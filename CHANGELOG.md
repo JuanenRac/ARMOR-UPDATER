@@ -5,6 +5,10 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.0.4] - The CLI status table glued ROLE straight into STACK
+
+- **Real bug, found while checking the previous fix for real via ELECTRO-HOBBY-3D-UPDATER's own `status --ecosystem all`:** the plain-text `--cli status` table padded ROLE to a fixed 10 characters - correct for HYDRA-UMC/URTC's short role enum (`tool`, `service`, ...), but A.R.M.O.R.'s manifest schema deliberately keeps `role` as free text, several real repos declaring a whole sentence. A fixed pad does nothing once the text is already longer than it, so every A.R.M.O.R. row ran ROLE straight into STACK with no separator at all (`Android operator clientKotlin / Jetpack Compose`). `role_w` is now computed the same way `stack_w` already was (that column had the identical bug fixed once before, for the same reason). New regression test in `tests/test_main.py` locks a real, long role's own separating space in place.
+
 ## [0.0.3] - The deploy filter matched none of A.R.M.O.R.'s own real projects
 
 - **Real bug, reported by the user filtering for mobile apps and not finding ARMOR-ANDROID-CONTROL:** the desktop GUI's deploy filter (both the Tkinter and the Qt Quick shell) compared each project's own real, free-text `deployment_target` against HYDRA-UMC's own closed enum (`cm5`/`user-pc`/`mobile`/`wearable`/`dev-server`) with `==` - a straight copy from HYDRA-UMC-UPDATER's own filter, never adapted to A.R.M.O.R.'s deliberately free-text manifest field. None of A.R.M.O.R.'s 15 real projects ever literally equal one of those five strings, so every filter button except "All" silently matched zero projects, not just the mobile one. The same raw text was also fed straight into `i18n.t(f"deploy_{value}")` for the Deploy column, so every row showed a broken string like `deploy_Android 10+` or `deploy_NVIDIA Jetson Orin NX` instead of its own real text.

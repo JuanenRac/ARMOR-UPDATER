@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "armor-updater"
-version = "0.0.3"
+version = "0.0.4"
 description = "Detects, installs, and manually updates the A.R.M.O.R. ecosystem's projects on the machine it runs on (the central server, or a dev machine with the same checkout layout). Every A.R.M.O.R. repository is public: remote discovery works with no GITHUB_TOKEN, an optional one just raises the request ceiling."
 readme = "README.md"
 requires-python = ">=3.10"
