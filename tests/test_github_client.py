@@ -112,16 +112,20 @@ def fixture_server(routes: dict[str, tuple[int, bytes]]):
 # ---------------------------------------------------------------------------
 
 
-def test_discover_remote_projects_requires_a_token():
-    # Every A.R.M.O.R. repository is private: there is no unauthenticated
-    # fallback, unlike a public ecosystem's 60/hour unauthenticated path.
-    with pytest.raises(github_client.MissingTokenError, match="GITHUB_TOKEN"):
-        discover_remote_projects(token="")
+def test_discover_remote_projects_works_without_a_token(monkeypatch):
+    # Every A.R.M.O.R. repository is public: an empty/absent token is a
+    # real, supported call, not an error - the same unauthenticated-by-
+    # default design HYDRA-UMC-UPDATER's own discovery already uses.
+    with fixture_server({"/users/JuanenRac/repos?type=owner&per_page=100&page=1": (200, b"[]")}) as base_url:
+        monkeypatch.setattr(github_client, "GITHUB_API_BASE", base_url)
+        discovery = discover_remote_projects(token="")
+    assert discovery.projects == ()
+    assert discovery.errors == ()
 
 
 def test_discover_remote_projects_raises_clearly_on_malformed_repo_list_json(monkeypatch):
     with fixture_server(
-        {"/user/repos?affiliation=owner&visibility=private&per_page=100&page=1": (200, b"{not valid json")}
+        {"/users/JuanenRac/repos?type=owner&per_page=100&page=1": (200, b"{not valid json")}
     ) as base_url:
         monkeypatch.setattr(github_client, "GITHUB_API_BASE", base_url)
         with pytest.raises(RuntimeError, match="unable to list GitHub repositories"):
@@ -137,7 +141,7 @@ def test_discover_remote_projects_names_the_real_rate_limit_reset_time(monkeypat
     # GITHUB_TOKEN raises it.
     with fixture_server(
         {
-            "/user/repos?affiliation=owner&visibility=private&per_page=100&page=1": (
+            "/users/JuanenRac/repos?type=owner&per_page=100&page=1": (
                 403, b'{"message": "rate limit exceeded"}',
                 {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"},
             )
@@ -150,7 +154,7 @@ def test_discover_remote_projects_names_the_real_rate_limit_reset_time(monkeypat
 
 def test_discover_remote_projects_raises_clearly_on_unexpected_top_level_shape(monkeypatch):
     with fixture_server(
-        {"/user/repos?affiliation=owner&visibility=private&per_page=100&page=1": (200, b'{"not": "a list"}')}
+        {"/users/JuanenRac/repos?type=owner&per_page=100&page=1": (200, b'{"not": "a list"}')}
     ) as base_url:
         monkeypatch.setattr(github_client, "GITHUB_API_BASE", base_url)
         with pytest.raises(RuntimeError, match="unexpected GitHub repository-list response"):
@@ -158,17 +162,16 @@ def test_discover_remote_projects_raises_clearly_on_unexpected_top_level_shape(m
 
 
 def test_discover_remote_projects_isolates_one_malformed_manifest_from_the_rest(monkeypatch):
-    owner = {"login": "JuanenRac"}
     repo_list = json.dumps(
         [
-            {"name": "GoodProject", "default_branch": "main", "owner": owner},
-            {"name": "BadProject", "default_branch": "main", "owner": owner},
-            {"name": "NoManifestHere", "default_branch": "main", "owner": owner},
+            {"name": "GoodProject", "default_branch": "main"},
+            {"name": "BadProject", "default_branch": "main"},
+            {"name": "NoManifestHere", "default_branch": "main"},
         ]
     ).encode()
 
     routes = {
-        "/user/repos?affiliation=owner&visibility=private&per_page=100&page=1": (200, repo_list),
+        "/users/JuanenRac/repos?type=owner&per_page=100&page=1": (200, repo_list),
         "/JuanenRac/GoodProject/main/armor.project.json": (200, json.dumps(valid_manifest("GoodProject")).encode()),
         "/JuanenRac/BadProject/main/armor.project.json": (200, b"{not valid json"),
         # NoManifestHere deliberately has no route at all - the fixture
@@ -320,13 +323,14 @@ def test_describe_http_error_surfaces_the_real_rate_limit_reset_time():
     assert "2023-11-14" in message  # 1700000000 UTC
 
 
-def test_describe_http_error_falls_back_for_a_real_access_restriction():
+def test_describe_http_error_falls_back_plainly_for_a_real_access_restriction():
     # A 403 that is NOT the rate limit (X-RateLimit-Remaining absent or
-    # nonzero) is a real access restriction - every A.R.M.O.R. repository
-    # is private, so this also names GITHUB_TOKEN as the likely cause.
-    assert "GITHUB_TOKEN" in describe_http_error(_http_error(403))
-    assert describe_http_error(_http_error(403, {"X-RateLimit-Remaining": "5"})) == "HTTP 403 (every A.R.M.O.R. repository is private; check GITHUB_TOKEN)"
-    assert "GITHUB_TOKEN" in describe_http_error(_http_error(404))
+    # nonzero) is some other, unrelated access restriction - every
+    # A.R.M.O.R. repository is public, so there is no GITHUB_TOKEN hint
+    # to add here; it is just the plain HTTP status.
+    assert describe_http_error(_http_error(403)) == "HTTP 403"
+    assert describe_http_error(_http_error(403, {"X-RateLimit-Remaining": "5"})) == "HTTP 403"
+    assert describe_http_error(_http_error(404)) == "HTTP 404"
 
 
 def test_is_primary_rate_limited_recognizes_the_real_signal():

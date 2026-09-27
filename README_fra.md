@@ -14,7 +14,7 @@
   <a href="README_jpn.md">🇯🇵 日本語</a>
 </p>
 
-### Détecte, installe et met à jour chaque dépôt A.R.M.O.R. sur la machine où il s'exécute (un programme Python sans dépendance obligatoire, conçu depuis le départ pour un écosystème privé)
+### Détecte, installe et met à jour chaque dépôt A.R.M.O.R. sur la machine où il s'exécute (un programme Python sans dépendance obligatoire, conçu depuis le départ pour l'écosystème public d'A.R.M.O.R.)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
@@ -26,13 +26,13 @@
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** **Maturité : échafaudage.** La découverte par manifeste, la comparaison de versions, l'installation/mise à jour atomique-par-vérification et le journal de preuves sont testés (103 tests) pour la forme réelle du manifeste d'A.R.M.O.R. ; il n'a jamais installé ni mis à jour un vrai dépôt A.R.M.O.R. de bout en bout, car chacun d'eux est privé et cela exige un vrai GITHUB_TOKEN que ce programme n'a pas encore reçu.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** **Maturité : échafaudage.** La découverte par manifeste, la comparaison de versions, l'installation/mise à jour atomique-par-vérification et le journal de preuves sont testés (103 tests) pour la forme réelle du manifeste d'A.R.M.O.R. ; il n'a encore jamais installé ni mis à jour un vrai dépôt A.R.M.O.R. de bout en bout.
 
 ---
 
 ## 🎯 Présentation
 
-* **Découverte, sans liste fixe :** un dossier local rejoint l'écosystème dès qu'il porte un `armor.project.json` valide déclarant `ecosystem: "A.R.M.O.R."` ; à distance, chaque dépôt qu'un `GITHUB_TOKEN` peut voir sur GitHub est vérifié de la même façon - chaque dépôt A.R.M.O.R. étant privé, ce jeton est requis partout, sans le repli à 60 requêtes par heure d'un écosystème public.
+* **Découverte, sans liste fixe :** un dossier local rejoint l'écosystème dès qu'il porte un `armor.project.json` valide déclarant `ecosystem: "A.R.M.O.R."` ; à distance, chaque dépôt du compte GitHub est vérifié de la même façon sans aucun jeton requis - chaque dépôt A.R.M.O.R. étant public, un `GITHUB_TOKEN` optionnel ne fait qu'élever le plafond de 60 requêtes par heure non authentifiées.
 * **Installer et mettre à jour, jamais sur place :** une mise à jour est construite et vérifiée d'abord dans un clone de test indépendant, et n'est promue - deux renommages de dossier, l'installation précédente gardée en sauvegarde - qu'une fois cette construction réellement réussie ; une modification locale réellement non validée est refusée d'emblée, jamais silencieusement écartée.
 * **Preuves :** chaque tentative, réussie ou non, ajoute une ligne à un journal local avec le projet, la version et le commit avant et après, et la raison d'un échec.
 * **Une CLI et une interface de bureau optionnelle :** `armor-updater status`/`install`/`update`, et une interface Qt Quick (`pip install ".[gui]"`) dans les sept langues de l'écosystème.
@@ -41,7 +41,7 @@
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, GITHUB_TOKEN required), install (atomic staging-clone
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, no token required), install (atomic staging-clone
 │                       update), evidence, main (CLI), settings, version_parse, i18n, gui/qt_gui/qml (optional Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), bump_version.py
 ├── tests/              9 test modules
@@ -53,7 +53,7 @@ ARMOR-UPDATER/
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
 python -m pytest tests -q                              # 103 tests
-armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
+armor-updater status                                    # local + GitHub state of every repository (no token needed)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
 ```

@@ -3,7 +3,12 @@
 All notable changes to this project will be documented in this file. The
 version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
-bumped manually only. See `bump_version.py`.
+bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
+
+## [0.0.2]
+
+- `build.bat`/`build-test.bat`/`build.sh`/`build-test.sh` create and use their own project-local `.venv` first, unlike every other A.R.M.O.R. repository's build scripts - a real bug, not a style choice: `run.bat`'s own double-click path (`run-gui.vbs`) launches `.venv\Scripts\pythonw.exe` directly, by design, and that `.venv` never existed because the generic delegator this repo used before never created one.
+- Every A.R.M.O.R. repository is now public; the manifest, `pyproject.toml`'s description and every "private ecosystem" reference across the README and source comments described a state that no longer holds. `GITHUB_TOKEN` remains supported (a private fork, or simply to raise the 60/hour unauthenticated ceiling) but is no longer required.
 
 ## [0.0.1] - Detects, installs and updates the A.R.M.O.R. ecosystem
 
