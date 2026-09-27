@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+# A.R.M.O.R. shared secret protection
+.env
+.env.*
+!.env.example
