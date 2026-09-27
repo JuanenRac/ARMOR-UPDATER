@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .deploy_category import categorize_deployment_target
 from .project_manifest import MANIFEST_FILE, ProjectManifest
 
 
@@ -41,6 +42,14 @@ class ProjectEntry:
     service_port: int | None = None
     service_health_path: str | None = None
     service_systemd_unit: str | None = None
+
+    @property
+    def deploy_category(self) -> str:
+        """This entry's own ``deploy`` (the manifest's free-text
+        ``deployment_target``), bucketed into a small, closed category for
+        the desktop GUI's deploy filter - see deploy_category.py. Computed,
+        never stored, so it can never drift out of sync with ``deploy``."""
+        return categorize_deployment_target(self.deploy)
 
 
 def entry_from_manifest(manifest: ProjectManifest) -> ProjectEntry:
