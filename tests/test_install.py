@@ -1,0 +1,792 @@
+# =============================================================================
+# ARMOR-UPDATER - Safe install/update behavior tests
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0 - see LICENSE
+# =============================================================================
+from __future__ import annotations
+
+import importlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from armor_updater import install
+from armor_updater.install import clone_or_pull, find_build_test_script, run_build_script
+from armor_updater.registry import ProjectEntry
+
+# P01: the sibling ARMOR-COMMON checkout's own src/ tree, if this repo
+# happens to be checked out alongside it (the real, normal layout for
+# this ecosystem's own workspace - see registry.py's own real project
+# list). Not a hard dependency of this test file itself: tests exercising
+# the durable-journal path skip cleanly (rather than fail) when it isn't
+# present, since a standalone ARMOR-UPDATER checkout (no sibling SDK)
+# is exactly the real "armor-common isn't installed" case install.py's
+# own header comment already documents as a supported, honest fallback.
+_SDK_SRC = Path(__file__).resolve().parents[2] / "ARMOR-COMMON" / "clients" / "python" / "src"
+
+
+def _reload_install_with_sdk_on_path():
+    """Adds the sibling SDK's src/ to sys.path and reloads armor_updater.install
+    so its own module-level `_HAS_DURABLE_JOURNAL` try/except re-runs and
+    succeeds - the only way to exercise that branch, since it's decided
+    once at import time. Returns the reloaded module; caller is
+    responsible for restoring the original state via
+    `_reload_install_without_sdk()` once done, so later tests in this
+    same file see the real, default (no-SDK) behavior again."""
+    sys.path.insert(0, str(_SDK_SRC))
+    for name in ("armor_sdk", "armor_sdk.promotion_journal"):
+        sys.modules.pop(name, None)
+    return importlib.reload(install)
+
+
+def _reload_install_without_sdk():
+    if str(_SDK_SRC) in sys.path:
+        sys.path.remove(str(_SDK_SRC))
+    for name in list(sys.modules):
+        if name == "armor_sdk" or name.startswith("armor_sdk."):
+            del sys.modules[name]
+    return importlib.reload(install)
+
+
+def entry() -> ProjectEntry:
+    return ProjectEntry("ARMOR-EXAMPLE", "python", "1.0.0")
+
+
+def test_prefers_the_non_versioning_build_test_script(tmp_path: Path):
+    project = tmp_path / entry().name
+    project.mkdir()
+    expected = project / ("build-test.bat" if os.name == "nt" else "build-test.sh")
+    expected.write_text("build test\n", encoding="utf-8")
+    (project / "build.sh").write_text("versioned build\n", encoding="utf-8")
+
+    assert find_build_test_script(project) == expected
+
+
+def test_never_touches_an_existing_non_git_directory(tmp_path: Path):
+    project = tmp_path / entry().name
+    project.mkdir()
+    sentinel = project / "operator-file.txt"
+    sentinel.write_text("must remain untouched", encoding="utf-8")
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert "isn't a git checkout" in result.message
+    assert sentinel.read_text(encoding="utf-8") == "must remain untouched"
+
+
+def test_missing_build_test_fails_closed(tmp_path: Path):
+    project = tmp_path / entry().name
+    project.mkdir()
+
+    assert find_build_test_script(project) is None
+
+
+def git(*args: str, cwd: Path) -> None:
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
+
+
+def write_manifest(path: Path, version: str) -> None:
+    (path / "armor.project.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "ecosystem": "A.R.M.O.R.",
+                "name": entry().name,
+                "version": version,
+                "role": "service",
+                "stack": "python",
+                "technologies": ["Python"],
+                "deployment_target": "The central server",
+                "maturity": "functional",
+                "family": "Test",
+                "parent": None,
+                "native_version": version,
+                "build": "python -m compileall src",
+                "notes": "Test manifest.",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_failed_clone_removes_only_its_staging_directory(tmp_path: Path, monkeypatch):
+    missing_remote = tmp_path / "does-not-exist.git"
+    monkeypatch.setattr(install, "github_repo_url", lambda _entry: str(missing_remote))
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert not (tmp_path / entry().name).exists()
+    assert not list(tmp_path.glob(f".{entry().name}.clone-*"))
+
+
+def test_diverged_pull_fails_without_resetting_local_checkout(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    (seed / "state.txt").write_text("base\n", encoding="utf-8")
+    write_manifest(seed, "1.0.0")
+    git("add", "state.txt", "armor.project.json", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=local)
+    git("config", "user.name", "Contract", cwd=local)
+    (local / "state.txt").write_text("local\n", encoding="utf-8")
+    git("commit", "-am", "local", cwd=local)
+    local_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    (seed / "state.txt").write_text("remote\n", encoding="utf-8")
+    git("commit", "-am", "remote", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert "merge --ff-only failed" in result.message
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == local_head
+    assert (local / "state.txt").read_text(encoding="utf-8") == "local\n"
+
+
+def write_build_script(path: Path, *, ok: bool) -> None:
+    """Writes both build-test.sh and build-test.bat (whichever
+    find_build_test_script actually picks for the current OS is the one
+    that matters) - `ok` controls whether it succeeds or fails, and a
+    successful run also drops a real marker file (built.txt) so a test
+    can confirm the STAGING build's own artifacts - not just its source -
+    made it into the promoted checkout."""
+    if ok:
+        (path / "build-test.sh").write_text("#!/usr/bin/env bash\necho built > built.txt\nexit 0\n", encoding="utf-8")
+        (path / "build-test.bat").write_text("@echo off\r\necho built> built.txt\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        (path / "build-test.sh").write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+        (path / "build-test.bat").write_text("@echo off\r\nexit /b 1\r\n", encoding="utf-8")
+
+
+def test_update_verifies_build_in_staging_before_promoting_and_keeps_a_backup(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    old_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    new_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=seed, text=True).strip()
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert result.ok, result.message
+    assert "previous installation kept at" in result.message
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == new_head
+    # The promoted checkout must have the STAGING build's own real
+    # artifact, not a second, separate build - proving the fix promotes
+    # the same directory it verified, rather than rebuilding blind.
+    assert (local / "built.txt").exists()
+
+    # unique per attempt (`.backup-<uuid>`), not a single fixed
+    # name - see clone_or_pull()'s own comment for the real data-loss gap
+    # a fixed, reused name left open.
+    backups = list(tmp_path.glob(f"{entry().name}.backup-*"))
+    assert len(backups) == 1, backups
+    backup = backups[0]
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=backup, text=True).strip() == old_head
+
+    # No leftover staging directories from a successful run.
+    assert not list(tmp_path.glob(f".{entry().name}.update-*"))
+
+
+def test_two_successive_updates_never_overwrite_the_earlier_backup(tmp_path: Path, monkeypatch):
+    # the
+    # previous fixed `<name>.backup` path was `rmtree`'d and overwritten
+    # on every single promotion - a second real update after a first one
+    # already succeeded silently destroyed the ONLY other recoverable
+    # copy of an installation, with no way back to either release.
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "v1", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    # This test's own real upstream IS the bare repo above (this project's own
+    # promotion-time reset would otherwise point a promoted checkout at a
+    # real, nonexistent GitHub URL, breaking the SECOND update's own
+    # `git fetch` here - see test_update_restores_the_real_upstream_...
+    # above for the same real reason).
+    monkeypatch.setattr(install, "github_repo_url", lambda _entry: str(remote))
+    v1_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "v2", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    first_result = clone_or_pull(entry(), tmp_path)
+    assert first_result.ok, first_result.message
+    v2_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    write_manifest(seed, "1.2.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "v3", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    second_result = clone_or_pull(entry(), tmp_path)
+    assert second_result.ok, second_result.message
+
+    # Both backups survive, each holding the real revision it was made
+    # from - neither promotion destroyed the other's own recovery point.
+    backups = sorted(tmp_path.glob(f"{entry().name}.backup-*"))
+    assert len(backups) == 2, backups
+    backup_heads = {
+        subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=backup, text=True).strip()
+        for backup in backups
+    }
+    assert backup_heads == {v1_head, v2_head}
+
+
+def test_promotion_self_heals_when_the_second_rename_fails(tmp_path: Path, monkeypatch):
+    # a crash or exception in the narrow gap between the two
+    # promotion renames used to leave NO active checkout at all. Inject
+    # a real failure into exactly that second rename (staging -> path)
+    # and confirm the previous installation is restored rather than
+    # silently lost.
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    old_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    original_rename = Path.rename
+
+    def flaky_rename(self: Path, target):
+        # Only the staging clone's own rename (the second, real
+        # promotion rename) fails - the first rename (installed
+        # checkout -> backup) must go through normally so this test
+        # actually reaches the self-heal path, not fail before it.
+        if self.name.startswith(f".{entry().name}.update-"):
+            raise OSError("synthetic failure injected by test")
+        return original_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", flaky_rename)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert "restored the previous installation" in result.message, result.message
+    assert local.is_dir()
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == old_head
+    # Self-heal renamed the backup back - no orphaned backup left behind.
+    assert not list(tmp_path.glob(f"{entry().name}.backup-*"))
+
+
+def test_update_restores_the_real_upstream_remote_on_the_promoted_checkout(tmp_path: Path, monkeypatch):
+    # the
+    # staging clone `git clone --local ...` creates is a clone OF the
+    # local installation path, so its own `origin` remote used to end up
+    # pointing at that local path - never this project's real upstream -
+    # once promoted, permanently stopping this checkout from ever
+    # discovering a real future update again.
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    # This test's own real upstream IS the bare repo above - matches how
+    # a real deployment's github_repo_url() always names the SAME real
+    # remote the checkout was originally cloned from.
+    monkeypatch.setattr(install, "github_repo_url", lambda _entry: str(remote))
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert result.ok, result.message
+    restored_origin = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=local, text=True).strip()
+    assert restored_origin == str(remote), (
+        f"origin must be the real upstream {remote}, not the local install path (or anything else) - got {restored_origin!r}"
+    )
+
+
+def test_update_carries_over_real_local_data_never_tracked_by_git(tmp_path: Path):
+    # `git
+    # clone --local` only ever copies the committed object database - a
+    # project's own real local data (config, accounts, generated
+    # certificates, ...) living untracked inside its checkout used to be
+    # left behind entirely once the old installation was renamed aside.
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    (seed / ".gitignore").write_text("data/\n", encoding="utf-8")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    # A real, genuinely untracked file (never added/committed at all) -
+    # the exact shape that reproduced the bug.
+    (local / "audit-local-settings.txt").write_text("real operator configuration\n", encoding="utf-8")
+    # A real, gitignored directory with real data inside it - the shape
+    # every server-side project in this ecosystem actually uses
+    # (data/settings.json, data/users.json, ...).
+    (local / "data").mkdir()
+    (local / "data" / "settings.json").write_text('{"real": "operator settings"}', encoding="utf-8")
+    # A real, untracked build-artifact-like directory - must NEVER be
+    # carried over even though git also considers it untracked.
+    (local / "node_modules").mkdir()
+    (local / "node_modules" / "some-package.js").write_text("// not real project source\n", encoding="utf-8")
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert result.ok, result.message
+    assert (local / "audit-local-settings.txt").read_text(encoding="utf-8") == "real operator configuration\n"
+    assert (local / "data" / "settings.json").read_text(encoding="utf-8") == '{"real": "operator settings"}'
+    assert not (local / "node_modules").exists(), "a build-artifact-like directory must never be carried over"
+
+
+def test_update_refuses_when_a_real_tracked_file_has_an_uncommitted_edit(tmp_path: Path):
+    # (P1, a real
+    # gap this module's own docstring did not actually close once 
+    # switched to the staging-clone flow): `git clone --local` only ever
+    # copies the COMMITTED object database - a genuinely dirty edit to a
+    # TRACKED file lives only in the installed checkout's own working
+    # tree, so the staging clone never sees it at all, and
+    # _carry_over_local_data() deliberately never carries over a tracked
+    # file (only real `??`/`!!` untracked/ignored paths - see its own
+    # docstring). The staging clone's own `git merge --ff-only` therefore
+    # always succeeds (its working tree starts clean), the build
+    # succeeds, and promotion renames the dirty original aside to
+    # `.backup` - the edit survives only there, never in the newly active
+    # checkout, while clone_or_pull() still reports ok=True. This
+    # directly contradicts this module's own documented promise ("a real
+    # local edit... fails loudly... instead of being silently
+    # discarded"), which was only ever true for the older,
+    # verify_build=False in-place-merge path.
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    (seed / "tracked.txt").write_text("committed\n", encoding="utf-8")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    # A real, uncommitted edit to an already-TRACKED file - never staged,
+    # never committed, exactly the shape that reproduced the bug.
+    (local / "tracked.txt").write_text("USER_UNCOMMITTED\n", encoding="utf-8")
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok, (
+        "an update must refuse when a real tracked file has an uncommitted edit, "
+        f"not silently discard it while reporting ok=True (got: {result.message!r})"
+    )
+    assert "uncommitted" in result.message.lower() or "dirty" in result.message.lower()
+    # The refusal must happen before anything is touched - the real edit
+    # must still be sitting in the ORIGINAL checkout's own working tree,
+    # never moved aside to .backup.
+    assert (local / "tracked.txt").read_text(encoding="utf-8") == "USER_UNCOMMITTED\n"
+    assert not (tmp_path / f"{entry().name}.backup").exists(), "a refused update must never rename anything aside"
+
+
+def test_tracked_dirty_paths_raises_when_git_status_itself_fails(tmp_path: Path):
+    # (P0, shared with a sibling project's own sibling helper): a
+    # `git status` that fails to even run (here: not a git repository at
+    # all, exit 128) used to be treated exactly like "ran fine, found
+    # nothing dirty" - the one real uncommitted edit this function exists
+    # to catch became invisible the moment the check itself broke.
+    from armor_updater.install import DirtyCheckError, _tracked_dirty_paths
+
+    not_a_repo = tmp_path / "not-a-repo"
+    not_a_repo.mkdir()
+
+    import pytest
+
+    with pytest.raises(DirtyCheckError):
+        _tracked_dirty_paths(not_a_repo)
+
+
+def test_update_build_failure_leaves_the_previous_installation_completely_untouched(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    old_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    # this project's own exact reproduction: the candidate's manifest is real
+    # and newer, but its build is broken.
+    write_manifest(seed, "1.1.0")
+    write_build_script(seed, ok=False)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "broken release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert "left completely untouched and remains the operative installation" in result.message
+    # The real closure criterion: the previous installation is still
+    # exactly where it was, on its previous revision, still buildable.
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == old_head
+    assert not (local / "built.txt").exists()
+    build_result = run_build_script(entry(), tmp_path)
+    assert build_result.ok, "the untouched previous installation must still build successfully"
+
+    assert not (tmp_path / f"{entry().name}.backup").exists()
+    assert not list(tmp_path.glob(f".{entry().name}.update-*"))
+
+
+def test_update_without_verify_build_restores_the_old_in_place_merge_behavior(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "base", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+
+    write_manifest(seed, "1.1.0")
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "new release", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    new_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=seed, text=True).strip()
+
+    result = clone_or_pull(entry(), tmp_path, verify_build=False)
+
+    assert result.ok, result.message
+    assert "Pulled latest into" in result.message
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == new_head
+    # No staging clone, no backup - verify_build=False is the plain,
+    # pre-existing in-place merge, unchanged.
+    assert not (tmp_path / f"{entry().name}.backup").exists()
+    assert not list(tmp_path.glob(f".{entry().name}.update-*"))
+
+
+def test_refuses_a_remote_manifest_version_lower_than_the_installed_version(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "2.0.0")
+    git("add", "armor.project.json", cwd=seed)
+    git("commit", "-m", "initial", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    local_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    write_manifest(seed, "1.9.9")
+    git("add", "armor.project.json", cwd=seed)
+    git("commit", "-m", "bad downgrade", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert not result.ok
+    assert "anti-rollback refused update" in result.message
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == local_head
+
+
+# ---------------------------------------------------------------------------
+# P01: durable promotion journal (armor-common's promotion_journal module,
+# an optional dependency - see install.py's own header comment).
+# ---------------------------------------------------------------------------
+
+def test_recover_interrupted_promotions_is_a_real_noop_without_the_sdk_installed():
+    # The default state for this whole test file: armor-common is not on
+    # sys.path, so install.py's own top-level try/except left
+    # _HAS_DURABLE_JOURNAL False - the honest, documented fallback for a
+    # standalone checkout, not a crash or a hidden dependency error.
+    assert install._HAS_DURABLE_JOURNAL is False
+    assert install.recover_interrupted_promotions(Path("/does/not/matter")) == []
+
+
+def test_promotion_journal_records_and_completes_a_real_successful_update(tmp_path: Path):
+    if not _SDK_SRC.is_dir():
+        import pytest
+        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
+    reloaded = _reload_install_with_sdk_on_path()
+    try:
+        assert reloaded._HAS_DURABLE_JOURNAL is True
+
+        remote = tmp_path / "remote.git"
+        git("init", "--bare", str(remote), cwd=tmp_path)
+        seed = tmp_path / "seed"
+        git("clone", str(remote), str(seed), cwd=tmp_path)
+        git("config", "user.email", "contract@example.invalid", cwd=seed)
+        git("config", "user.name", "Contract", cwd=seed)
+        write_manifest(seed, "1.0.0")
+        write_build_script(seed, ok=True)
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "base", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        local = tmp_path / entry().name
+        git("clone", str(remote), str(local), cwd=tmp_path)
+
+        write_manifest(seed, "1.1.0")
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "new release", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        result = reloaded.clone_or_pull(entry(), tmp_path)
+
+        assert result.ok, result.message
+        journal_path = tmp_path / reloaded._JOURNAL_FILENAME
+        assert journal_path.exists(), "a real promotion with the SDK installed must write a journal file"
+        journal = reloaded.PromotionJournal(journal_path)
+        assert journal.pending() == [], "a fully successful promotion must leave nothing pending in the journal"
+    finally:
+        _reload_install_without_sdk()
+
+
+def _entry_with_health(*, port: int) -> ProjectEntry:
+    return ProjectEntry(
+        entry().name, "python", "pyproject.toml", r"(\d+)\.(\d+)\.(\d+)",
+        service_port=port, service_health_path="/health",
+    )
+
+
+def test_i13_promotion_completes_only_after_a_real_passing_health_check(tmp_path: Path):
+    if not _SDK_SRC.is_dir():
+        import pytest
+        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    reloaded = _reload_install_with_sdk_on_path()
+    try:
+        port = server.server_address[1]
+        remote = tmp_path / "remote.git"
+        git("init", "--bare", str(remote), cwd=tmp_path)
+        seed = tmp_path / "seed"
+        git("clone", str(remote), str(seed), cwd=tmp_path)
+        git("config", "user.email", "contract@example.invalid", cwd=seed)
+        git("config", "user.name", "Contract", cwd=seed)
+        write_manifest(seed, "1.0.0")
+        write_build_script(seed, ok=True)
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "base", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        local = tmp_path / entry().name
+        git("clone", str(remote), str(local), cwd=tmp_path)
+
+        write_manifest(seed, "1.1.0")
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "new release", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        result = reloaded.clone_or_pull(_entry_with_health(port=port), tmp_path)
+
+        assert result.ok, result.message
+        assert "passing health check" in result.message
+        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
+        assert journal.pending() == [], "a genuinely passing health check must complete the promotion"
+    finally:
+        _reload_install_without_sdk()
+        server.shutdown()
+        thread.join(timeout=5)
+
+
+def test_i13_promotion_stays_pending_when_the_health_check_fails(tmp_path: Path):
+    if not _SDK_SRC.is_dir():
+        import pytest
+        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
+    import socket
+
+    # A real, guaranteed-closed local port - nothing is listening, so the
+    # freshly-promoted "service" this entry declares can never answer.
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.bind(("127.0.0.1", 0))
+    closed_port = probe.getsockname()[1]
+    probe.close()
+
+    reloaded = _reload_install_with_sdk_on_path()
+    try:
+        remote = tmp_path / "remote.git"
+        git("init", "--bare", str(remote), cwd=tmp_path)
+        seed = tmp_path / "seed"
+        git("clone", str(remote), str(seed), cwd=tmp_path)
+        git("config", "user.email", "contract@example.invalid", cwd=seed)
+        git("config", "user.name", "Contract", cwd=seed)
+        write_manifest(seed, "1.0.0")
+        write_build_script(seed, ok=True)
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "base", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        local = tmp_path / entry().name
+        git("clone", str(remote), str(local), cwd=tmp_path)
+
+        write_manifest(seed, "1.1.0")
+        git("add", "-A", cwd=seed)
+        git("commit", "-m", "new release", cwd=seed)
+        git("push", "origin", "HEAD", cwd=seed)
+
+        result = reloaded.clone_or_pull(_entry_with_health(port=closed_port), tmp_path)
+
+        # this project's own real acceptance test, end to end: the files DID
+        # promote (the checkout really is the new version), but a
+        # failing health check must never be reported as success, and
+        # must never be silently pruned from the journal either.
+        assert not result.ok, "a failing health check must not be reported as a successful install"
+        assert "health" in result.message
+        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
+        assert len(journal.pending()) == 1, "the promotion must stay pending for recovery/a human, not be silently completed"
+        assert (local / "armor.project.json").read_text(encoding="utf-8").count("1.1.0") >= 1, "the promotion itself really did happen - only its health is in question"
+    finally:
+        _reload_install_without_sdk()
+
+
+def test_recover_interrupted_promotions_heals_a_real_crash_left_backed_up(tmp_path: Path):
+    if not _SDK_SRC.is_dir():
+        import pytest
+        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
+    reloaded = _reload_install_with_sdk_on_path()
+    try:
+        # Simulates exactly the real gap clone_or_pull()'s own promotion
+        # step can crash in: the target was already renamed aside to
+        # backup, but staging never got promoted into its place - target
+        # is genuinely missing.
+        target = tmp_path / entry().name
+        backup = tmp_path / f"{entry().name}.backup-deadbeef"
+        backup.mkdir()
+        (backup / "marker.txt").write_text("previous real install", encoding="utf-8")
+
+        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
+        record = journal.begin(entry().name, target, tmp_path / f".{entry().name}.update-x", backup)
+        journal.advance(record.promotion_id, reloaded.PromotionPhase.BACKED_UP)
+
+        actions = reloaded.recover_interrupted_promotions(tmp_path)
+
+        assert target.exists(), "the interrupted promotion must be healed by restoring the backup"
+        assert (target / "marker.txt").read_text(encoding="utf-8") == "previous real install"
+        assert not backup.exists()
+        assert any("restored" in action for action in actions)
+    finally:
+        _reload_install_without_sdk()
+
+
+def test_install_or_update_calls_recovery_before_its_own_work(tmp_path: Path, monkeypatch):
+    # install_or_update() must heal a real interrupted promotion from a
+    # PREVIOUS run before starting its own new work - verified here
+    # without the SDK at all: recover_interrupted_promotions() itself is
+    # monkeypatched to prove it's actually called, at the right time
+    # (before the real clone_or_pull work), regardless of whether the SDK
+    # happens to be installed.
+    calls = []
+    monkeypatch.setattr(install, "recover_interrupted_promotions", lambda root: calls.append(root) or [])
+
+    project = tmp_path / entry().name
+    project.mkdir()
+    sentinel = project / "not-a-git-repo.txt"
+    sentinel.write_text("x", encoding="utf-8")
+
+    install.install_or_update(entry(), tmp_path)
+
+    assert calls == [tmp_path]
