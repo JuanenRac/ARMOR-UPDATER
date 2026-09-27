@@ -5,6 +5,12 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.0.3] - The deploy filter matched none of A.R.M.O.R.'s own real projects
+
+- **Real bug, reported by the user filtering for mobile apps and not finding ARMOR-ANDROID-CONTROL:** the desktop GUI's deploy filter (both the Tkinter and the Qt Quick shell) compared each project's own real, free-text `deployment_target` against HYDRA-UMC's own closed enum (`cm5`/`user-pc`/`mobile`/`wearable`/`dev-server`) with `==` - a straight copy from HYDRA-UMC-UPDATER's own filter, never adapted to A.R.M.O.R.'s deliberately free-text manifest field. None of A.R.M.O.R.'s 15 real projects ever literally equal one of those five strings, so every filter button except "All" silently matched zero projects, not just the mobile one. The same raw text was also fed straight into `i18n.t(f"deploy_{value}")` for the Deploy column, so every row showed a broken string like `deploy_Android 10+` or `deploy_NVIDIA Jetson Orin NX` instead of its own real text.
+- New `deploy_category.py` classifies each project's real `deployment_target` text into one of six real hardware-target categories (`field-node`, `server`, `mobile`, `browser`, `workstation`, `shared`) by keyword content, checked against all 15 real manifests in a new test file (`tests/test_deploy_category.py`). `ProjectEntry.deploy_category` is a computed property, so it can never drift out of sync with the manifest's own `deploy` text. The filter now uses this category; the Deploy column now shows each project's own real text unchanged.
+- The Tkinter shell's Linux-only default filter (`cm5`, another value no A.R.M.O.R. project ever declares) now defaults to `server` - the real category of A.R.M.O.R.'s own Jetson-based central server.
+
 ## [0.0.2]
 
 - `build.bat`/`build-test.bat`/`build.sh`/`build-test.sh` create and use their own project-local `.venv` first, unlike every other A.R.M.O.R. repository's build scripts - a real bug, not a style choice: `run.bat`'s own double-click path (`run-gui.vbs`) launches `.venv\Scripts\pythonw.exe` directly, by design, and that `.venv` never existed because the generic delegator this repo used before never created one.

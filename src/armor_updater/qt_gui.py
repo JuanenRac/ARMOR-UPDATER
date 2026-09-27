@@ -29,13 +29,17 @@ from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 
 from . import __version__, i18n, settings
+from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
 from .install import install_or_update
 from .registry import GITHUB_OWNER
 
 
-DEPLOY_ORDER = ("all", "cm5", "user-pc", "mobile", "wearable", "dev-server")
+#: One filter button per real A.R.M.O.R. hardware-target category (plus
+#: "all") - see deploy_category.py for why these are not HYDRA-UMC's own
+#: cm5/user-pc/wearable/dev-server enum.
+DEPLOY_ORDER = DEPLOY_CATEGORIES
 
 #: Real, plain-text log file, one per real GUI run - the QML Activity Log
 #: only ever shows the last 8 lines (see UpdaterBridge.activity's own
@@ -267,7 +271,7 @@ class UpdaterBridge(QObject):
         visible: list[dict[str, object]] = []
         for item in ordered:
             entry = item.entry
-            if self._deploy != "all" and entry.deploy != self._deploy:
+            if self._deploy != "all" and entry.deploy_category != self._deploy:
                 continue
             remote = self._remotes.get(entry.name)
             state_key = _state_key(item, remote)
@@ -278,7 +282,12 @@ class UpdaterBridge(QObject):
                 "maturity": self.text(f"maturity_{entry.maturity}"),
                 "role": self.text(f"role_{entry.role}"),
                 "stack": entry.stack,
-                "deploy": self.text(f"deploy_{entry.deploy}"),
+                # entry.deploy is A.R.M.O.R.'s own free, human-readable
+                # text ("ESP32-S3-ETH-PoE", "NVIDIA Jetson Orin NX") - shown
+                # as the project wrote it, never run through i18n as if it
+                # were an enum key (it previously was, and every project's
+                # Deploy column showed a broken "deploy_<free text>" string).
+                "deploy": entry.deploy,
                 "local": str(item.version) if item.version else ("-" if not item.installed else "?"),
                 "github": str(remote.version) if remote and remote.version else "-",
                 "state": self.text(state_key),

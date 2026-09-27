@@ -48,6 +48,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, i18n, settings
+from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
 from .install import install_or_update
@@ -55,23 +56,27 @@ from .registry import GITHUB_OWNER, ProjectEntry
 
 #: Order matters - shown left-to-right in the filter dropdown, "all" first.
 #: Real labels come from i18n.t(lang, f"deploy_{key}") / "deploy_all" at
-#: render time, not hardcoded here - see UpdaterGUI._deploy_label().
-DEPLOY_ORDER = ["all", "cm5", "user-pc", "mobile", "wearable", "dev-server"]
+#: render time, not hardcoded here - see UpdaterGUI._deploy_label(). One
+#: button per real A.R.M.O.R. hardware-target category (plus "all") - see
+#: deploy_category.py for why these are not HYDRA-UMC's own
+#: cm5/user-pc/wearable/dev-server enum.
+DEPLOY_ORDER = list(DEPLOY_CATEGORIES)
 
 #: The four manifest maturity values, in the same order as the dashboard.
 MATURITY_KEYS = ("production", "established", "functional", "scaffolding")
 
 
 def _default_deploy_filter() -> str:
-    """Linux is the real CM5's own OS - default to showing only what
-    actually belongs there. Anywhere else (a developer's Windows/macOS
-    machine) defaults to showing everything, since "what am I even
-    supposed to do with each of these 44 repos" is exactly the question
+    """Linux is the real OS of A.R.M.O.R.'s own central server (the Jetson
+    Orin NX running ARMOR-SERVER/-SERVER-AI/-VOICE-AI/-DEVOPS) - default to
+    showing only that "server" category there. Anywhere else (a developer's
+    Windows/macOS machine) defaults to showing everything, since "what am I
+    even supposed to do with each of these repos" is exactly the question
     the deploy field answers for a dev machine. Always changeable by hand
     from the dropdown regardless of platform - this is just a starting
     point, never a restriction (the deployment target comes from each
-    repository manifest)."""
-    return "cm5" if sys.platform.startswith("linux") else "all"
+    repository manifest; see deploy_category.py for how it is bucketed)."""
+    return "server" if sys.platform.startswith("linux") else "all"
 
 
 def _state_key(local: LocalStatus, remote: RemoteStatus | None) -> str:
@@ -639,7 +644,7 @@ class UpdaterGUI:
         # target than the one selected) falls back to a top-level row
         # instead of erroring on a parent iid that doesn't exist.
         for ls in ordered:
-            if wanted != "all" and ls.entry.deploy != wanted:
+            if wanted != "all" and ls.entry.deploy_category != wanted:
                 continue
 
             entry = ls.entry
@@ -666,7 +671,12 @@ class UpdaterGUI:
                     self._maturity_label(entry.maturity),
                     self._role_label(entry.role),
                     entry.stack,
-                    self._deploy_label(entry.deploy),
+                    # entry.deploy is A.R.M.O.R.'s own free, human-readable
+                    # text ("ESP32-S3-ETH-PoE", "NVIDIA Jetson Orin NX") -
+                    # shown as the project wrote it, never run through
+                    # _deploy_label() (that previously showed a broken
+                    # "deploy_<free text>" string in this column instead).
+                    entry.deploy,
                     local_v, github_v, state,
                 ),
                 tags=tags,
