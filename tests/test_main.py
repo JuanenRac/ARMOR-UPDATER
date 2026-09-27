@@ -69,6 +69,32 @@ def test_status_json_output_is_real_machine_readable_json(monkeypatch, capsys, t
     assert by_name["ARMOR-GHOST"]["local_version"] is None
 
 
+def test_status_table_never_runs_a_long_real_role_into_the_stack_column(monkeypatch, capsys, tmp_path) -> None:
+    """Real bug: A.R.M.O.R.'s own manifest schema deliberately keeps
+    `role` as free text (several real repos declare a whole sentence, not
+    HYDRA-UMC/URTC's short enum) - the plain-text table used to pad it to
+    a fixed 10 characters, which does nothing once the real text is
+    longer than that, running it straight into STACK with no separator
+    at all (e.g. "Android operator clientKotlin / Jetpack Compose")."""
+    long_role = "Shared contracts and validation library"
+    entry = ProjectEntry(name="ARMOR-COMMON", stack="Python 3.11+", native_version="0.2.6", maturity="functional", role=long_role)
+    local_discovery = LocalDiscovery(
+        projects=(LocalStatus(entry=entry, path=tmp_path / "ARMOR-COMMON", installed=True, version=Version(0, 2, 6)),),
+        errors=(),
+    )
+    remote_discovery = RemoteDiscovery(projects=(RemoteStatus(entry=entry, version=Version(0, 2, 6)),), errors=())
+    monkeypatch.setattr(main_module, "discover_workspace", lambda root: local_discovery)
+    monkeypatch.setattr(main_module, "discover_remote_projects", lambda: remote_discovery)
+
+    args = build_parser().parse_args(["status", "--workspace", str(tmp_path)])
+    exit_code = args.func(args)
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert f"{long_role} " in out  # a real separating space survives after the role
+    assert long_role + "Python" not in out  # never glued straight into the stack
+
+
 # =============================================================================
 # resolve_workspace_root() - real user request: remember a chosen
 # workspace root across GUI launches instead of resetting to

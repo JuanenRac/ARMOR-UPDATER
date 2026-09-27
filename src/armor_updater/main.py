@@ -164,7 +164,13 @@ def cmd_status(args: argparse.Namespace) -> int:
     # like "python-qtquick" (14 chars) straight into the LOCAL column with
     # no separating space the moment a stack name grew past the old fixed 12.
     stack_w = max((len(p.stack) for p in entries.values()), default=5) + 2
-    header = f"{'PROJECT':<{name_w}}{'MATURITY':<13}{'ROLE':<10}{'STACK':<{stack_w}}{'LOCAL':<10}{'GITHUB':<10}{'STATE'}"
+    # Also dynamic, for the same real reason: HYDRA-UMC/URTC's own `role`
+    # is a short enum ("tool", "service", ...), but A.R.M.O.R.'s manifest
+    # schema deliberately keeps `role` as free text (a whole sentence in
+    # several real repos) - a fixed `<10` ran straight into STACK with no
+    # separating space at all for every A.R.M.O.R. project.
+    role_w = max((len(p.role) for p in entries.values()), default=4) + 2
+    header = f"{'PROJECT':<{name_w}}{'MATURITY':<13}{'ROLE':<{role_w}}{'STACK':<{stack_w}}{'LOCAL':<10}{'GITHUB':<10}{'STATE'}"
     print(header)
     print("-" * len(header))
 
@@ -177,7 +183,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         if state == "OUTDATED":
             outdated += 1
         print(
-            f"{ls.entry.name:<{name_w}}{ls.entry.maturity:<13}{ls.entry.role:<10}"
+            f"{ls.entry.name:<{name_w}}{ls.entry.maturity:<13}{ls.entry.role:<{role_w}}"
             f"{ls.entry.stack:<{stack_w}}{local_v:<10}{remote_v:<10}{state}"
         )
 
