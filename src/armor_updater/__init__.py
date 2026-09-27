@@ -8,4 +8,4 @@ build, kept here (rather than reading it back out of installed package
 metadata) so this module has a version to report even before
 `pip install -e .` has ever run against a bare checkout.
 """
-__version__ = "0.0.1"
+__version__ = "0.0.2"

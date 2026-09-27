@@ -101,10 +101,10 @@ def cmd_status(args: argparse.Namespace) -> int:
             for error in remote_discovery.errors:
                 print(f"WARNING: {error}", file=sys.stderr)
         except MissingTokenError as exc:
-            # Every A.R.M.O.R. repository is private: there is no
-            # unauthenticated fallback at all (not even a single raw
-            # manifest read), unlike a public ecosystem's 60/hour path.
-            # Report local-only state instead of crashing.
+            # Every A.R.M.O.R. repository is public, so discover_remote_projects()
+            # never raises this by default - it only fires for a private fork
+            # that opted into requiring a token. Report local-only state
+            # instead of crashing either way.
             print(f"WARNING: {exc}", file=sys.stderr)
         except RuntimeError as exc:
             # A real, transient GitHub failure (rate limit, network) with a
