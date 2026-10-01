@@ -14,7 +14,7 @@
   <a href="README_jpn.md">🇯🇵 日本語</a>
 </p>
 
-### Rileva, installa e aggiorna ogni repository A.R.M.O.R. sulla macchina su cui viene eseguito (un programma Python senza dipendenze obbligatorie, costruito da zero per l'ecosistema pubblico di A.R.M.O.R.)
+### Rileva, installa e aggiorna ogni repository A.R.M.O.R. sulla macchina su cui viene eseguito (un programma Python senza dipendenze obbligatorie, costruito da zero per un ecosistema privato)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
@@ -26,13 +26,13 @@
 
 ---
 
-**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (103 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha ancora mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine.
+**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (103 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine, perché ognuno di essi è privato e ciò richiede un vero GITHUB_TOKEN che questo programma non ha ancora ricevuto.
 
 ---
 
 ## 🎯 Panoramica
 
-* **Scoperta, senza elenco fisso:** una cartella locale entra a far parte dell'ecosistema non appena porta un `armor.project.json` valido che dichiara `ecosystem: "A.R.M.O.R."`; da remoto, ogni repository dell'account GitHub viene controllato allo stesso modo senza bisogno di alcun token - ogni repository A.R.M.O.R. è pubblico, quindi un `GITHUB_TOKEN` opzionale serve solo ad alzare il limite di 60 richieste all'ora non autenticate.
+* **Scoperta, senza elenco fisso:** una cartella locale entra a far parte dell'ecosistema non appena porta un `armor.project.json` valido che dichiara `ecosystem: "A.R.M.O.R."`; da remoto, ogni repository che un `GITHUB_TOKEN` può vedere su GitHub viene controllato allo stesso modo - ogni repository A.R.M.O.R. è privato, quindi quel token è sempre obbligatorio, senza il ripiego di 60 richieste all'ora di un ecosistema pubblico.
 * **Installare e aggiornare, mai sul posto:** un aggiornamento viene prima costruito e verificato in un clone di staging indipendente, e viene promosso - due rinomine di cartella, l'installazione precedente conservata come backup - solo quando quella build ha davvero successo; una modifica locale realmente non committata viene rifiutata subito, mai scartata in silenzio.
 * **Prove:** ogni tentativo, riuscito o no, aggiunge una riga a un registro locale con il progetto, la versione e il commit prima e dopo, e il motivo di un fallimento.
 * **Una CLI e un'interfaccia desktop opzionale:** `armor-updater status`/`install`/`update`, e un'interfaccia Qt Quick (`pip install ".[gui]"`) nelle sette lingue dell'ecosistema.
@@ -41,7 +41,7 @@
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, no token required), install (atomic staging-clone
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, GITHUB_TOKEN required), install (atomic staging-clone
 │                       update), evidence, main (CLI), settings, version_parse, i18n, gui/qt_gui/qml (optional Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), bump_version.py
 ├── tests/              9 test modules
@@ -53,7 +53,7 @@ ARMOR-UPDATER/
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
 python -m pytest tests -q                              # 103 tests
-armor-updater status                                    # local + GitHub state of every repository (no token needed)
+armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
 ```
@@ -70,6 +70,7 @@ Vedi `CONTRIBUTING.md` per come un repository entra a far parte dell'ecosistema 
 * **[ARMOR-RADAR](https://github.com/JuanenRac/ARMOR-RADAR)** - Firmware del nodo di campo per ESP32-S3 con tre radar e un proprio pannello web
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protocolli di inverter e batterie solari e messaggi di un nodo gateway
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Nodo elettrico: contatori, il messaggio delle letture della rete e le regole di manovra
+* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Pannello touch: lo stato del sistema su uno schermo a parete, attivare e riconoscere gli allarmi, e la casa dell'assistente vocale
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - La rete locale: i suoi dispositivi, internet e ciò che cambia
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Coordinatore centrale: telemetria, allarmi, dispositivi, letture solari e telecamere
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Console web: telecamere, radar, allarmi, energia solare e progettista del sito 2D/3D

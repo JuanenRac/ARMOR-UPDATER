@@ -14,7 +14,7 @@
   🇯🇵 <b>日本語</b>
 </p>
 
-### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、最初から A.R.M.O.R. の公開エコシステム向けに作られたもの)
+### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、最初から非公開のエコシステム向けに作られたもの)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
@@ -26,13 +26,13 @@
 
 ---
 
-**正直さのチェック - 今日動いているもの:** **成熟度:骨組み。** マニフェスト発見、バージョン比較、検証済みでのみ確定するインストール/更新、証跡ログは、A.R.M.O.R. 自身のマニフェスト形式に合わせてテスト済み(103 件のテスト)だが、実際の A.R.M.O.R. リポジトリを最初から最後までインストールまたは更新したことはまだ一度もない。
+**正直さのチェック - 今日動いているもの:** **成熟度:骨組み。** マニフェスト発見、バージョン比較、検証済みでのみ確定するインストール/更新、証跡ログは、A.R.M.O.R. 自身のマニフェスト形式に合わせてテスト済み(103 件のテスト)だが、実際の A.R.M.O.R. リポジトリを最初から最後までインストールまたは更新したことは一度もない。すべてのリポジトリが非公開であり、そのためにはこのプログラムがまだ与えられていない本物の GITHUB_TOKEN が必要だからである。
 
 ---
 
 ## 🎯 概要
 
-* **固定リストのない発見:** ローカルのフォルダは `ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持てばその時点でエコシステムに加わる。リモートでは GitHub アカウント配下のすべてのリポジトリをトークンなしで同じ方法で確認する — すべての A.R.M.O.R. リポジトリは公開なので、任意の `GITHUB_TOKEN` は 1 時間 60 リクエストという未認証の上限を引き上げるだけである。
+* **固定リストのない発見:** ローカルのフォルダは `ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持てばその時点でエコシステムに加わる。リモートでは `GITHUB_TOKEN` が GitHub 上で見られるすべてのリポジトリを同じ方法で確認する — すべての A.R.M.O.R. リポジトリは非公開なので、このトークンは常に必須であり、公開エコシステムのような 1 時間 60 リクエストという代替手段は存在しない。
 * **その場では行わないインストールと更新:** 更新はまず独立したステージング用クローンで構築・検証され、そのビルドが実際に成功したときにのみ昇格される — 2 回のディレクトリ名変更で、以前のインストールはバックアップとして残される。本当にコミットされていないローカルの変更は即座に拒否され、黙って捨てられることはない。
 * **証跡:** 成功・失敗を問わず、すべての試行はプロジェクト名、前後のバージョンとコミット、失敗の理由をローカルのログに一行追加する。
 * **CLI と任意のデスクトップシェル:** `armor-updater status`/`install`/`update`、およびエコシステムの 7 言語に対応した Qt Quick インターフェース(`pip install ".[gui]"`)。
@@ -41,7 +41,7 @@
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, no token required), install (atomic staging-clone
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, GITHUB_TOKEN required), install (atomic staging-clone
 │                       update), evidence, main (CLI), settings, version_parse, i18n, gui/qt_gui/qml (optional Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), bump_version.py
 ├── tests/              9 test modules
@@ -53,7 +53,7 @@ ARMOR-UPDATER/
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
 python -m pytest tests -q                              # 103 tests
-armor-updater status                                    # local + GitHub state of every repository (no token needed)
+armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
 ```
@@ -70,6 +70,7 @@ See `docs/CLI_REFERENCE.md`.
 * **[ARMOR-RADAR](https://github.com/JuanenRac/ARMOR-RADAR)** - ESP32-S3 用フィールドノードのファームウェア。レーダー 3 基と独自の Web パネル付き
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太陽光インバーターとバッテリーのプロトコル、およびゲートウェイノードのメッセージ
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 電気ノード：電力量計、電力網の計測メッセージ、開閉のルール
+* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - タッチパネル：壁面ディスプレイでのシステム状態表示、警戒・確認操作、音声アシスタントの拠点
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - ローカルネットワーク：機器、インターネット、そして変化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央コーディネーター：テレメトリ、アラーム、デバイス、太陽光の測定値、カメラ
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web コンソール：カメラ、レーダー、アラーム、太陽光発電、2D/3D サイト設計
