@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "A.R.M.O.R.",
   "name": "ARMOR-UPDATER",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "role": "Detects, installs and updates the A.R.M.O.R. ecosystem's repositories on the machine it runs on",
   "stack": "Python 3.10+ (standard library only; PySide6 optional for the desktop shell)",
   "technologies": [
@@ -15,7 +15,7 @@
   "maturity": "functional",
   "family": "Ecosystem Operations",
   "parent": "ARMOR-COMMON",
-  "native_version": "0.0.4",
+  "native_version": "0.0.5",
   "build": "python -m pytest tests -q",
   "notes": "Manifest discovery, version comparison, and an atomic-by-verification install/update (a build is verified in an isolated staging clone before being promoted, never in place). Every A.R.M.O.R. repository is public, so remote discovery and manifest fetches work with no GITHUB_TOKEN at all (an optional token just raises the 60/hour unauthenticated ceiling), and the manifest reader matches A.R.M.O.R.'s own armor.project.json shape (free-text role/deployment_target, a flat native_version string). Run for real, end to end, against GitHub in an isolated workspace: a clean install and a later update of a real repository (with its own real sibling dependency also installed) both cloned, built, tested and promoted correctly, with the previous checkout kept as an atomic backup."
 }
