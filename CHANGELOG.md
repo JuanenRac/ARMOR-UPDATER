@@ -5,6 +5,12 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.0.5] - The logo was never shown
+
+- **Real bug, reported by the user:** the header of the window and the About window pointed at `images/ARMOR_UPDATER_ICON.svg`, a file that does not exist (the project's icon is `ARMOR_ICON.svg`), so the logo at the top left stayed empty. They now point at the real file.
+- **Window and taskbar icon:** an `.ico` with seven sizes (`images/ARMOR_ICON.ico`, made from the SVG) is now shipped, the window is given its icon itself, and on Windows the process gets its own identity so the taskbar shows it and not the one of Python.
+
+
 ## [0.0.4] - The CLI status table glued ROLE straight into STACK
 
 - **Real bug, found while checking the previous fix for real via ELECTRO-HOBBY-3D-UPDATER's own `status --ecosystem all`:** the plain-text `--cli status` table padded ROLE to a fixed 10 characters - correct for HYDRA-UMC/URTC's short role enum (`tool`, `service`, ...), but A.R.M.O.R.'s manifest schema deliberately keeps `role` as free text, several real repos declaring a whole sentence. A fixed pad does nothing once the text is already longer than it, so every A.R.M.O.R. row ran ROLE straight into STACK with no separator at all (`Android operator clientKotlin / Jetpack Compose`). `role_w` is now computed the same way `stack_w` already was (that column had the identical bug fixed once before, for the same reason). New regression test in `tests/test_main.py` locks a real, long role's own separating space in place.

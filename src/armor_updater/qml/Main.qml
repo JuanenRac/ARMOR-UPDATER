@@ -297,7 +297,7 @@ ApplicationWindow {
                     color: "#0e3045"; border.width: 1; border.color: "#2d7695"
                     VectorImage {
                         anchors.fill: parent; anchors.margins: 10
-                        source: "../../../images/ARMOR_UPDATER_ICON.svg"
+                        source: "../../../images/ARMOR_ICON.svg"
                         preferredRendererType: VectorImage.CurveRenderer
                         animations.loops: Animation.Infinite
                         animations.paused: false
@@ -387,7 +387,7 @@ ApplicationWindow {
                 VectorImage {
                     anchors.fill: parent
                     anchors.margins: 5
-                    source: "../../../images/ARMOR_UPDATER_ICON.svg"
+                    source: "../../../images/ARMOR_ICON.svg"
                     preferredRendererType: VectorImage.CurveRenderer
                     animations.loops: Animation.Infinite
                     animations.paused: false
