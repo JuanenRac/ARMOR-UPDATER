@@ -20,13 +20,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-103-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** **成熟度:脚手架。** 清单发现、版本比对、以验证为准的原子安装/更新以及证据日志,针对 A.R.M.O.R. 自己的清单格式做了测试(103 个测试);它从未真正端到端地安装或更新过任何一个 A.R.M.O.R. 仓库,因为每一个仓库都是私有的,这需要一个真实的 GITHUB_TOKEN,而这个程序目前还没有拿到过。
+**诚实性检查 - 今天真正能运行的部分:** **成熟度:脚手架。** 清单发现、版本比对、以验证为准的原子安装/更新以及证据日志,针对 A.R.M.O.R. 自己的清单格式做了测试(109 个测试);它从未真正端到端地安装或更新过任何一个 A.R.M.O.R. 仓库,因为每一个仓库都是私有的,这需要一个真实的 GITHUB_TOKEN,而这个程序目前还没有拿到过。
 
 ---
 
@@ -52,7 +52,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 103 tests
+python -m pytest tests -q                              # 109 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update

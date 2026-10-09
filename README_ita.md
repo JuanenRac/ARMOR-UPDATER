@@ -20,13 +20,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-103-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (103 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine, perché ognuno di essi è privato e ciò richiede un vero GITHUB_TOKEN che questo programma non ha ancora ricevuto.
+**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (109 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine, perché ognuno di essi è privato e ciò richiede un vero GITHUB_TOKEN che questo programma non ha ancora ricevuto.
 
 ---
 
@@ -52,7 +52,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 103 tests
+python -m pytest tests -q                              # 109 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
