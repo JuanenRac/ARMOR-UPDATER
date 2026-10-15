@@ -5,7 +5,7 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
-## [0.0.8] - Audit round two: signed updates are verified
+## [0.0.8] - Signed updates are verified
 
 - An update is verified against its signature before it is installed, and read-only files left by git in the staging folder no longer stop a clean-up on Windows.
 - Tests for the signature check.
