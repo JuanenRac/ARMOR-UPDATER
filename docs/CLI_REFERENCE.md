@@ -184,3 +184,10 @@ On Windows, `run-gui.vbs` is the console-free double-click launcher; bare
 explicit Install/Update actions, real in-window checkpoints and a language
 selector (7 languages; the CLI itself stays English-only, since it's
 meant to be scripted/piped).
+
+## An update that survives a crash
+
+Promoting an update takes two renames (the old checkout is moved aside as `<name>.backup`, then the new one takes its place). Without anything else, a crash or a power cut exactly between them is
+repaired the next time the tool runs, by the same process that notices the gap. For an installation that matters, install the optional durable journal (the `armor_sdk` package of the ecosystem's SDK, which this tool
+uses when it finds it, with no setting to change): it writes down each phase of the promotion in a small file in the workspace, so that the next run finishes or undoes an interrupted promotion even after the whole process
+died. Without the journal, an update is still correct as long as the process lives; with it, it is also correct after a crash.
