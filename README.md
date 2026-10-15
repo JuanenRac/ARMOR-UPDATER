@@ -14,25 +14,26 @@
   <a href="README_jpn.md">🇯🇵 日本語</a>
 </p>
 
-### Detects, installs and updates every A.R.M.O.R. repository on the machine it runs on (a Python program with no required dependencies, built for a private ecosystem from the start)
+### Detects, installs and updates every A.R.M.O.R. repository on the machine it runs on (a Python program with no required dependencies, for a public ecosystem)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-115-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what runs today:** **Maturity: scaffolding.** The manifest discovery, version comparison, atomic-by-verification install/update and evidence log are tested (109 tests) against A.R.M.O.R.'s own manifest shape; it has never installed or updated a real A.R.M.O.R. repository end to end, because every one of them is private and that needs a real GITHUB_TOKEN this program has not yet been given.
+**Honesty check - what runs today:** **Maturity: scaffolding.** The manifest discovery, version comparison, atomic-by-verification install/update and evidence log are tested (115 tests) against A.R.M.O.R.'s own manifest shape; it has never installed or updated a real A.R.M.O.R. repository end to end, because it has not yet been run on the central machine (the repositories are public and need no token).
 
 ---
 
 ## 🎯 Overview
 
-* **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every repository a `GITHUB_TOKEN` can see on GitHub is checked the same way - every A.R.M.O.R. repository is private, so that token is required throughout, with no 60-requests-an-hour fallback a public ecosystem could fall back to.
+* **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every repository of the account is checked the same way - the repositories are public, so no token is needed; an optional `GITHUB_TOKEN` only raises the 60-requests-an-hour ceiling.
+* **Only signed code, if you ask for it:** an optional policy (`require_signed_commits` in the settings, or `ARMOR_UPDATER_REQUIRE_SIGNED=1`) refuses a candidate whose commit is not signed by a trusted key (`git verify-commit`) before its manifest is read or anything is built; a refused candidate leaves the installed checkout untouched.
 * **Install and update, never in place:** an update is built and verified in an independent staging clone first, and only promoted - two directory renames, the previous install kept as a backup - once that build actually succeeds; a genuinely uncommitted local edit is refused outright, never silently discarded.
 * **Evidence:** every attempt, successful or not, appends one line to a local log with the project, the version and commit before and after, and the reason for a failure.
 * **A CLI and an optional desktop shell:** `armor-updater status`/`install`/`update`, and a Qt Quick interface (`pip install ".[gui]"`) in the ecosystem's seven languages.
@@ -52,7 +53,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 109 tests
+python -m pytest tests -q                              # 115 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update

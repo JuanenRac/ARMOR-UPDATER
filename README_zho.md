@@ -14,25 +14,26 @@
   <a href="README_jpn.md">🇯🇵 日本語</a>
 </p>
 
-### 在运行它的机器上发现、安装并更新每一个 A.R.M.O.R. 仓库(一个不需要依赖的 Python 程序,从一开始就为私有生态系统而设计)
+### 在运行它的机器上发现、安装并更新每一个 A.R.M.O.R. 仓库(一个不需要依赖的 Python 程序,面向公开的生态系统)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-115-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** **成熟度:脚手架。** 清单发现、版本比对、以验证为准的原子安装/更新以及证据日志,针对 A.R.M.O.R. 自己的清单格式做了测试(109 个测试);它从未真正端到端地安装或更新过任何一个 A.R.M.O.R. 仓库,因为每一个仓库都是私有的,这需要一个真实的 GITHUB_TOKEN,而这个程序目前还没有拿到过。
+**诚实性检查 - 今天真正能运行的部分:** **成熟度:脚手架。** 清单发现、版本比对、以验证为准的原子安装/更新以及证据日志,针对 A.R.M.O.R. 自己的清单格式做了测试(115 个测试);它从未真正端到端地安装或更新过任何一个 A.R.M.O.R. 仓库,因为它还没有在中央机器上运行过(这些仓库是公开的,不需要令牌)。
 
 ---
 
 ## 🎯 概述
 
-* **发现,没有固定列表:** 本地文件夹只要携带一个有效的、声明 `ecosystem: "A.R.M.O.R."` 的 `armor.project.json` 就会加入;远程方面,`GITHUB_TOKEN` 能在 GitHub 上看到的每一个仓库都以同样方式核实——每个 A.R.M.O.R. 仓库都是私有的,所以这个令牌始终是必需的,没有公开生态系统那种每小时 60 次请求的退路。
+* **发现,没有固定列表:** 本地文件夹只要携带一个有效的、声明 `ecosystem: "A.R.M.O.R."` 的 `armor.project.json` 就会加入;远程方面,账户中的每一个仓库都以同样方式核实——这些仓库是公开的,所以不需要令牌;可选的 `GITHUB_TOKEN` 只会提高每小时 60 次请求的上限。
+* **按需只接受已签名的代码:** 可选策略(设置中的 `require_signed_commits`,或 `ARMOR_UPDATER_REQUIRE_SIGNED=1`)会在读取清单、构建任何东西之前,拒绝提交未被可信密钥签名的候选版本(`git verify-commit`);被拒绝的候选版本不会改动已安装的副本。
 * **安装与更新,从不就地进行:** 更新先在一个独立的暂存克隆中构建并验证,只有在构建真正成功后才会被提升——两次目录改名,原来的安装保留为备份;真正未提交的本地改动会被直接拒绝,绝不会被悄悄丢弃。
 * **证据:** 每一次尝试,无论成功与否,都会在本地日志里追加一行,记录项目、前后的版本与提交,以及失败的原因。
 * **一个命令行工具和一个可选的桌面界面:** `armor-updater status`/`install`/`update`,以及一个 Qt Quick 界面(`pip install ".[gui]"`),覆盖生态系统的七种语言。
@@ -52,7 +53,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 109 tests
+python -m pytest tests -q                              # 115 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update

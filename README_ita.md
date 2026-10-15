@@ -14,25 +14,26 @@
   <a href="README_jpn.md">🇯🇵 日本語</a>
 </p>
 
-### Rileva, installa e aggiorna ogni repository A.R.M.O.R. sulla macchina su cui viene eseguito (un programma Python senza dipendenze obbligatorie, costruito da zero per un ecosistema privato)
+### Rileva, installa e aggiorna ogni repository A.R.M.O.R. sulla macchina su cui viene eseguito (un programma Python senza dipendenze obbligatorie, per un ecosistema pubblico)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-115-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (109 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine, perché ognuno di essi è privato e ciò richiede un vero GITHUB_TOKEN che questo programma non ha ancora ricevuto.
+**Controllo di onestà - cosa funziona oggi:** **Maturità: impalcatura.** La scoperta tramite manifesto, il confronto delle versioni, l'installazione/aggiornamento atomico-per-verifica e il registro delle prove sono testati (115 test) sulla forma reale del manifesto di A.R.M.O.R.; non ha mai installato né aggiornato un vero repository A.R.M.O.R. dall'inizio alla fine, perché non è ancora stato eseguito sulla macchina centrale (i repository sono pubblici e non richiedono alcun token).
 
 ---
 
 ## 🎯 Panoramica
 
-* **Scoperta, senza elenco fisso:** una cartella locale entra a far parte dell'ecosistema non appena porta un `armor.project.json` valido che dichiara `ecosystem: "A.R.M.O.R."`; da remoto, ogni repository che un `GITHUB_TOKEN` può vedere su GitHub viene controllato allo stesso modo - ogni repository A.R.M.O.R. è privato, quindi quel token è sempre obbligatorio, senza il ripiego di 60 richieste all'ora di un ecosistema pubblico.
+* **Scoperta, senza elenco fisso:** una cartella locale entra a far parte dell'ecosistema non appena porta un `armor.project.json` valido che dichiara `ecosystem: "A.R.M.O.R."`; da remoto, ogni repository dell'account viene controllato allo stesso modo - i repository sono pubblici, quindi non serve alcun token; un `GITHUB_TOKEN` facoltativo alza soltanto il limite di 60 richieste all'ora.
+* **Solo codice firmato, se lo chiedi:** una politica facoltativa (`require_signed_commits` nelle impostazioni, o `ARMOR_UPDATER_REQUIRE_SIGNED=1`) rifiuta un candidato il cui commit non è firmato da una chiave fidata (`git verify-commit`) prima di leggere il suo manifesto o costruire qualcosa; un candidato rifiutato lascia intatta la copia installata.
 * **Installare e aggiornare, mai sul posto:** un aggiornamento viene prima costruito e verificato in un clone di staging indipendente, e viene promosso - due rinomine di cartella, l'installazione precedente conservata come backup - solo quando quella build ha davvero successo; una modifica locale realmente non committata viene rifiutata subito, mai scartata in silenzio.
 * **Prove:** ogni tentativo, riuscito o no, aggiunge una riga a un registro locale con il progetto, la versione e il commit prima e dopo, e il motivo di un fallimento.
 * **Una CLI e un'interfaccia desktop opzionale:** `armor-updater status`/`install`/`update`, e un'interfaccia Qt Quick (`pip install ".[gui]"`) nelle sette lingue dell'ecosistema.
@@ -52,7 +53,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 109 tests
+python -m pytest tests -q                              # 115 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update

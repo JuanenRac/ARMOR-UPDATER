@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import os
 import time
 from shutil import copy2, copytree, rmtree
@@ -32,6 +33,7 @@ from uuid import uuid4
 
 from .evidence import installed_state, record_attempt
 from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
+from .signature import current_policy, verify_revision
 from .registry import ProjectEntry, github_repo_url
 
 # P01/the durable version of this module's own in-process
@@ -145,6 +147,15 @@ def _run(
     return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
 
 
+def _make_writable_and_retry(function, target, _excinfo) -> None:  # noqa: ANN001 - the signature of shutil's error callback
+    """git leaves its object files read-only, which Windows refuses to delete: make the file writable and try again."""
+    try:
+        os.chmod(target, 0o700)
+        function(target)
+    except OSError:
+        pass
+
+
 def _rmtree_best_effort(path: Path) -> None:
     """Removes a staging directory this module created and no longer
     needs, tolerating a Windows-specific rough edge: a child process (git,
@@ -157,8 +168,13 @@ def _rmtree_best_effort(path: Path) -> None:
     giving up on the very first attempt."""
     for attempt in range(5):
         try:
-            rmtree(path)
-            return
+            if sys.version_info >= (3, 12):
+                rmtree(path, onexc=_make_writable_and_retry)
+            else:
+                rmtree(path, onerror=_make_writable_and_retry)
+            if not path.exists():
+                return
+            raise PermissionError(str(path))
         except FileNotFoundError:
             return
         except OSError:
@@ -396,16 +412,20 @@ def clone_or_pull(
             capture_output=progress is not None,
         )
         if result.returncode != 0:
-            rmtree(staging_path, ignore_errors=True)
+            _rmtree_best_effort(staging_path)
             return InstallResult(False, f"git clone failed (exit {result.returncode})", _command_output(result))
+        refused = verify_revision(staging_path, "HEAD", current_policy())
+        if refused:
+            _rmtree_best_effort(staging_path)
+            return InstallResult(False, f"cloned candidate refused by the signature policy: {refused}")
         try:
             _checkpoint(progress, "validation", "Validating the fetched repository manifest before deployment.")
             _manifest_from_revision(staging_path, "HEAD", entry)
         except ManifestValidationError as exc:
-            rmtree(staging_path, ignore_errors=True)
+            _rmtree_best_effort(staging_path)
             return InstallResult(False, f"cloned checkout failed manifest validation: {exc}")
         if path.exists():
-            rmtree(staging_path, ignore_errors=True)
+            _rmtree_best_effort(staging_path)
             return InstallResult(False, f"{path} appeared while cloning - not replacing it")
         staging_path.replace(path)
         _checkpoint(progress, "validation", "Manifest accepted; staged checkout promoted without replacing other files.")
@@ -454,6 +474,9 @@ def clone_or_pull(
             f"git fetch failed (exit {result.returncode}) - remote unavailable or authentication failed?",
             _command_output(result),
         )
+    refused = verify_revision(path, "FETCH_HEAD", current_policy())
+    if refused:
+        return InstallResult(False, f"remote candidate refused by the signature policy: {refused}")
     try:
         _checkpoint(progress, "validation", "Checking the candidate manifest and anti-rollback rule.")
         candidate = _manifest_from_revision(path, "FETCH_HEAD", entry)

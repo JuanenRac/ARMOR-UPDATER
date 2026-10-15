@@ -14,25 +14,26 @@
   🇯🇵 <b>日本語</b>
 </p>
 
-### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、最初から非公開のエコシステム向けに作られたもの)
+### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、公開されたエコシステム向け)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-109-00E5FF.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-115-00E5FF.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** **成熟度:骨組み。** マニフェスト発見、バージョン比較、検証済みでのみ確定するインストール/更新、証跡ログは、A.R.M.O.R. 自身のマニフェスト形式に合わせてテスト済み(109 件のテスト)だが、実際の A.R.M.O.R. リポジトリを最初から最後までインストールまたは更新したことは一度もない。すべてのリポジトリが非公開であり、そのためにはこのプログラムがまだ与えられていない本物の GITHUB_TOKEN が必要だからである。
+**正直さのチェック - 今日動いているもの:** **成熟度:骨組み。** マニフェスト発見、バージョン比較、検証済みでのみ確定するインストール/更新、証跡ログは、A.R.M.O.R. 自身のマニフェスト形式に合わせてテスト済み(115 件のテスト)だが、実際の A.R.M.O.R. リポジトリを最初から最後までインストールまたは更新したことは一度もない。中央のマシン上ではまだ実行していないからである(リポジトリは公開されており、トークンは不要)。
 
 ---
 
 ## 🎯 概要
 
-* **固定リストのない発見:** ローカルのフォルダは `ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持てばその時点でエコシステムに加わる。リモートでは `GITHUB_TOKEN` が GitHub 上で見られるすべてのリポジトリを同じ方法で確認する — すべての A.R.M.O.R. リポジトリは非公開なので、このトークンは常に必須であり、公開エコシステムのような 1 時間 60 リクエストという代替手段は存在しない。
+* **固定リストのない発見:** ローカルのフォルダは `ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持てばその時点でエコシステムに加わる。リモートではアカウントのすべてのリポジトリを同じ方法で確認する — リポジトリは公開されているためトークンは不要で、任意の `GITHUB_TOKEN` は 1 時間 60 リクエストという上限を引き上げるだけである。
+* **求めれば署名済みコードのみ:** 任意のポリシー(設定の `require_signed_commits`、または `ARMOR_UPDATER_REQUIRE_SIGNED=1`)により、コミットが信頼できる鍵で署名されていない候補は、マニフェストを読む前、何かをビルドする前に拒否されます(`git verify-commit`)。拒否された候補はインストール済みのコピーに触れません。
 * **その場では行わないインストールと更新:** 更新はまず独立したステージング用クローンで構築・検証され、そのビルドが実際に成功したときにのみ昇格される — 2 回のディレクトリ名変更で、以前のインストールはバックアップとして残される。本当にコミットされていないローカルの変更は即座に拒否され、黙って捨てられることはない。
 * **証跡:** 成功・失敗を問わず、すべての試行はプロジェクト名、前後のバージョンとコミット、失敗の理由をローカルのログに一行追加する。
 * **CLI と任意のデスクトップシェル:** `armor-updater status`/`install`/`update`、およびエコシステムの 7 言語に対応した Qt Quick インターフェース(`pip install ".[gui]"`)。
@@ -52,7 +53,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 109 tests
+python -m pytest tests -q                              # 115 tests
 armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
 armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
