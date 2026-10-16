@@ -37,7 +37,7 @@
 * **Deteção, sem lista fixa:** uma pasta local junta-se no momento em que traz um `armor.project.json` válido que declare `ecosystem: "A.R.M.O.R."`; remotamente, cada repositório que um `GITHUB_TOKEN` veja no GitHub verifica-se da mesma forma - todos os repositórios A.R.M.O.R. são privados, por isso esse token é necessário em todo o lado, sem o recurso de 60 pedidos por hora que um ecossistema público poderia usar.
 * **Instalar e atualizar, nunca no local:** uma atualização constrói-se e verifica-se primeiro num clone de preparação independente, e só se promove - duas mudanças de nome de pasta, ficando a instalação anterior como cópia de segurança - quando essa construção realmente tem êxito; uma edição local realmente por confirmar recusa-se à partida, nunca se descarta em silêncio.
 * **Provas:** cada tentativa, bem-sucedida ou não, acrescenta uma linha a um registo local com o projeto, a versão e o commit antes e depois, e o motivo de uma falha.
-* **Uma CLI e uma consola de ambiente de trabalho opcional:** `armor-updater status`/`install`/`update`, e uma interface Qt Quick (`pip install ".[gui]"`) nos idiomas do ecossistema.
+* **Uma CLI e uma consola de ambiente de trabalho opcional:** `armor-updater status`/`install`/`update`, e uma interface Qt Quick (`pip install ".[gui]"`) nos oito idiomas do ecossistema.
 
 ## 📂 Estrutura do repositório
 

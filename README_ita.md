@@ -36,7 +36,7 @@
 * **Scoperta, senza elenco fisso:** una cartella locale entra a far parte dell'ecosistema non appena porta un `armor.project.json` valido che dichiara `ecosystem: "A.R.M.O.R."`; da remoto, ogni repository che un `GITHUB_TOKEN` può vedere su GitHub viene controllato allo stesso modo - ogni repository A.R.M.O.R. è privato, quindi quel token è sempre obbligatorio, senza il ripiego di 60 richieste all'ora di un ecosistema pubblico.
 * **Installare e aggiornare, mai sul posto:** un aggiornamento viene prima costruito e verificato in un clone di staging indipendente, e viene promosso - due rinomine di cartella, l'installazione precedente conservata come backup - solo quando quella build ha davvero successo; una modifica locale realmente non committata viene rifiutata subito, mai scartata in silenzio.
 * **Prove:** ogni tentativo, riuscito o no, aggiunge una riga a un registro locale con il progetto, la versione e il commit prima e dopo, e il motivo di un fallimento.
-* **Una CLI e un'interfaccia desktop opzionale:** `armor-updater status`/`install`/`update`, e un'interfaccia Qt Quick (`pip install ".[gui]"`) nelle sette lingue dell'ecosistema.
+* **Una CLI e un'interfaccia desktop opzionale:** `armor-updater status`/`install`/`update`, e un'interfaccia Qt Quick (`pip install ".[gui]"`) nelle otto lingue dell'ecosistema.
 
 ## 📂 Struttura del repository
 

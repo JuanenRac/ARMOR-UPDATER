@@ -36,7 +36,7 @@
 * **Erkennung, ohne feste Liste:** ein lokaler Ordner tritt dem Ökosystem bei, sobald er ein gültiges `armor.project.json` mit `ecosystem: "A.R.M.O.R."` trägt; entfernt wird jedes Repository, das ein `GITHUB_TOKEN` auf GitHub sehen kann, genauso geprüft - jedes A.R.M.O.R.-Repository ist privat, daher ist dieses Token überall erforderlich, ohne den 60-Anfragen-pro-Stunde-Rückfall eines öffentlichen Ökosystems.
 * **Installieren und aktualisieren, nie an Ort und Stelle:** eine Aktualisierung wird zuerst in einem unabhängigen Staging-Klon gebaut und verifiziert und erst befördert - zwei Ordnerumbenennungen, die vorherige Installation als Sicherung behalten -, sobald dieser Build tatsächlich gelingt; eine echte, nicht committete lokale Änderung wird von vornherein abgelehnt, nie stillschweigend verworfen.
 * **Nachweis:** jeder Versuch, erfolgreich oder nicht, fügt einer lokalen Protokolldatei eine Zeile mit Projekt, Version und Commit davor und danach sowie dem Grund eines Fehlschlags hinzu.
-* **Eine CLI und eine optionale Desktop-Oberfläche:** `armor-updater status`/`install`/`update`, sowie eine Qt-Quick-Oberfläche (`pip install ".[gui]"`) in den sieben Sprachen des Ökosystems.
+* **Eine CLI und eine optionale Desktop-Oberfläche:** `armor-updater status`/`install`/`update`, sowie eine Qt-Quick-Oberfläche (`pip install ".[gui]"`) in den acht Sprachen des Ökosystems.
 
 ## 📂 Struktur des Repositorys
 

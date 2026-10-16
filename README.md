@@ -36,7 +36,7 @@
 * **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every repository a `GITHUB_TOKEN` can see on GitHub is checked the same way - every A.R.M.O.R. repository is private, so that token is required throughout, with no 60-requests-an-hour fallback a public ecosystem could fall back to.
 * **Install and update, never in place:** an update is built and verified in an independent staging clone first, and only promoted - two directory renames, the previous install kept as a backup - once that build actually succeeds; a genuinely uncommitted local edit is refused outright, never silently discarded.
 * **Evidence:** every attempt, successful or not, appends one line to a local log with the project, the version and commit before and after, and the reason for a failure.
-* **A CLI and an optional desktop shell:** `armor-updater status`/`install`/`update`, and a Qt Quick interface (`pip install ".[gui]"`) in the ecosystem's seven languages.
+* **A CLI and an optional desktop shell:** `armor-updater status`/`install`/`update`, and a Qt Quick interface (`pip install ".[gui]"`) in the ecosystem's eight languages.
 
 ## 📂 Repository Structure
 

@@ -36,7 +36,7 @@
 * **Découverte, sans liste fixe :** un dossier local rejoint l'écosystème dès qu'il porte un `armor.project.json` valide déclarant `ecosystem: "A.R.M.O.R."` ; à distance, chaque dépôt qu'un `GITHUB_TOKEN` peut voir sur GitHub est vérifié de la même façon - chaque dépôt A.R.M.O.R. étant privé, ce jeton est requis partout, sans le repli à 60 requêtes par heure d'un écosystème public.
 * **Installer et mettre à jour, jamais sur place :** une mise à jour est construite et vérifiée d'abord dans un clone de test indépendant, et n'est promue - deux renommages de dossier, l'installation précédente gardée en sauvegarde - qu'une fois cette construction réellement réussie ; une modification locale réellement non validée est refusée d'emblée, jamais silencieusement écartée.
 * **Preuves :** chaque tentative, réussie ou non, ajoute une ligne à un journal local avec le projet, la version et le commit avant et après, et la raison d'un échec.
-* **Une CLI et une interface de bureau optionnelle :** `armor-updater status`/`install`/`update`, et une interface Qt Quick (`pip install ".[gui]"`) dans les sept langues de l'écosystème.
+* **Une CLI et une interface de bureau optionnelle :** `armor-updater status`/`install`/`update`, et une interface Qt Quick (`pip install ".[gui]"`) dans les huit langues de l'écosystème.
 
 ## 📂 Structure du dépôt
 

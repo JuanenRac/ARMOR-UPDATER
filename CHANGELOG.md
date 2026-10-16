@@ -5,6 +5,11 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.1.1] - Portuguese interface
+
+- The interface now speaks Portuguese as well: the eighth language of the family, with the whole table of texts (menus, states, checkpoints, batch actions, About), selectable in the language box of the window.
+- A test keeps the Portuguese table with exactly the same keys as English, and the list of languages equal to the tables.
+
 ## [0.1.0] - Build trees are forgotten after an install
 
 - After an install the updater forgets the temporary build trees so the next run starts clean and the disk does not fill.
