@@ -12,7 +12,7 @@
     "GitHub REST API and raw content"
   ],
   "deployment_target": "Any machine that installs or updates A.R.M.O.R. repositories (a developer PC or the central server)",
-  "maturity": "functional",
+  "maturity": "established",
   "family": "Ecosystem Operations",
   "parent": "ARMOR-COMMON",
   "native_version": "0.1.1",

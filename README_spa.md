@@ -21,15 +21,27 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-103-00E5FF.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
+  <img src="https://img.shields.io/badge/Tests-116-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.1-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Comprobación de honestidad - qué funciona hoy:** **Madurez: andamiaje.** El descubrimiento por manifiesto, la comparación de versiones, la instalación/actualización atómica-por-verificación y el registro de evidencia están probados (103 pruebas) contra la forma real del manifiesto de A.R.M.O.R.; nunca ha instalado ni actualizado un repositorio de A.R.M.O.R. real de principio a fin, porque todos son privados y eso exige un GITHUB_TOKEN real que este programa aún no ha recibido.
+**Comprobación de honestidad - qué funciona hoy:** El descubrimiento por manifiesto, la comparación de versiones, la comprobación de firma, la instalación y actualización atómica por verificación, el registro de evidencias y las tablas de la interfaz en ocho idiomas están probados (116 tests, 4 omitidos sin pantalla), y la interfaz Qt Quick se ha ejecutado en Windows. No se ha ejecutado contra todos los repositorios de la familia de principio a fin, y las instalaciones que hace necesitan `git` y las herramientas de compilación de cada repositorio en la máquina.
 
 ---
+
+## 📋 De un vistazo
+
+| | |
+|---|---|
+| Versión | `0.1.1` |
+| Madurez | Establecido |
+| Tests | 116 (`python -m pytest tests -q`, 4 skipped) |
+| Tecnología | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
+| En hardware real | No aplica: es un programa de escritorio; su interfaz Qt Quick se ha ejecutado en Windows |
 
 ## 🎯 Descripción general
 
@@ -38,25 +50,31 @@
 * **Evidencia:** cada intento, con éxito o no, añade una línea a un registro local con el proyecto, la versión y el commit antes y después, y el motivo de un fallo.
 * **Una CLI y una interfaz de escritorio opcional:** `armor-updater status`/`install`/`update`, y una interfaz Qt Quick (`pip install ".[gui]"`) en los ocho idiomas del ecosistema.
 
+## 🧩 Papel en A.R.M.O.R.
+
+ARMOR-UPDATER es la herramienta de escritorio para quien guarda una copia de la familia en un PC: encuentra los repositorios A.R.M.O.R. de la máquina, los compara con GitHub e instala o actualiza uno a uno, verificando antes de sustituir nada. Es distinta de las actualizaciones que [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) gobierna en la CM5 (esas pasan por [ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)): esta es para la máquina de un desarrollador.
+
 ## 📂 Estructura del repositorio
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, GITHUB_TOKEN required), install (atomic staging-clone
-│                       update), evidence, main (CLI), settings, version_parse, i18n, gui/qt_gui/qml (optional Qt Quick shell)
-├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), bump_version.py
-├── tests/              9 test modules
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (atomic staging-clone update), signature (signed updates), evidence, main (CLI), settings, version_parse,
+│                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
+├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
+├── tests/              13 test modules
 └── docs/               CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ```
 
 ## 🛠️ Entorno de desarrollo
 
+**Requisitos:** Python 3.10+, `git` and the build tools of the repositories you install, optional: PySide6 for the desktop shell
+
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 103 tests
-armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
+python -m pytest tests -q                              # 116 tests (4 skipped without a display)
+armor-updater status                                    # local + GitHub state of every repository
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
-armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
+armor-updater update ARMOR-NETWORK                      # atomic-by-verification update of an installed one
 ```
 
 See `docs/CLI_REFERENCE.md`.
@@ -71,12 +89,14 @@ Ver `CONTRIBUTING.md` para saber cómo se une un repositorio al ecosistema que d
 * **[ARMOR-RADAR](https://github.com/JuanenRac/ARMOR-RADAR)** - Firmware del nodo de campo para ESP32-S3 con tres radares y su propio panel web
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protocolos de inversores y baterías solares y los mensajes de un nodo pasarela
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Nodo eléctrico: contadores, el mensaje de las lecturas de la red y las reglas para maniobrar
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Nodo y central de alarma: zonas, armado, retardos, sirena y PIN, con el servidor o sin él
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Panel táctil: el estado del sistema en una pantalla de pared, armar y reconocer alarmas, y el hogar del asistente de voz
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - La red local: sus dispositivos, internet y lo que cambia
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Coordinador central: telemetría, alarmas, dispositivos, lecturas solares y cámaras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Consola web: cámaras, radar, alarmas, energía solar y el diseñador de sitio 2D/3D
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - Cliente Android del operador con radar 2D/3D en vivo
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - Política de inferencia visual que explica sus decisiones y nunca actúa
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Zonas de cámara, máscaras y reglas de detección para la Jetson Orin NX
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - Intenciones de voz sin conexión con una confirmación imposible de falsificar
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - Cajas, electrónica y la matriz de aceptación en banco
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - Despliegue, el banco de pruebas de la CM5, copias de seguridad y TLS

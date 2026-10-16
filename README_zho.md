@@ -21,15 +21,27 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
-  <img src="https://img.shields.io/badge/Tests-103-00E5FF.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-ff9800.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
+  <img src="https://img.shields.io/badge/Tests-116-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.1-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** **成熟度:脚手架。** 清单发现、版本比对、以验证为准的原子安装/更新以及证据日志,针对 A.R.M.O.R. 自己的清单格式做了测试(103 个测试);它从未真正端到端地安装或更新过任何一个 A.R.M.O.R. 仓库,因为每一个仓库都是私有的,这需要一个真实的 GITHUB_TOKEN,而这个程序目前还没有拿到过。
+**诚实性检查 - 今天真正能运行的部分:** 清单发现、版本比较、签名检查、按验证的原子安装和更新、证据日志以及八种语言的界面表格都经过测试（116 个测试，无显示器时跳过 4 个），Qt Quick 界面已在 Windows 上运行过。它还没有对家族的所有仓库端到端运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
 
 ---
+
+## 📋 速览
+
+| | |
+|---|---|
+| 版本 | `0.1.1` |
+| 成熟度 | 成熟 |
+| 测试 | 116 (`python -m pytest tests -q`, 4 skipped) |
+| 技术栈 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
+| 真实硬件 | 不适用：这是桌面程序；其 Qt Quick 界面已在 Windows 上运行过 |
 
 ## 🎯 概述
 
@@ -38,25 +50,31 @@
 * **证据:** 每一次尝试,无论成功与否,都会在本地日志里追加一行,记录项目、前后的版本与提交,以及失败的原因。
 * **一个命令行工具和一个可选的桌面界面:** `armor-updater status`/`install`/`update`,以及一个 Qt Quick 界面(`pip install ".[gui]"`),覆盖生态系统的八种语言。
 
+## 🧩 在 A.R.M.O.R. 中的角色
+
+ARMOR-UPDATER 是为在 PC 上保存家族副本的人准备的桌面工具：它找出机器上的 A.R.M.O.R. 仓库，与 GitHub 对比，并逐个安装或更新，替换任何东西之前都先验证。它与 [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) 在 CM5 上驱动的更新不同（那些经过 [ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)）：这个是给开发者的机器用的。
+
 ## 📂 仓库结构
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client (remote, GITHUB_TOKEN required), install (atomic staging-clone
-│                       update), evidence, main (CLI), settings, version_parse, i18n, gui/qt_gui/qml (optional Qt Quick shell)
-├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), bump_version.py
-├── tests/              9 test modules
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (atomic staging-clone update), signature (signed updates), evidence, main (CLI), settings, version_parse,
+│                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
+├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
+├── tests/              13 test modules
 └── docs/               CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ```
 
 ## 🛠️ 开发环境
 
+**环境要求:** Python 3.10+, `git` and the build tools of the repositories you install, optional: PySide6 for the desktop shell
+
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 103 tests
-armor-updater status                                    # local + GitHub state of every repository (needs GITHUB_TOKEN)
+python -m pytest tests -q                              # 116 tests (4 skipped without a display)
+armor-updater status                                    # local + GitHub state of every repository
 armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
-armor-updater update ARMOR-NETWORK                      # atomic-by-verification update
+armor-updater update ARMOR-NETWORK                      # atomic-by-verification update of an installed one
 ```
 
 See `docs/CLI_REFERENCE.md`.
@@ -71,12 +89,14 @@ See `docs/CLI_REFERENCE.md`.
 * **[ARMOR-RADAR](https://github.com/JuanenRac/ARMOR-RADAR)** - 适用于 ESP32-S3 的现场节点固件，带三个雷达和自带网页面板
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太阳能逆变器与电池的协议，以及网关节点的消息
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 电气节点：电表、电网读数消息和开关规则
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - 报警节点与报警主机：防区、布防、延时、警笛和 PIN，有无服务器均可
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - 触摸面板：墙面屏幕上的系统状态、布防与确认，以及语音助手的所在
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - 本地网络：其设备、互联网以及变化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央协调器：遥测、报警、设备、太阳能读数和摄像头
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - 网页控制台：摄像头、雷达、报警、太阳能和 2D/3D 场地设计器
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - 带实时 2D/3D 雷达的 Android 操作员客户端
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 会解释决策且从不执行动作的视觉推理策略
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 上的摄像头区域、遮罩与检测规则
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 带无法伪造确认的离线语音意图
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - 外壳、电子器件和台架验收矩阵
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - 部署、CM5 测试台、备份与 TLS

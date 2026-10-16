@@ -182,7 +182,7 @@ Running `armor-updater` with no arguments opens the QML desktop client.
 On Windows, `run-gui.vbs` is the console-free double-click launcher; bare
 `run.bat` delegates to it. The client provides a filterable project table,
 explicit Install/Update actions, real in-window checkpoints and a language
-selector (7 languages; the CLI itself stays English-only, since it's
+selector (8 languages; the CLI itself stays English-only, since it's
 meant to be scripted/piped).
 
 ## An update that survives a crash
