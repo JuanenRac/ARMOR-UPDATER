@@ -615,11 +615,9 @@ def clone_or_pull(
     # leave `path` genuinely missing) - vastly narrower than before,
     # where the unsafe window spanned the entire build.
     #
-    # (P1; honest,
-    # bounded mitigation, not the full transactional journal/rollback
-    # the finding's own acceptance criteria describes - that needs
-    # designing once, shared with a sibling project's own
-    # canary_deploy.py, as real, separate future work): two real gaps
+    # (An honest, bounded mitigation, not a full transactional journal
+    # with rollback - that needs designing once, shared with a sibling
+    # project's own canary_deploy.py, as real, separate future work): two real gaps
     # existed here. First, `backup_path` reused the SAME fixed name
     # every promotion (`rmtree(backup_path, ...)` right before renaming
     # into it) - a second install after a first one already failed
@@ -773,7 +771,7 @@ def install_or_update(
     protect, so it still gets its separate run_build_script call here,
     exactly as before.
 
-    P01: heals any promotion a PREVIOUS run of this updater started and
+    It heals any promotion a PREVIOUS run of this updater started and
     never finished (a real process crash exactly between clone_or_pull's
     own 2 promotion renames) before this run's own work begins - see
     recover_interrupted_promotions()'s own doc comment. A genuine no-op

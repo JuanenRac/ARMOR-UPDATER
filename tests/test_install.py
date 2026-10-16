@@ -16,7 +16,7 @@ from armor_updater import install
 from armor_updater.install import clone_or_pull, find_build_test_script, run_build_script
 from armor_updater.registry import ProjectEntry
 
-# P01: the sibling ARMOR-COMMON checkout's own src/ tree, if this repo
+# The sibling ARMOR-COMMON checkout's own src/ tree, if this repo
 # happens to be checked out alongside it (the real, normal layout for
 # this ecosystem's own workspace - see registry.py's own real project
 # list). Not a hard dependency of this test file itself: tests exercising
@@ -581,7 +581,7 @@ def test_refuses_a_remote_manifest_version_lower_than_the_installed_version(tmp_
 
 
 # ---------------------------------------------------------------------------
-# P01: durable promotion journal (armor-common's promotion_journal module,
+# The durable promotion journal (armor-common's promotion_journal module,
 # an optional dependency - see install.py's own header comment).
 # ---------------------------------------------------------------------------
 
