@@ -11,7 +11,8 @@
   <a href="README_ita.md">🇮🇹 Italiano</a> |
   <a href="README_deu.md">🇩🇪 Deutsch</a> |
   <a href="README_zho.md">🇨🇳 简体中文</a> |
-  🇯🇵 <b>日本語</b>
+  🇯🇵 <b>日本語</b> |
+  <a href="README_por.md">🇵🇹 Português</a>
 </p>
 
 ### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、最初から非公開のエコシステム向けに作られたもの)
