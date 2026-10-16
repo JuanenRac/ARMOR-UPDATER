@@ -111,6 +111,15 @@ def recover_interrupted_promotions(workspace_root: Path) -> list[str]:
 # one actually run. Covers every real name used across the 44 projects
 # (see this module's own header comment) without needing a per-project
 # override in registry.py for something this mechanical.
+def forget_build_trees(root: Path) -> None:
+    """Remove the CMake build directories the candidate's build-test left in the staging clone. CMake writes absolute paths into its cache, and the clone is about to be renamed to
+    its real place: a build-test run by hand there would stop with "CMakeCache.txt directory is different". They are only build output (and ignored by git), so the next build makes them again."""
+    for name in ("build", "build-test", ".build"):
+        tree = root / name
+        if (tree / "CMakeCache.txt").is_file():
+            rmtree(tree, ignore_errors=True)
+
+
 BUILD_TEST_SCRIPT_POSIX = "build-test.sh"
 BUILD_TEST_SCRIPT_WINDOWS = "build-test.bat"
 
@@ -637,6 +646,7 @@ def clone_or_pull(
     journal = PromotionJournal(workspace_root / _JOURNAL_FILENAME) if _HAS_DURABLE_JOURNAL else None
     promotion_id = journal.begin(entry.name, path, staging_path, backup_path, health_check_url=health_check_url).promotion_id if journal else None
     _checkpoint(progress, "validation", "Promoting the verified candidate; the previous installation is kept as a backup.")
+    forget_build_trees(staging_path)
     path.rename(backup_path)
     if journal:
         journal.advance(promotion_id, PromotionPhase.BACKED_UP)

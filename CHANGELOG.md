@@ -5,6 +5,10 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.1.0] - Build trees are forgotten after an install
+
+- After an install the updater forgets the temporary build trees so the next run starts clean and the disk does not fill.
+
 ## [0.0.9] - The copy button of the log is an icon
 
 - The button that copies the activity log is now a small icon (two sheets), with the old words as its tooltip, and turns green for a moment when it has copied.
