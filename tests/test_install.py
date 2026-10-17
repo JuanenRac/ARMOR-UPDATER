@@ -546,6 +546,34 @@ def test_refuses_a_remote_manifest_version_lower_than_the_installed_version(tmp_
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == local_head
 
 
+def test_refuses_to_update_a_checkout_that_sits_on_another_branch(tmp_path: Path):
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    git("add", "armor.project.json", cwd=seed)
+    git("commit", "-m", "initial", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=local)
+    git("config", "user.name", "Contract", cwd=local)
+    git("checkout", "-b", "experiment", cwd=local)
+    local_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip()
+
+    # Make the default branch known even when the clone did not record origin/HEAD.
+    known = ProjectEntry("ARMOR-EXAMPLE", "python", "1.0.0", default_branch=subprocess.check_output(["git", "-C", str(seed), "branch", "--show-current"], text=True).strip())
+    result = clone_or_pull(known, tmp_path)
+
+    assert not result.ok
+    assert "experiment" in result.message and "default branch" in result.message
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == local_head
+
+
 # ---------------------------------------------------------------------------
 # The durable promotion journal (armor-common's promotion_journal module,
 # an optional dependency - see install.py's own header comment).

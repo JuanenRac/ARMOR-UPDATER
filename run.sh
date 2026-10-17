@@ -33,6 +33,8 @@ printf '\n'
 #   ./run.sh --cli status --offline      - same, without the GitHub check
 #   ./run.sh --cli install <project>     - clone + build one project not yet installed
 #   ./run.sh --cli update  <project>     - pull + rebuild one project already installed
+# Without arguments the windowed GUI needs the optional Qt package (installed by the GUI build) or, failing that, tkinter and a display; on a headless machine
+# or without either, use --cli.
 # --cli never needs tkinter/a display - safe on a headless CM5 with no
 # python3-tk installed. See main.py's own header comment.
 set -uo pipefail  # no -e: we need to reach the trap below even if the process exits non-zero

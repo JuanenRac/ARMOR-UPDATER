@@ -47,7 +47,7 @@ from concurrent.futures import (
     ThreadPoolExecutor,
     as_completed,
 )
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .project_manifest import (
     ECOSYSTEM_ID,
@@ -274,7 +274,7 @@ def _fetch_discovered_manifest(owner: str, name: str, branch: str, token: str = 
     if manifest.ecosystem != ECOSYSTEM_ID:
         return None
     return RemoteStatus(
-        entry=entry_from_manifest(manifest),
+        entry=replace(entry_from_manifest(manifest), default_branch=branch),
         version=Version.from_string(manifest.version),
         url=url,
         manifest=manifest,

@@ -5,6 +5,13 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.1.3] - Default-branch awareness
+
+- An update is refused when the checkout is on a branch other than the repository default branch, instead of merging the default branch into it.
+- Discovery records each repository default branch, and the fallback manifest lookup uses it instead of assuming main.
+- run.sh and the CLI header describe the GUI requirements and the ordered batches of the window.
+- The changelog now says the signature check applies when the signature policy is switched on.
+
 ## [0.1.2] - Updates that survive a crash, a project that cannot be left half installed and commands that mean what the README says
 
 - **A promotion is journalled.** The two renames that put a new checkout in place of the old one are recorded on disk first; if the process dies between them (a kill, a power cut) the next run puts the previous checkout back instead of leaving the project without a folder. The journal the earlier code looked for lived in a package that never existed, so the recovery never ran; it is now part of the updater.
@@ -37,7 +44,7 @@ bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
 ## [0.0.8] - Signed updates are verified
 
-- An update is verified against its signature before it is installed, and read-only files left by git in the staging folder no longer stop a clean-up on Windows.
+- When the signature policy is switched on, an update is verified against its signature before it is installed, and read-only files left by git in the staging folder no longer stop a clean-up on Windows.
 - Tests for the signature check.
 
 ## [0.0.7] - A failed write of the evidence is said

@@ -6,7 +6,7 @@
 """Tests for generic runtime entries; no fixed ecosystem project list."""
 
 from armor_updater.project_manifest import parse_manifest
-from armor_updater.registry import entry_from_manifest, github_raw_url, github_repo_url
+from armor_updater.registry import ProjectEntry, entry_from_manifest, github_raw_url, github_repo_url
 
 
 def test_runtime_entry_uses_repository_owned_data():
@@ -28,3 +28,8 @@ def test_runtime_entry_uses_repository_owned_data():
     assert entry.stack == "python"
     assert github_raw_url(entry).endswith("/ARMOR-EXAMPLE/main/armor.project.json")
     assert github_repo_url(entry).endswith("/ARMOR-EXAMPLE")
+
+
+def test_raw_url_uses_the_entrys_default_branch_when_known():
+    assert "/main/" in github_raw_url(ProjectEntry("X", "python"))
+    assert "/trunk/" in github_raw_url(ProjectEntry("X", "python", default_branch="trunk"))

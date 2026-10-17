@@ -354,6 +354,23 @@ def _promote(entry: ProjectEntry, workspace_root: Path, path: Path, staging_path
     return (backup_path,)
 
 
+def _wrong_branch_message(path: Path, entry: ProjectEntry) -> str:
+    """A message when the checkout sits on a branch other than the repository's default one (the update fetches the remote default branch, so merging it there would mix
+    branches), else an empty string. A detached HEAD, or a default branch that cannot be told, is not refused."""
+    current = _run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=path, capture_output=True)
+    if current.returncode != 0:
+        return ""
+    branch = (current.stdout or "").strip()
+    expected = ""
+    remote_head = _run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], cwd=path, capture_output=True)
+    if remote_head.returncode == 0:
+        expected = (remote_head.stdout or "").strip().removeprefix("origin/")
+    expected = expected or entry.default_branch
+    if branch and expected and branch != expected:
+        return f"{path} is on branch '{branch}', not the default branch '{expected}' - switch back to '{expected}' before updating"
+    return ""
+
+
 def clone_or_pull(
     entry: ProjectEntry,
     workspace_root: Path,
@@ -431,6 +448,10 @@ def clone_or_pull(
             f"{path} has uncommitted change(s) to real tracked file(s): {preview} - refusing to update; "
             "commit, stash, or discard them first so an update can never silently discard real local work",
         )
+
+    wrong_branch = _wrong_branch_message(path, entry)
+    if wrong_branch:
+        return InstallResult(False, wrong_branch)
 
     # Fetch first and inspect FETCH_HEAD before changing the operator's working tree: a malformed or older remote manifest must not become an installed downgrade merely because
     # Git can fast-forward it.

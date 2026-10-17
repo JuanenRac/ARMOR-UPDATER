@@ -17,8 +17,8 @@
 #   install <project>   - clone + build ONE project that isn't installed yet
 #   update  <project>   - pull + rebuild ONE project that IS installed
 # install/update are deliberately separate from status and always take an
-# explicit project name - there is no "update everything" - see
-# install.py's own header comment for why.
+# explicit project name - the CLI has no "update everything" (the window does
+# offer ordered batches) - see install.py's own header comment for why.
 #
 # GUI imports are only attempted after --cli has been ruled out.  A genuinely
 # headless CM5 therefore never needs Qt, tkinter or a display to run

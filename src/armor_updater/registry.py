@@ -42,6 +42,8 @@ class ProjectEntry:
     service_port: int | None = None
     service_health_path: str | None = None
     service_systemd_unit: str | None = None
+    # The repository's default branch when the remote told us (empty = unknown, "main" is assumed for URLs and no branch check is made from this field).
+    default_branch: str = ""
 
     @property
     def deploy_category(self) -> str:
@@ -72,8 +74,9 @@ def entry_from_manifest(manifest: ProjectManifest) -> ProjectEntry:
     )
 
 
-def github_raw_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER, branch: str = GITHUB_BRANCH) -> str:
-    """Return the raw GitHub URL for a repository manifest."""
+def github_raw_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER, branch: str | None = None) -> str:
+    """Return the raw GitHub URL for a repository manifest, on the entry's own default branch when it is known."""
+    branch = branch or entry.default_branch or GITHUB_BRANCH
     return f"https://raw.githubusercontent.com/{owner}/{entry.name}/{branch}/{MANIFEST_FILE}"
 
 
