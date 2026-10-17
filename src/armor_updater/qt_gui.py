@@ -33,13 +33,12 @@ from . import __version__, i18n, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
-from .install import install_or_update
+from .install import install_or_update, install_order
 from .registry import GITHUB_OWNER
 
 
 #: One filter button per real A.R.M.O.R. hardware-target category (plus
-#: "all") - see deploy_category.py for why these are not HYDRA-UMC's own
-#: cm5/user-pc/wearable/dev-server enum.
+#: "all") - see deploy_category.py for how the free text of a manifest becomes a category.
 DEPLOY_ORDER = DEPLOY_CATEGORIES
 
 #: Real, plain-text log file, one per real GUI run - the QML Activity Log
@@ -452,6 +451,9 @@ class UpdaterBridge(QObject):
         if not targets:
             self._append_activity(self.text("msg_batch_nothing_to_do"))
             return
+        # ARMOR-COMMON first (every project's build runs its script), a parent before its children, then by name
+        rank = {entry.name: position for position, entry in enumerate(install_order([item.entry for item in targets]))}
+        targets.sort(key=lambda item: rank[item.entry.name])
 
         verb = self.text("action_installing" if action == "install" else "action_updating")
         self._start_operation(skip_build, batch_total=len(targets))

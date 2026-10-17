@@ -30,7 +30,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .settings import load_settings
+from .settings import load_settings, settings_damaged
 
 
 @dataclass(frozen=True)
@@ -49,10 +49,33 @@ def current_policy() -> SignaturePolicy:
         required = True
     elif env_required in {"0", "false", "no"}:
         required = False
+    elif settings_damaged():
+        required = True   # the file that holds the policy cannot be read: it is not taken as "off"
     else:
         required = settings.get("require_signed_commits") is True
     signers = os.environ.get("ARMOR_UPDATER_ALLOWED_SIGNERS") or settings.get("allowed_signers_file")
     return SignaturePolicy(required, signers if isinstance(signers, str) and signers else None)
+
+
+def verify_range(repo: Path, base: str, tip: str, policy: SignaturePolicy, *, limit: int = 200) -> str | None:
+    """None when every commit that `tip` brings over `base` is acceptable under `policy`, otherwise the reason. Verifying only the tip would let an unsigned commit ride in under a
+    signed one. A disabled policy accepts everything; a range longer than `limit` commits is refused (a person reads it first)."""
+    if not policy.required:
+        return None
+    try:
+        listing = subprocess.run(["git", "rev-list", f"{base}..{tip}"], cwd=repo, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return f"could not list the new commits: {exc}"
+    if listing.returncode != 0:
+        return "could not list the new commits (is the installed commit part of the remote history?)"
+    commits = listing.stdout.split()
+    if len(commits) > limit:
+        return f"{len(commits)} new commits are too many to verify one by one; update by hand after reading them"
+    for commit in commits:
+        refused = verify_revision(repo, commit, policy)
+        if refused:
+            return f"{refused} [{commit[:12]}]"
+    return None
 
 
 def verify_revision(repo: Path, revision: str, policy: SignaturePolicy) -> str | None:

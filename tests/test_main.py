@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from armor_updater import main as main_module
@@ -116,3 +117,44 @@ def test_resolve_workspace_root_falls_back_to_the_real_default_when_nothing_save
 
     monkeypatch.setattr(settings, "get_saved_workspace_root", lambda: None)
     assert main_module.resolve_workspace_root() == main_module.default_workspace_root()
+
+
+def test_the_command_words_run_the_command_line_without_cli(monkeypatch, capsys) -> None:
+    # a script or a cron job that runs `armor-updater status` must never open a window
+    called = []
+    monkeypatch.setattr(main_module, "cmd_status", lambda args: called.append(args.command) or 0)
+    monkeypatch.setattr(sys, "argv", ["armor-updater", "status", "--offline"])
+    # the parser stores the function at build time, so the monkeypatched one is the one it holds
+    assert main_module.main() == 0
+    assert called == ["status"]
+
+
+def test_without_any_window_the_bare_command_fails_instead_of_pretending(monkeypatch, capsys) -> None:
+    import builtins
+    real_import = builtins.__import__
+
+    def refuse(name, *args, **kwargs):
+        if name in {"armor_updater.qt_gui", "armor_updater.gui"} or (name in {"qt_gui", "gui"}) or (args and len(args) > 2 and args[2] and any(f in ("qt_gui", "gui") for f in args[2])):
+            raise ImportError(name)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", refuse)
+    monkeypatch.setattr(sys, "argv", ["armor-updater"])
+    assert main_module.main() == 1
+    assert "--cli" in capsys.readouterr().err
+
+
+def test_installed_as_a_package_the_workspace_must_be_named(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(main_module, "__file__", str(tmp_path / "lib" / "site-packages" / "armor_updater" / "main.py"))
+    monkeypatch.delenv("ARMOR_WORKSPACE", raising=False)
+    monkeypatch.setattr(main_module.settings, "get_saved_workspace_root", lambda: None)
+    try:
+        main_module.default_workspace_root()
+    except main_module.WorkspaceUnknown as error:
+        assert "--workspace" in str(error)
+    else:
+        raise AssertionError("it must not guess the folder of the Python environment")
+    workspace = tmp_path / "projects"
+    workspace.mkdir()
+    monkeypatch.setenv("ARMOR_WORKSPACE", str(workspace))
+    assert main_module.default_workspace_root() == workspace.resolve()

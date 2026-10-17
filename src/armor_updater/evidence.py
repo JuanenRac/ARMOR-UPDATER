@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -49,9 +50,14 @@ def record_attempt(
     after: dict[str, Any],
     ok: bool,
     message: str,
+    duration_s: float | None = None,
+    now: float | None = None,
 ) -> Path | None:
-    """Append one attempt to the evidence file; returns its path, or None if it could not be written."""
+    """Append one attempt to the evidence file; returns its path, or None if it could not be written. Each line says when it happened (UTC) and how long it took."""
+    stamp = time.gmtime(now if now is not None else time.time())
     line = {
+        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", stamp),
+        "durationS": round(duration_s, 1) if duration_s is not None else None,
         "project": project,
         "ok": ok,
         "versionBefore": before.get("version"),
@@ -76,6 +82,6 @@ def record_attempt(
 def read_attempts(workspace_root: Path) -> list[dict[str, Any]]:
     path = workspace_root / EVIDENCE_DIRECTORY / EVIDENCE_FILE
     try:
-        return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     except (OSError, ValueError):
         return []

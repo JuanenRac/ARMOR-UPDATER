@@ -17,6 +17,7 @@ already-configured language is never silently lost.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,17 @@ def load_settings() -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def settings_damaged() -> bool:
+    """True when the settings file exists but cannot be read as an object. The signature policy lives in it: a damaged file must not quietly turn the policy off."""
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError):
+        return True
+    return not isinstance(data, dict)
+
+
 def save_settings(**updates: Any) -> None:
     """Merges `updates` into whatever is already saved and writes the
     real, combined result back - best-effort, matching `i18n.py`'s own
@@ -53,8 +65,13 @@ def save_settings(**updates: Any) -> None:
     """
     current = load_settings()
     current.update(updates)
+    if SETTINGS_PATH.exists() and settings_damaged():
+        return   # a file that cannot be read is not overwritten (see settings_damaged)
     try:
-        SETTINGS_PATH.write_text(json.dumps(current, indent=2), encoding="utf-8")
+        # written whole beside the file and put in its place, so a closing window or a power cut leaves the old file, never half of the new one
+        temporary = SETTINGS_PATH.with_name(SETTINGS_PATH.name + ".tmp")
+        temporary.write_text(json.dumps(current, indent=2), encoding="utf-8")
+        os.replace(temporary, SETTINGS_PATH)
     except OSError:
         pass
 

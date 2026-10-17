@@ -1,26 +1,35 @@
 # ARMOR-UPDATER — CLI Reference
 
-`armor-updater` defaults to a windowed Qt Quick GUI. Passing `--cli` switches
+`armor-updater` with no arguments opens a windowed Qt Quick GUI. Passing `--cli` switches
 to the headless argparse CLI documented here, before the optional desktop
 runtime is imported, so `--cli` mode works on a genuinely headless CM5 with
-no Qt/PySide6 desktop runtime installed and no display. Every example below was captured from a real
-run of the installed CLI — not written from memory.
+no Qt/PySide6 desktop runtime installed and no display. A command word (`status`, `install`,
+`update`, `rollback`, `backups`) as the first argument also runs the command line without `--cli`, so a script
+or a scheduled job never opens a window; with no window available and no command, the program says so and
+exits with 1.
+
+Where the projects live: the parent folder of the updater's own checkout, or - when the updater is installed as
+a package, where there is no such folder - the folder named by `--workspace`, by the environment variable
+`ARMOR_WORKSPACE` or chosen before in the window; without any of them a command stops with exit code 2 and says so.
 
 ## Usage
 
 ```
 $ armor-updater --cli -h
-usage: armor-updater --cli [-h] [--version] {status,install,update} ...
+usage: armor-updater --cli [-h] [--version] {status,install,update,rollback,backups} ...
 
 Detects, installs, and manually updates the A.R.M.O.R. ecosystem's
 projects on this machine.
 
 positional arguments:
-  {status,install,update}
+  {status,install,update,rollback,backups}
     status              Show what's installed, its version, and the latest
                         GitHub version of every project.
     install             Clone and build ONE project that isn't installed yet.
     update              Pull and rebuild ONE project that's already installed.
+    rollback            Put the newest backup of ONE project back in its place.
+    backups             List the backups of replaced checkouts and the disk
+                        they take; --prune N keeps the newest N of each.
 
 options:
   -h, --help            show this help message and exit
@@ -29,7 +38,7 @@ options:
 
 ```
 $ armor-updater --cli --version
-armor-updater 0.1.8
+armor-updater 0.1.2
 ```
 
 `install`/`update` are deliberately separate from `status` and always
@@ -93,8 +102,9 @@ options:
                         script.
 ```
 
-`git clone`s the named project into `--workspace`, then runs its own
-`build-test.sh`/`.bat` unless `--no-build` is given. A project name that
+Clones the named project into a staging folder inside `--workspace`, runs its own `build-test.sh`/`.bat` there (unless `--no-build` is given) and only when the
+build passes puts it in place (a project whose build fails is not left half installed). Every project's build runs `../ARMOR-COMMON/scripts/armor-project.sh`: a
+project is not built when ARMOR-COMMON is not installed next to it, and a batch in the window goes ARMOR-COMMON first. A project name that
 doesn't expose a valid manifest on GitHub is a real, reported failure —
 never a silent no-op:
 
@@ -128,9 +138,14 @@ options:
 
 Fetches the remote candidate, validates its repository-owned
 `armor.project.json` before modifying the checkout, rejects a candidate
-whose semantic version is lower than the installed manifest, then performs a
-`git merge --ff-only` and runs its own build script unless `--no-build` is
-given. The preflight is deliberately manifest-based: a reachable Git commit is
+whose version is lower than the installed manifest, does nothing when the candidate is
+the commit already installed, and otherwise builds it in an independent staging clone and
+promotes it with two journalled renames; the replaced checkout is kept under
+`<workspace>/.armor-updater/backups/<project>/` (the newest three). With `--no-build` it only performs a
+`git merge --ff-only`. If the process dies between the two renames, the next run puts the previous checkout back.
+Virtual environments and CMake trees made by the build in the staging folder are removed before the promotion (they hold absolute paths and cannot be moved) and the
+project's own `build.sh`/`.bat` makes the environment again in the final place. Only one updater works on a workspace at a time (a lock under
+`.armor-updater/`); a second one is told to wait. The preflight is deliberately manifest-based: a reachable Git commit is
 not automatically a safe ecosystem update. `--ff-only` is
 deliberate and load-bearing: **a healthy local checkout is never
 replaced**. A real local edit (this tool is meant to also run on a
@@ -191,3 +206,15 @@ Promoting an update takes two renames (the old checkout is moved aside as `<name
 repaired the next time the tool runs, by the same process that notices the gap. For an installation that matters, install the optional durable journal (the `armor_sdk` package of the ecosystem's SDK, which this tool
 uses when it finds it, with no setting to change): it writes down each phase of the promotion in a small file in the workspace, so that the next run finishes or undoes an interrupted promotion even after the whole process
 died. Without the journal, an update is still correct as long as the process lives; with it, it is also correct after a crash.
+
+### `rollback <PROJECT-NAME> [--workspace PATH]`
+
+Puts the newest backup of the project back in its place. The checkout that was there becomes the newest backup, so a rollback can itself be undone with another `rollback`.
+
+### `backups [PROJECT-NAME] [--workspace PATH] [--prune N]`
+
+Lists the backups (with the disk each takes). `--prune N` deletes all but the newest `N` of each project. Backups are never inside the scanned workspace folders, so they never show as projects.
+
+### The evidence file
+
+Every attempt appends one line to `<workspace>/.armor-updater/evidence.jsonl`: when it happened (UTC) and how long it took, the project, the version and commit before and after, whether it worked and why not.

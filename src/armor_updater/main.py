@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -38,14 +39,28 @@ from .install import install_or_update
 from .version_parse import Version
 
 
+class WorkspaceUnknown(RuntimeError):
+    """The updater cannot tell which folder holds the projects."""
+
+
 def default_workspace_root() -> Path:
-    """This project's own parent directory - correct as long as
-    ARMOR-UPDATER itself was checked out the same way every other
-    ecosystem project is (a sibling of the other 55 under one common
-    parent) - the standard layout this whole tool assumes throughout.
-    Always overridable with --workspace for anything else (a CM5 install
-    under a different path, a CI checkout, ...)."""
-    return Path(__file__).resolve().parents[3]
+    """The folder that holds the projects: the parent of this checkout when the updater runs from its own checkout, as every ecosystem project is a sibling of the others under
+    one parent. Installed as a package (site-packages) there is no such parent: then the workspace named by the environment variable ARMOR_WORKSPACE, or the one chosen before in
+    the window, is used, and without either the commands stop with a message instead of cloning into the folders of the Python environment. `--workspace` always wins."""
+    checkout = Path(__file__).resolve().parents[2]
+    try:
+        manifest = json.loads((checkout / "armor.project.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        manifest = {}
+    if manifest.get("name") == "ARMOR-UPDATER":
+        return checkout.parent
+    configured = os.environ.get("ARMOR_WORKSPACE")
+    if configured and Path(configured).is_dir():
+        return Path(configured).resolve()
+    saved = settings.get_saved_workspace_root()
+    if saved is not None:
+        return saved
+    raise WorkspaceUnknown("this updater is not running from its own checkout: give the folder that holds the projects with --workspace, or set ARMOR_WORKSPACE")
 
 
 def resolve_workspace_root() -> Path:
@@ -78,8 +93,12 @@ def _state_label(local: LocalStatus, remote: RemoteStatus | None) -> str:
     return "up to date"
 
 
+def _workspace_root(args: argparse.Namespace) -> Path:
+    return Path(args.workspace).resolve() if args.workspace else default_workspace_root()
+
+
 def cmd_status(args: argparse.Namespace) -> int:
-    workspace_root = Path(args.workspace).resolve() if args.workspace else default_workspace_root()
+    workspace_root = _workspace_root(args)
     # Real bug fixed here, found while adding --json: this line (and the
     # --offline notice below) printed to stdout unconditionally, ahead of
     # everything else - the exact opposite of what --json promises a
@@ -164,11 +183,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     # like "python-qtquick" (14 chars) straight into the LOCAL column with
     # no separating space the moment a stack name grew past the old fixed 12.
     stack_w = max((len(p.stack) for p in entries.values()), default=5) + 2
-    # Also dynamic, for the same real reason: HYDRA-UMC/URTC's own `role`
-    # is a short enum ("tool", "service", ...), but A.R.M.O.R.'s manifest
-    # schema deliberately keeps `role` as free text (a whole sentence in
-    # several real repos) - a fixed `<10` ran straight into STACK with no
-    # separating space at all for every A.R.M.O.R. project.
+    # Also dynamic: the `role` of a manifest is free text (a whole sentence in several repositories), and a fixed width would run it into the STACK column.
     role_w = max((len(p.role) for p in entries.values()), default=4) + 2
     header = f"{'PROJECT':<{name_w}}{'MATURITY':<13}{'ROLE':<{role_w}}{'STACK':<{stack_w}}{'LOCAL':<10}{'GITHUB':<10}{'STATE'}"
     print(header)
@@ -213,7 +228,7 @@ def cmd_update(args: argparse.Namespace) -> int:
 
 
 def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> int:
-    workspace_root = Path(args.workspace).resolve() if args.workspace else default_workspace_root()
+    workspace_root = _workspace_root(args)
     local_discovery = discover_workspace(workspace_root)
     local_by_name = {status.entry.name: status.entry for status in local_discovery.projects}
     entry = local_by_name.get(args.project)
@@ -254,6 +269,51 @@ def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> i
     return 0 if ok else 1
 
 
+def cmd_rollback(args: argparse.Namespace) -> int:
+    """Puts the newest backup of a project back in its place (the checkout that is there becomes the newest backup, so a rollback can itself be undone)."""
+    from .promotion import WorkspaceBusy, WorkspaceLock, recover_interrupted_promotion, rollback
+    workspace_root = _workspace_root(args)
+    try:
+        with WorkspaceLock(workspace_root):
+            for action in recover_interrupted_promotion(workspace_root):
+                print(action)
+            print(rollback(workspace_root, args.project))
+    except WorkspaceBusy as busy:
+        print(str(busy), file=sys.stderr)
+        return 1
+    except RuntimeError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    return 0
+
+
+def cmd_backups(args: argparse.Namespace) -> int:
+    """Lists the backups of the replaced checkouts (with the disk each takes) and, with --prune N, keeps only the newest N of every project."""
+    from .promotion import BACKUPS_DIRECTORY, WorkspaceBusy, WorkspaceLock, disk_used, list_backups, prune_backups, state_directory
+    workspace_root = _workspace_root(args)
+    root = state_directory(workspace_root) / BACKUPS_DIRECTORY
+    projects = [args.project] if args.project else sorted(p.name for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
+    total = 0
+    try:
+        with WorkspaceLock(workspace_root):
+            for project in projects:
+                if args.prune is not None:
+                    for removed in prune_backups(workspace_root, project, max(0, args.prune)):
+                        print(f"deleted {removed}")
+                for backup in list_backups(workspace_root, project):
+                    size = disk_used(backup)
+                    total += size
+                    print(f"{project}  {backup.name}  {size / 1024 / 1024:.1f} MB")
+    except WorkspaceBusy as busy:
+        print(str(busy), file=sys.stderr)
+        return 1
+    if not projects:
+        print("no backups")
+    else:
+        print(f"total {total / 1024 / 1024:.1f} MB")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="armor-updater --cli",
@@ -281,11 +341,27 @@ def build_parser() -> argparse.ArgumentParser:
     update_p.add_argument("--no-build", action="store_true", help="Pull only - skip running the project's own build script.")
     update_p.set_defaults(func=cmd_update)
 
+    rollback_p = subparsers.add_parser("rollback", help="Put the newest backup of ONE project back in its place.")
+    rollback_p.add_argument("project", help="Exact project name.")
+    rollback_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
+    rollback_p.set_defaults(func=cmd_rollback)
+
+    backups_p = subparsers.add_parser("backups", help="List the backups of replaced checkouts and the disk they take; --prune N keeps the newest N of each.")
+    backups_p.add_argument("project", nargs="?", help="Only this project.")
+    backups_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
+    backups_p.add_argument("--prune", type=int, metavar="N", help="Delete all but the newest N backups of each project.")
+    backups_p.set_defaults(func=cmd_backups)
+
     return parser
 
 
+#: The words that mean the command line even without --cli (a script or a cron job that runs `armor-updater status` must not open a window).
+COMMAND_WORDS = {"status", "install", "update", "rollback", "backups"}
+
+
 def main() -> int:
-    if "--cli" not in sys.argv:
+    arguments = [a for a in sys.argv[1:] if a != "--cli"]
+    if "--cli" not in sys.argv and not (arguments and arguments[0] in COMMAND_WORDS):
         try:
             from .qt_gui import launch_qt_gui
         except ImportError:
@@ -296,23 +372,27 @@ def main() -> int:
                 from .gui import launch_gui
             except ImportError:
                 print("The Qt Quick GUI is not installed and tkinter is unavailable. "
-                      "Use `--cli` on a headless system, or run the project build "
-                      "to install the optional PySide6 GUI runtime.", file=sys.stderr)
+                      "Use `--cli` on a headless system, or install the optional window with "
+                      "`pip install -e '.[gui]'`.", file=sys.stderr)
+                return 1   # nothing was done: a script must not read this as a success
             else:
-                print("Qt Quick GUI runtime is not installed; starting the legacy "
-                      "Tkinter fallback. Run build.bat/build.sh to enable the new "
-                      "visual desktop interface.", file=sys.stderr)
+                print("The Qt Quick GUI runtime is not installed; starting the legacy "
+                      "Tkinter window. `pip install -e '.[gui]'` (build.bat does it on Windows) "
+                      "installs the new one.", file=sys.stderr)
                 return launch_gui(resolve_workspace_root())
         else:
             return launch_qt_gui(resolve_workspace_root())
 
-    argv = [a for a in sys.argv[1:] if a != "--cli"]
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
     if not getattr(args, "command", None):
         parser.print_help()
         return 0
-    return args.func(args)
+    try:
+        return args.func(args)
+    except WorkspaceUnknown as error:
+        print(str(error), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

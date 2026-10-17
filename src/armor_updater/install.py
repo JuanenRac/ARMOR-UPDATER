@@ -4,113 +4,92 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0 - see LICENSE
 #
-# Deliberately does NOT reimplement per-stack build logic (npm/cargo/go/
-# gradlew/flutter/pip, 7 different toolchains across the ecosystem). Every
-# project carries the common non-versioning build-test.sh/.bat entry point.
-# It delegates to its own stack-aware check without incrementing a manifest or
-# CHANGELOG, so fleet maintenance cannot manufacture a release merely by
-# refreshing a checkout. Versioned build scripts remain an explicit human
-# release action and are never selected here. The shared build-test entry point
-# already knows its own real
-# dependencies, venv/toolchain setup, and quirks (A.R.M.O.R.-TELEMETRY-
-# COLLECTOR/a sibling project's module root being src/, not the repo
-# root, for instance). Reimplementing that here would mean two places that
-# both claim to know how to build a given project, guaranteed to drift.
-# This module's own job ends at "clone/pull the source, then run whichever
-# build script this specific checkout actually has."
+# Deliberately does NOT reimplement per-stack build logic (npm, cargo, gradlew, flutter, pip, ESP-IDF, CMake...). Every project carries the common non-versioning
+# build-test.sh/.bat entry point, which delegates to its own stack-aware check without incrementing a manifest or CHANGELOG, so fleet maintenance cannot manufacture a release merely
+# by refreshing a checkout. Versioned build scripts remain an explicit human release action and are never selected here. This module's job ends at "clone/pull the source, run
+# whichever build script this checkout has, and put the result in place without ever leaving the project without a working folder".
+#
+# What it guarantees (and what it does not):
+#   * a new project and an update are both built in a staging folder first; the live folder is not touched until the build passes;
+#   * the promotion is two renames, journalled on disk (promotion.py) so that a crash between them is healed at the next run; the replaced checkout is kept as a backup under
+#     <workspace>/.armor-updater/backups/<project>/ (the newest few, `rollback` puts the newest back);
+#   * only one updater works on a workspace at a time (a lock file);
+#   * an update to the commit already installed does nothing;
+#   * local data kept inside a checkout (ignored or untracked files) is carried into the candidate, except what a build makes again.
+# It does NOT make a rename atomic with respect to a process that is running from the folder, and a project whose build leaves absolute paths in places this module does not know
+# (it removes the CMake trees and the virtual environments) may need its own build run once in the final place.
 # =============================================================================
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
-import os
 import time
-from shutil import copy2, copytree, rmtree
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from shutil import copy2, copytree, rmtree
+from typing import Callable, Iterable
 from uuid import uuid4
 
 from .evidence import installed_state, record_attempt
 from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
-from .signature import current_policy, verify_revision
+from .promotion import (
+    DEFAULT_KEEP,
+    Promotion,
+    PromotionJournal,
+    WorkspaceBusy,
+    WorkspaceLock,
+    new_backup_path,
+    prune_backups,
+    recover_interrupted_promotion,
+)
 from .registry import ProjectEntry, github_repo_url
+from .signature import current_policy, verify_range, verify_revision
 
-# P01/the durable version of this module's own in-process
-# self-heal for the narrow gap between the 2 promotion renames below (see
-# clone_or_pull's own docstring) - ARMOR-COMMON's promotion_journal
-# module, shared with a sibling project's own canary_deploy.py, exactly
-# as that fix's own comment called for. Optional (see pyproject.toml's
-# own "durable-journal" extra) so this project's safety-critical update
-# core stays usable with zero external dependencies - the SAME
-# stdlib-only-by-default / opt-in-extra shape this module's own PySide6
-# GUI dependency already established. Without it installed, promotion
-# still works exactly as before (the in-process self-heal already in
-# clone_or_pull), just without surviving a full process crash.
-#
-# P01/the same optional package also carries check_service_health -
-# when a project's own manifest declares a real service_port +
-# service_health_path, a promotion is not reported as a real success
-# until that real endpoint answers healthy (see _health_check_url_for()
-# and clone_or_pull's own promotion step below), and a crash between
-# promoting and checking is itself recoverable via
-# recover_interrupted_promotions() (the pending check runs for real on
-# the next call, never repeating the build).
-try:
-    from armor_sdk.promotion_journal import PromotionJournal, PromotionPhase
-    from armor_sdk.promotion_journal import check_service_health as _check_service_health
-    from armor_sdk.promotion_journal import recover as _recover_promotions
-    _HAS_DURABLE_JOURNAL = True
-except ImportError:
-    _HAS_DURABLE_JOURNAL = False
-
-# One journal file per workspace, not per project - a single small JSON
-# file covers however many projects this workspace ever promotes,
-# consistent with PromotionJournal's own "proportionate for a handful of
-# records" design.
-_JOURNAL_FILENAME = ".armor_updater_promotion_journal.json"
-
-
-def _health_check_url_for(entry: ProjectEntry) -> str | None:
-    """this project's own real 'servicio comprobado' target - only ever built when
-    the project's own manifest declares BOTH `service_port` and
-    `service_health_path` (see ProjectEntry's own field comments); either
-    alone declares nothing checkable. Always `127.0.0.1`: this checks
-    whatever is listening on THIS host, immediately after THIS host's own
-    checkout was just promoted - never a remote address a manifest could
-    otherwise smuggle in. A project whose real runtime lives elsewhere
-    (e.g. deployed separately to /opt/armor/<svc> and restarted by
-    A.R.M.O.R.-OS's own provisioning scripts, not served directly from this
-    checkout) simply should not declare `service_health_path` in a context
-    where checking it here wouldn't mean anything - that is the project's
-    own manifest to author, not a judgment call this function makes."""
-    if entry.service_port is None or not entry.service_health_path:
-        return None
-    return f"http://127.0.0.1:{entry.service_port}{entry.service_health_path}"
+#: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
+COMMON_PROJECT = "ARMOR-COMMON"
 
 
 def recover_interrupted_promotions(workspace_root: Path) -> list[str]:
-    """Heals any promotion this updater itself started and never finished
-    - a real process crash, `kill -9`, power loss, or a reboot exactly
-    between the 2 renames in clone_or_pull's own promotion step. Called
-    once at the start of install_or_update() (every real entry point -
-    CLI, Tkinter GUI, Qt GUI - funnels through it), so a genuinely
-    interrupted prior run is healed before another update ever proceeds.
-
-    Returns the human-readable actions recover() took (empty if nothing
-    was pending, OR if armor-common itself isn't installed - see this
-    module's own header comment for why that is a real, honest no-op
-    rather than an error)."""
-    if not _HAS_DURABLE_JOURNAL:
-        return []
-    journal = PromotionJournal(workspace_root / _JOURNAL_FILENAME)
-    return _recover_promotions(journal)
+    """Heals a promotion that a crash, a kill or a power cut left half done (see promotion.py). Returns what it did."""
+    return recover_interrupted_promotion(workspace_root)
 
 
-# Checked in this order - the first one that exists in the checkout is the
-# one actually run. Covers every real name used across the 44 projects
-# (see this module's own header comment) without needing a per-project
-# override in registry.py for something this mechanical.
+def install_order(entries: Iterable[ProjectEntry]) -> list[ProjectEntry]:
+    """The order to install or update several projects in: ARMOR-COMMON first (every build needs it), then a parent before its children, then by name."""
+    items = sorted(entries, key=lambda e: e.name.casefold())
+    names = {e.name for e in items}
+    ordered: list[ProjectEntry] = []
+    placed: set[str] = set()
+
+    def place(entry: ProjectEntry, trail: tuple[str, ...] = ()) -> None:
+        if entry.name in placed or entry.name in trail:
+            return
+        if entry.parent and entry.parent in names and entry.parent != entry.name:
+            place(next(e for e in items if e.name == entry.parent), trail + (entry.name,))
+        ordered.append(entry)
+        placed.add(entry.name)
+
+    for entry in items:
+        if entry.name == COMMON_PROJECT:
+            place(entry)
+    for entry in items:
+        place(entry)
+    return ordered
+
+
+#: Build output and environments that are made again by a build and must not be carried over, whatever folder of the checkout they are in.
+_NEVER_CARRIED_OVER_DIR_NAMES = {
+    ".git", "node_modules", "dist", "build", "target", ".venv", "venv", "env",
+    "__pycache__", ".next", ".cache", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox",
+    ".gradle", ".kotlin", ".idea", ".dart_tool", "coverage", ".build", "build-test",
+}
+
+#: Virtual environments: a `venv` holds the absolute path it was made in (activate scripts, the first line of every script in bin/), and an editable install points at its
+#: sources by absolute path, so neither survives the rename that puts the staging folder in its place.
+_ENVIRONMENT_NAMES = (".venv", "venv")
+
+
 def forget_build_trees(root: Path) -> None:
     """Remove the CMake build directories the candidate's build-test left in the staging clone. CMake writes absolute paths into its cache, and the clone is about to be renamed to
     its real place: a build-test run by hand there would stop with "CMakeCache.txt directory is different". They are only build output (and ignored by git), so the next build makes them again."""
@@ -120,13 +99,35 @@ def forget_build_trees(root: Path) -> None:
             rmtree(tree, ignore_errors=True)
 
 
+def remove_generated_environments(root: Path) -> bool:
+    """Removes the virtual environments (and the metadata of editable installs) the build-test made in the staging clone: they cannot be moved. True when there was one, which tells
+    the caller to make the environment again in the final place."""
+    removed = False
+    for name in _ENVIRONMENT_NAMES:
+        tree = root / name
+        if tree.is_dir():
+            _rmtree_best_effort(tree)
+            removed = True
+    if removed:
+        for pattern in ("*.egg-info", "src/*.egg-info", "__editable__*"):
+            for leftover in root.glob(pattern):
+                if leftover.is_dir():
+                    _rmtree_best_effort(leftover)
+                else:
+                    try:
+                        leftover.unlink()
+                    except OSError:
+                        pass
+    return removed
+
+
 BUILD_TEST_SCRIPT_POSIX = "build-test.sh"
 BUILD_TEST_SCRIPT_WINDOWS = "build-test.bat"
+BUILD_SCRIPT_POSIX = "build.sh"
+BUILD_SCRIPT_WINDOWS = "build.bat"
 
-# The GUI consumes these events to show the same real work that the CLI does.
-# A callback is deliberately optional: command-line users retain normal child
-# process output, while the GUI captures it so Windows never needs a second
-# terminal window merely to show a project's build output.
+# The GUI consumes these events to show the same real work that the CLI does. A callback is deliberately optional: command-line users retain normal child process output, while the
+# GUI captures it so Windows never needs a second terminal window merely to show a project's build output.
 ProgressCallback = Callable[[str, str], None]
 
 
@@ -143,17 +144,20 @@ def _run(
     kwargs: dict[str, object] = {"cwd": str(cwd), "check": False}
     if capture_output:
         kwargs.update({"capture_output": True, "text": True})
-    # The GUI is started with pythonw on Windows. Do not let git or a child
-    # build script create a surprise console while its output is captured for
-    # the in-window checkpoint log.
+    # The GUI is started with pythonw on Windows. Do not let git or a child build script create a surprise console while its output is captured for the in-window checkpoint log.
     if capture_output and os.name == "nt":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-        # Ecosystem .bat files deliberately finish with `pause` when an
-        # operator double-clicks them.  In the GUI they run as a child with
-        # captured evidence instead, so provide one harmless newline and do
-        # not leave a hidden child waiting forever for a keypress.
+    if os.name == "nt":
+        # Ecosystem .bat files finish with `pause` when an operator double-clicks them. Here they run as a child, so give them one harmless newline and never leave a hidden child
+        # waiting for a keypress (also without a captured output: the Tk window starts them too).
         kwargs["input"] = "\n"
-    return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
+        kwargs.setdefault("text", True)
+    else:
+        kwargs["stdin"] = subprocess.DEVNULL
+    try:
+        return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
+    except OSError as error:   # git or the shell is not there, the folder is not usable
+        return subprocess.CompletedProcess(cmd, 127, stdout="", stderr=f"{type(error).__name__}: {error}")
 
 
 def _make_writable_and_retry(function, target, _excinfo) -> None:  # noqa: ANN001 - the signature of shutil's error callback
@@ -166,15 +170,9 @@ def _make_writable_and_retry(function, target, _excinfo) -> None:  # noqa: ANN00
 
 
 def _rmtree_best_effort(path: Path) -> None:
-    """Removes a staging directory this module created and no longer
-    needs, tolerating a Windows-specific rough edge: a child process (git,
-    or a project's own build-test.sh/.bat) can leave a file handle open
-    for a brief moment even after that process has already exited,
-    turning an immediate rmtree into a spurious PermissionError. Retries
-    a few times with a short pause instead of either raising (this is
-    always best-effort cleanup of OUR OWN temporary directory, never
-    something that should fail the caller's own real result) or silently
-    giving up on the very first attempt."""
+    """Removes a folder this module created and no longer needs, tolerating a Windows rough edge: a child process (git, or a project's own build-test) can leave a file handle open for
+    a brief moment after it has exited. Retries a few times instead of raising: this is always best-effort cleanup of our own temporary folder, never something that should fail the
+    caller's real result."""
     for attempt in range(5):
         try:
             if sys.version_info >= (3, 12):
@@ -197,32 +195,11 @@ def _checkpoint(progress: ProgressCallback | None, phase: str, message: str) -> 
         progress(phase, message)
 
 
-# well-known
-# build-artifact directory names, never carried over by
-# _carry_over_local_data() below even though git genuinely considers
-# them untracked/ignored - always safe to regenerate, and carrying them
-# over would risk a large, slow copy that also contaminates the staging
-# clone's own freshly-verified build with stale artifacts. Same real
-# convention this ecosystem's own generic tools/build_test.py already
-# excludes when walking a checkout.
-_NEVER_CARRIED_OVER_DIR_NAMES = {
-    ".git", "node_modules", "dist", "build", "target", ".venv", "venv",
-    "__pycache__", ".next", ".cache", ".pytest_cache", ".mypy_cache",
-}
-
-
 def _real_untracked_paths(path: Path) -> list[str]:
-    """Returns every real path (relative to `path`) this checkout's own
-    git considers untracked OR ignored (`git status`'s own `??`/`!!`
-    codes) - the exact real local-data shape needs carried over
-    into a staging clone, which `git clone --local` never copies (it
-    only ever copies the committed object database). Deliberately never
-    includes a modified TRACKED file - a genuinely dirty working tree on
-    a tracked file already fails clone_or_pull's own `git merge
-    --ff-only` step separately, a different real problem this is not
-    trying to solve."""
+    """Every path (relative to `path`) git considers untracked or ignored (`??`/`!!`): the local data that `git clone --local` never copies (it only copies the committed objects).
+    A modified TRACKED file is never included - that already blocks the update separately."""
     result = subprocess.run(
-        ["git", "status", "--porcelain", "--ignored", "-z"],
+        ["git", "status", "--porcelain", "--ignored", "-uall", "-z"],
         cwd=str(path), check=False, capture_output=True, text=True,
     )
     if result.returncode != 0 or not result.stdout:
@@ -238,42 +215,12 @@ def _real_untracked_paths(path: Path) -> list[str]:
 
 
 class DirtyCheckError(RuntimeError):
-    """(shared with a sibling project's own sibling helper): `git
-    status` itself failed to run against a checkout (not a git
-    repository, git missing from PATH, a permissions/IO error, ...) -
-    see `_tracked_dirty_paths()`'s own docstring for why this must never
-    be read as "no dirty files found". Nothing was touched."""
+    """`git status` itself failed to run against a checkout (not a git repository, git missing, a permissions error): not being able to verify clean is not the same as clean."""
 
 
 def _tracked_dirty_paths(path: Path) -> list[str]:
-    """Returns every real path (relative to `path`) this checkout's own
-    git considers a TRACKED file with a real uncommitted change - staged
-    or not (`git status --porcelain`'s own status codes other than
-    `??`/`!!`, which _real_untracked_paths() already owns).
-
-    this
-    module's own docstring used to claim "a real local edit... fails
-    loudly with git's own error instead of being silently discarded" -
-    true only for the older verify_build=False in-place `git merge
-    --ff-only` path. Once moved the default (verify_build=True)
-    flow to an isolated staging clone, that claim silently stopped being
-    true: `git clone --local` only ever copies the COMMITTED object
-    database, so a real uncommitted edit to an already-tracked file
-    lives ONLY in `path`'s own working tree and is invisible to the
-    fresh, clean staging clone - its own `git merge --ff-only` always
-    succeeds (nothing there conflicts), the build succeeds, and
-    promotion renames the dirty original aside to `.backup`, so the
-    real edit survives only there while this function's own caller
-    still reports `ok=True`. Checked explicitly, upfront, so this can
-    fail loudly again before any staging work happens at all - matching
-    what the docstring already promised.
-
-    (P0, shared with OPS-AGENT's own sibling helper): a `git
-    status` that fails to even RUN (returncode != 0) used to be treated
-    exactly like "ran fine, found nothing dirty" - the one real
-    uncommitted edit this function exists to catch became invisible the
-    moment the check itself broke. Raises DirtyCheckError instead: not
-    being able to verify clean is not the same as clean."""
+    """Every path git considers a TRACKED file with an uncommitted change. Checked upfront because the staging clone only copies the committed objects: a local edit to a tracked file
+    would be invisible to it, the build would pass, and the promotion would move the edit away to a backup while reporting success."""
     result = subprocess.run(
         ["git", "status", "--porcelain", "-z"],
         cwd=str(path), check=False, capture_output=True, text=True,
@@ -291,37 +238,22 @@ def _tracked_dirty_paths(path: Path) -> list[str]:
             continue
         status_code, rel_path = entry_text[:2], entry_text[3:]
         if status_code in ("??", "!!"):
-            continue  # real untracked/ignored data - _carry_over_local_data()'s own concern, not a rejection reason
+            continue
         paths.append(rel_path)
     return paths
 
 
 def _carry_over_local_data(old_path: Path, staging_path: Path, *, progress: ProgressCallback | None = None) -> None:
-    """Copies every real untracked/ignored file or directory from
-    `old_path` into `staging_path` before the candidate is built or
-    promoted.
-
-    a real
-    project's own operational data living inside its checkout (`data/
-    settings.json`, `data/users.json`, a real sqlite file, TLS material a
-    project generated for itself, ...) is exactly the shape of file `git
-    clone --local` never copies at all - it only ever copies the
-    committed object database. Reproduced with a real untracked file
-    dropped into a real git checkout before an update: the promoted
-    checkout was missing it entirely afterward, while the (kept, never
-    deleted) `.backup` checkout still had it - a real, silent data loss
-    on every update of a project that keeps any real local state inside
-    its own checkout, which describes most services in this ecosystem
-    (see this module's own header comment on why relocating that data
-    outside every checkout entirely is real, separate, future work this
-    fix does not attempt)."""
+    """Copies the untracked/ignored data of `old_path` (a project's own settings, users, database, certificates kept inside its checkout) into `staging_path` before the candidate
+    is built or promoted. Anything that has a build-output or environment folder among the components of its path is left out, however deep it is (`app/build`, `.gradle`, a
+    nested `node_modules`): a build makes them again, and carrying them over would make the verified build reuse stale artifacts."""
     carried = 0
     for rel_path in _real_untracked_paths(old_path):
-        if rel_path.split("/")[0] in _NEVER_CARRIED_OVER_DIR_NAMES:
+        if any(part in _NEVER_CARRIED_OVER_DIR_NAMES for part in Path(rel_path).parts):
             continue
         source = old_path / rel_path
         if not source.exists():
-            continue  # a real race (removed between `git status` and now) - nothing left to carry
+            continue  # removed between `git status` and now
         destination = staging_path / rel_path
         destination.parent.mkdir(parents=True, exist_ok=True)
         if source.is_dir():
@@ -332,17 +264,12 @@ def _carry_over_local_data(old_path: Path, staging_path: Path, *, progress: Prog
     if carried:
         _checkpoint(
             progress, "validation",
-            f"Carried {carried} real local data file(s)/director(y/ies) from the installed checkout into the verified candidate.",
+            f"Carried {carried} local data file(s)/director(y/ies) from the installed checkout into the verified candidate.",
         )
 
 
 def _validated_manifest_text(text: str, entry: ProjectEntry) -> ProjectManifest:
-    """Parse the repository-owned manifest used as an update precondition.
-
-    The updater never treats a Git revision as deployable merely because it
-    can be fetched. It must still identify itself as the project selected by
-    the operator and retain a valid public manifest.
-    """
+    """The repository-owned manifest used as an update precondition: the revision must still identify itself as the selected project."""
     return parse_manifest(text, expected_name=entry.name)
 
 
@@ -366,6 +293,67 @@ def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> P
     return _validated_manifest_text(result.stdout, entry)
 
 
+def _rev_parse(path: Path, revision: str) -> str:
+    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, text=True).stdout.strip()
+
+
+def _rebuild_environment(path: Path, progress: ProgressCallback | None) -> InstallResult:
+    """Makes the virtual environment again in the final place (the project's own build.sh/.bat is the script that makes it)."""
+    name = BUILD_SCRIPT_WINDOWS if os.name == "nt" else BUILD_SCRIPT_POSIX
+    script = path / name
+    if not script.is_file():
+        return InstallResult(True, f"no {name} to make the environment of {path.name} again; run its own set-up once")
+    _checkpoint(progress, "build", f"Making the environment of {path.name} again in its final place with {name}.")
+    cmd = ["cmd", "/c", str(script)] if os.name == "nt" else ["bash", str(script)]
+    result = _run(cmd, cwd=path, capture_output=progress is not None)
+    if result.returncode != 0:
+        return InstallResult(False, f"{name} exited with code {result.returncode}: run it again in {path} to make the environment", _command_output(result))
+    return InstallResult(True, f"{name} made the environment again", _command_output(result))
+
+
+def _promote(entry: ProjectEntry, workspace_root: Path, path: Path, staging_path: Path, commit: str, progress: ProgressCallback | None) -> InstallResult | tuple[Path | None]:
+    """The two renames that put `staging_path` in place of `path` (when there is one), journalled. Returns an InstallResult when it failed, else the backup folder (None for a new
+    project)."""
+    journal = PromotionJournal(workspace_root)
+    backup_path: Path | None = None
+    if path.exists():
+        backup_path = new_backup_path(workspace_root, entry.name, _rev_parse(path, "HEAD") or None)
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+    journal.begin(Promotion(entry.name, str(path), str(staging_path), str(backup_path or ""), "begun"))
+    _checkpoint(progress, "validation", "Promoting the verified candidate; the previous installation is kept as a backup.")
+    if backup_path is not None:
+        try:
+            path.rename(backup_path)
+        except OSError as exc:
+            journal.complete()
+            _rmtree_best_effort(staging_path)
+            return InstallResult(
+                False,
+                f"could not move the installed checkout aside ({exc}) - a program may have a file of {path} open (an editor, a service that runs from it): close it and try again; "
+                f"{path} was left as it was",
+            )
+        journal.advance("backed_up")
+    try:
+        staging_path.rename(path)
+    except OSError as exc:
+        if backup_path is not None:
+            try:
+                backup_path.rename(path)
+            except OSError:
+                return InstallResult(
+                    False,
+                    f"promotion failed AND the restore also failed - {path} may not exist right now; the previous installation is at {backup_path}: {exc}",
+                )
+        journal.complete()
+        return InstallResult(
+            False,
+            f"promotion failed ({exc}) - the previous installation is back in {path}; the verified candidate is still at {staging_path} for inspection",
+        )
+    journal.advance("promoted")
+    journal.complete()
+    return (backup_path,)
+
+
 def clone_or_pull(
     entry: ProjectEntry,
     workspace_root: Path,
@@ -373,53 +361,18 @@ def clone_or_pull(
     verify_build: bool = True,
     progress: ProgressCallback | None = None,
 ) -> InstallResult:
-    """git clone if this project isn't checked out yet under
-    workspace_root, otherwise `git -C <path> fetch` followed by a real
-    `git merge --ff-only FETCH_HEAD` - never a force-push-style reset.
-    Before that fast-forward, the updater validates the fetched revision's
-    repository-owned manifest and rejects a lower version, so an update
-    cannot silently become a rollback. A real local edit a developer made
-    (this tool is meant to also run on a dev machine, not only the real
-    CM5) fails loudly instead of being silently discarded - explicitly
-    checked upfront (see _tracked_dirty_paths()'s own docstring for why
-    this can no longer be left to git's own `merge --ff-only` error:
-    that used to be true, but stopped being true the moment verify_build
-    defaulted to the isolated staging-clone flow below, ).
+    """Installs the project when it is not checked out under `workspace_root`, otherwise fetches and promotes the candidate - never a force-push-style reset.
 
-    (P1):
-    updating an EXISTING checkout used to merge the candidate straight
-    into `path`, then leave building it to a separate step
-    (install_or_update's own run_build_script call) - a build failure
-    there left new sources merged into `path` sitting next to the
-    PREVIOUS build's artifacts, an inconsistent install with no rollback.
-    With verify_build=True (the default), the candidate is instead
-    cloned+merged+built in a fully independent staging clone FIRST -
-    `path` is never touched at all until that build actually succeeds -
-    then promoted into place via two back-to-back directory renames
-    (each individually atomic on the same filesystem; the previous
-    installation is kept, not deleted, at `<name>.backup`, so an
-    operator can restore it by hand if the new version misbehaves
-    despite building fine). A build failure - or a crash, full disk, or
-    diverged/dirty checkout at any point before that final promotion -
-    leaves `path` completely untouched and still the operative
-    installation. verify_build=False skips all of this and restores the
-    exact old in-place-merge behavior, for a caller that intentionally
-    doesn't want a build (matching install_or_update's own `build=False`
-    path)."""
+    Both cases build in a staging folder first (unless `verify_build` is False): the live folder is not touched until the build of the candidate has passed. For an existing
+    checkout the candidate manifest is read from the fetched revision before anything changes, a lower version is refused (an update can never silently become a rollback), a
+    candidate that is the commit already installed does nothing, and uncommitted edits to tracked files stop the update (so real local work is never moved aside unnoticed).
+    The staging folder is promoted by two journalled renames; the replaced checkout is kept under `<workspace>/.armor-updater/backups/<project>/` and the oldest are deleted."""
     path = workspace_root / entry.name
     _checkpoint(progress, "preflight", "Validating the selected workspace and project manifest.")
     if not path.exists():
-        # Clone to a sibling staging path first.  A failed network transfer or
-        # malformed remote must not leave a partial directory that the next
-        # operator run mistakes for a real installation.  rename() is atomic
-        # inside workspace_root and we never remove a path we did not create.
         staging_path = workspace_root / f".{entry.name}.clone-{uuid4().hex}"
         _checkpoint(progress, "source", "Cloning the selected repository into a safe staging directory.")
-        result = _run(
-            ["git", "clone", github_repo_url(entry), str(staging_path)],
-            cwd=workspace_root,
-            capture_output=progress is not None,
-        )
+        result = _run(["git", "clone", github_repo_url(entry), str(staging_path)], cwd=workspace_root, capture_output=progress is not None)
         if result.returncode != 0:
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"git clone failed (exit {result.returncode})", _command_output(result))
@@ -429,16 +382,34 @@ def clone_or_pull(
             return InstallResult(False, f"cloned candidate refused by the signature policy: {refused}")
         try:
             _checkpoint(progress, "validation", "Validating the fetched repository manifest before deployment.")
-            _manifest_from_revision(staging_path, "HEAD", entry)
+            candidate = _manifest_from_revision(staging_path, "HEAD", entry)
         except ManifestValidationError as exc:
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"cloned checkout failed manifest validation: {exc}")
+        environment_removed = False
+        output = ""
+        if verify_build:
+            _checkpoint(progress, "build", "Building and verifying the new project in the staging directory before it takes its place.")
+            built = _run_build_script_at(staging_path, progress=progress)
+            output = built.output
+            if not built.ok:
+                _rmtree_best_effort(staging_path)
+                return InstallResult(False, f"the build failed, so {entry.name} was not installed: {built.message}", built.output)
+            forget_build_trees(staging_path)
+            environment_removed = remove_generated_environments(staging_path)
         if path.exists():
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"{path} appeared while cloning - not replacing it")
-        staging_path.replace(path)
-        _checkpoint(progress, "validation", "Manifest accepted; staged checkout promoted without replacing other files.")
-        return InstallResult(True, f"Cloned into {path}")
+        promoted = _promote(entry, workspace_root, path, staging_path, "", progress)
+        if isinstance(promoted, InstallResult):
+            return promoted
+        message = f"Installed {path} (v{candidate.version})" + (" after a verified build" if verify_build else "")
+        if environment_removed:
+            rebuilt = _rebuild_environment(path, progress)
+            message += "; " + rebuilt.message
+            if not rebuilt.ok:
+                return InstallResult(False, message, rebuilt.output or output)
+        return InstallResult(True, message, output)
 
     if not (path / ".git").is_dir():
         return InstallResult(False, f"{path} exists but isn't a git checkout - not touching it")
@@ -449,13 +420,6 @@ def clone_or_pull(
     except ManifestValidationError as exc:
         return InstallResult(False, f"installed checkout failed manifest validation: {exc}")
 
-    # refuse upfront, before any fetch/staging work, if a real
-    # tracked file has a genuine uncommitted edit - see
-    # _tracked_dirty_paths()'s own docstring for exactly why the
-    # staging-clone flow below can no longer be trusted to catch this
-    # itself. Applies to both verify_build values - a caller intending
-    # the older in-place-merge path (verify_build=False) never wanted
-    # a real local edit silently discarded either.
     try:
         dirty = _tracked_dirty_paths(path)
     except DirtyCheckError as exc:
@@ -468,22 +432,17 @@ def clone_or_pull(
             "commit, stash, or discard them first so an update can never silently discard real local work",
         )
 
-    # Fetch first and inspect FETCH_HEAD before changing the operator's
-    # working tree. This prevents a malformed or older remote manifest from
-    # becoming an installed downgrade merely because Git can fast-forward it.
+    # Fetch first and inspect FETCH_HEAD before changing the operator's working tree: a malformed or older remote manifest must not become an installed downgrade merely because
+    # Git can fast-forward it.
     _checkpoint(progress, "source", "Fetching the remote candidate without changing the local checkout.")
-    result = _run(
-        ["git", "fetch", "--quiet", "origin", "HEAD"],
-        cwd=path,
-        capture_output=progress is not None,
-    )
+    result = _run(["git", "fetch", "--quiet", "origin", "HEAD"], cwd=path, capture_output=progress is not None)
     if result.returncode != 0:
         return InstallResult(
             False,
             f"git fetch failed (exit {result.returncode}) - remote unavailable or authentication failed?",
             _command_output(result),
         )
-    refused = verify_revision(path, "FETCH_HEAD", current_policy())
+    refused = verify_range(path, "HEAD", "FETCH_HEAD", current_policy())   # every new commit, not only the last one
     if refused:
         return InstallResult(False, f"remote candidate refused by the signature policy: {refused}")
     try:
@@ -496,14 +455,16 @@ def clone_or_pull(
             False,
             f"remote candidate v{candidate.version} is older than installed v{installed.version}; anti-rollback refused update",
         )
+    # Resolved as a real SHA: `FETCH_HEAD` means something different in every repo, and the staging clone copies this repository's whole object database, so the commit is present there.
+    candidate_sha = _rev_parse(path, "FETCH_HEAD")
+    if not candidate_sha:
+        return InstallResult(False, f"could not resolve the fetched candidate to a real commit; {path} was not modified")
+    if candidate_sha == _rev_parse(path, "HEAD"):
+        return InstallResult(True, f"{entry.name} is already up to date (v{installed.version}, commit {candidate_sha[:12]}); nothing was changed")
 
     if not verify_build:
         _checkpoint(progress, "validation", "Applying the accepted candidate with a fast-forward-only merge.")
-        result = _run(
-            ["git", "merge", "--ff-only", "FETCH_HEAD"],
-            cwd=path,
-            capture_output=progress is not None,
-        )
+        result = _run(["git", "merge", "--ff-only", "FETCH_HEAD"], cwd=path, capture_output=progress is not None)
         if result.returncode != 0:
             return InstallResult(
                 False,
@@ -512,36 +473,9 @@ def clone_or_pull(
             )
         return InstallResult(True, f"Pulled latest into {path}")
 
-    # prove the candidate actually builds in a fully independent
-    # staging clone BEFORE touching `path` at all - see this function's
-    # own docstring. Resolved as a real SHA (not the name "FETCH_HEAD",
-    # which means something different in every repo) BEFORE staging even
-    # exists: `path`'s FETCH_HEAD already names this exact commit, and
-    # `git clone --local` below copies `path`'s whole object database, so
-    # that commit is already a real, present object in the staging clone
-    # even though nothing there points to it yet - no second fetch
-    # needed, and no dependency on staging's own "origin" (which `git
-    # clone` would otherwise point at `path` itself, not path's real
-    # upstream - fetching "origin" there would silently fetch nothing
-    # new and validate the WRONG, stale candidate).
-    candidate_sha = subprocess.run(
-        ["git", "rev-parse", "FETCH_HEAD"], cwd=str(path), check=False, capture_output=True, text=True
-    ).stdout.strip()
-    if not candidate_sha:
-        return InstallResult(False, f"could not resolve the fetched candidate to a real commit; {path} was not modified")
-
     staging_path = workspace_root / f".{entry.name}.update-{uuid4().hex}"
     _checkpoint(progress, "source", "Cloning the installed checkout into an isolated staging area for verification.")
-    # --no-hardlinks: a plain `git clone --local` hardlinks object files
-    # from `path` on the same volume by default - real, reproducible
-    # testing on Windows found that a build script running INSIDE the
-    # staging clone can leave those hardlinked objects genuinely
-    # undeletable afterward (WinError 5, not a transient lock - retrying
-    # does not help), silently leaving an orphaned `.{name}.update-*`
-    # directory behind in workspace_root forever. A full copy costs a
-    # little more local disk I/O (still no network - this is a same-
-    # filesystem clone either way) in exchange for staging actually being
-    # a fully independent directory that can always be cleaned up.
+    # --no-hardlinks: a plain `git clone --local` hardlinks object files, and on Windows a build running inside the clone can leave them undeletable afterwards.
     result = _run(
         ["git", "clone", "--local", "--no-hardlinks", str(path), str(staging_path)],
         cwd=workspace_root,
@@ -555,20 +489,8 @@ def clone_or_pull(
             _command_output(result),
         )
 
-    # `git
-    # clone --local` above points the new clone's own `origin` remote at
-    # the LOCAL SOURCE PATH it was cloned from (`path`, the installation
-    # about to be renamed aside) - never at this project's real GitHub
-    # upstream. Left uncorrected, the checkout this staging clone becomes
-    # once promoted below would have `origin` pointing at itself, so
-    # every FUTURE `git fetch origin` here would fetch nothing new,
-    # silently and permanently stopping this checkout from ever
-    # discovering a real update again. Reset to the real upstream
-    # immediately, before build/promotion, so staging is a faithful
-    # preview of the checkout it is about to become in every respect,
-    # not just source content.
-    real_origin_url = github_repo_url(entry)
-    result = _run(["git", "remote", "set-url", "origin", real_origin_url], cwd=staging_path, capture_output=progress is not None)
+    # `git clone --local` points the new clone's `origin` at the local source path. Put the real upstream back before promotion, or the promoted checkout could never again discover an update.
+    result = _run(["git", "remote", "set-url", "origin", github_repo_url(entry)], cwd=staging_path, capture_output=progress is not None)
     if result.returncode != 0:
         _rmtree_best_effort(staging_path)
         return InstallResult(
@@ -577,13 +499,6 @@ def clone_or_pull(
             _command_output(result),
         )
 
-    # carry
-    # over the installed checkout's own real local data BEFORE building/
-    # promoting - see _carry_over_local_data()'s own docstring for the
-    # real gap this closes. Done before the build below (not merely
-    # before promotion) so a build-test script that reads this project's
-    # own real local files during verification sees the same real data
-    # the promoted checkout will actually run against.
     _carry_over_local_data(path, staging_path, progress=progress)
 
     _checkpoint(progress, "validation", "Applying the accepted candidate in the isolated staging clone.")
@@ -606,111 +521,25 @@ def clone_or_pull(
             build_result.output,
         )
 
-    # The one real promotion step: swap the previous installation aside
-    # (kept, never deleted - see this function's own docstring) and move
-    # the proven-buildable staging clone into its place. Both are plain
-    # directory renames on the same filesystem/volume, so each one
-    # individually is atomic; the only remaining unsafe window is the
-    # brief gap between these two renames (a crash exactly there would
-    # leave `path` genuinely missing) - vastly narrower than before,
-    # where the unsafe window spanned the entire build.
-    #
-    # (An honest, bounded mitigation, not a full transactional journal
-    # with rollback - that needs designing once, shared with a sibling
-    # project's own canary_deploy.py, as real, separate future work): two real gaps
-    # existed here. First, `backup_path` reused the SAME fixed name
-    # every promotion (`rmtree(backup_path, ...)` right before renaming
-    # into it) - a second install after a first one already failed
-    # partway would silently delete the ONLY recoverable copy of the
-    # previous installation before even attempting the new promotion.
-    # Now unique per attempt (`.backup-<uuid>`, matching OPS-AGENT's own
-    # fix), never overwriting an earlier backup. Second, a crash or
-    # exception in the narrow gap between the two renames used to leave
-    # NO active checkout at `path` at all, with no attempt to recover -
-    # now a best-effort self-heal: if the second rename fails, this
-    # immediately tries to rename the backup back to `path` so a real
-    # installation still exists, rather than silently leaving neither a
-    # live checkout nor a clear indication of which path holds the real
-    # one.
-    backup_path = workspace_root / f"{entry.name}.backup-{uuid4().hex[:8]}"
-    # P01/a durable journal entry, written to disk BEFORE the
-    # first real rename, so recover_interrupted_promotions() can heal
-    # this promotion even if the process itself dies right here - the
-    # in-process self-heal below still runs unconditionally either way,
-    # this is additive, never a replacement for it. journal is None
-    # (never referenced past this point) when armor-common isn't
-    # installed - see this module's own header comment.
-    health_check_url = _health_check_url_for(entry)
-    journal = PromotionJournal(workspace_root / _JOURNAL_FILENAME) if _HAS_DURABLE_JOURNAL else None
-    promotion_id = journal.begin(entry.name, path, staging_path, backup_path, health_check_url=health_check_url).promotion_id if journal else None
-    _checkpoint(progress, "validation", "Promoting the verified candidate; the previous installation is kept as a backup.")
     forget_build_trees(staging_path)
-    path.rename(backup_path)
-    if journal:
-        journal.advance(promotion_id, PromotionPhase.BACKED_UP)
-    try:
-        staging_path.rename(path)
-    except OSError as exc:
-        try:
-            backup_path.rename(path)
-        except OSError:
-            return InstallResult(
-                False,
-                f"promotion failed AND the self-heal restore also failed - {path} may not exist right now; "
-                f"the previous installation should still be recoverable at {backup_path}: {exc}",
-                build_result.output,
-            )
-        if journal:
-            # The in-process self-heal above already fully resolved this -
-            # nothing left for a later recover_interrupted_promotions()
-            # call to do.
-            journal.complete(promotion_id)
-        return InstallResult(
-            False,
-            f"promotion failed (exit path unavailable: {exc}) - restored the previous installation at {path}; "
-            f"the verified candidate is still available at {staging_path} for manual inspection",
-            build_result.output,
-        )
-    if journal:
-        journal.advance(promotion_id, PromotionPhase.PROMOTED)
-    sha_label = candidate_sha[:12]
-    # a promotion that finishes its 2 renames is not yet a HEALTHY
-    # promotion when the project itself declares a real health endpoint -
-    # check it for real before ever calling this a success, rather than
-    # treating "the files moved" as the whole postcondition. Skipped
-    # entirely (same as before this feature existed) when the project
-    # declares no health endpoint, or the optional durable-journal
-    # dependency isn't installed at all (no journal to even record the
-    # check against - see this module's own header comment).
-    if journal and health_check_url:
-        healthy, reason = _check_service_health(health_check_url)
-        if not healthy:
-            return InstallResult(
-                False,
-                f"Promoted {path} to v{candidate.version} (commit {sha_label}), but its own declared health "
-                f"check at {health_check_url} still fails ({reason}) - the promotion is left pending in the "
-                f"journal; re-running install_or_update() will retry the check without repeating the build",
-                build_result.output,
-            )
-        journal.complete(promotion_id)
-        return InstallResult(
-            True,
-            f"Updated {path} to v{candidate.version} (commit {sha_label}) after a verified build and a real "
-            f"passing health check ({reason}); previous installation kept at {backup_path}",
-            build_result.output,
-        )
-    if journal:
-        journal.complete(promotion_id)
-    return InstallResult(
-        True,
-        f"Updated {path} to v{candidate.version} (commit {sha_label}) after a verified build; "
-        f"previous installation kept at {backup_path}",
-        build_result.output,
-    )
+    environment_removed = remove_generated_environments(staging_path)
+    promoted = _promote(entry, workspace_root, path, staging_path, candidate_sha, progress)
+    if isinstance(promoted, InstallResult):
+        return promoted
+    (backup_path,) = promoted
+    pruned = prune_backups(workspace_root, entry.name, DEFAULT_KEEP)
+    message = f"Updated {path} to v{candidate.version} (commit {candidate_sha[:12]}) after a verified build; previous installation kept at {backup_path}"
+    if pruned:
+        message += f" ({len(pruned)} older backup(s) deleted)"
+    if environment_removed:
+        rebuilt = _rebuild_environment(path, progress)
+        message += "; " + rebuilt.message
+        if not rebuilt.ok:
+            return InstallResult(False, message, rebuilt.output or build_result.output)
+    return InstallResult(True, message, build_result.output)
 
 
 def find_build_test_script(path: Path) -> Path | None:
-    import os
     name = BUILD_TEST_SCRIPT_WINDOWS if os.name == "nt" else BUILD_TEST_SCRIPT_POSIX
     candidate = path / name
     return candidate if candidate.is_file() else None
@@ -726,20 +555,12 @@ def run_build_script(
 
 
 def _run_build_script_at(path: Path, *, progress: ProgressCallback | None = None) -> InstallResult:
-    """The real work behind run_build_script(), taking an explicit path
-    instead of deriving one from workspace_root/entry.name - shared with
-    clone_or_pull's own staging-clone build verification, which
-    needs to build a candidate sitting in a temporary staging directory,
-    not (yet) the real installed checkout."""
+    """The work behind run_build_script(), taking an explicit path: shared with the staging-clone verification, which builds a candidate that is not (yet) the installed checkout."""
     script = find_build_test_script(path)
     if script is None:
         return InstallResult(False, f"No non-versioning build-test.sh/.bat found in {path} - upgrade this checkout or verify it manually before deployment.")
 
-    if os.name == "nt":
-        cmd = ["cmd", "/c", str(script)]
-    else:
-        cmd = ["bash", str(script)]
-
+    cmd = ["cmd", "/c", str(script)] if os.name == "nt" else ["bash", str(script)]
     _checkpoint(progress, "build", f"Running {script.name}; this never increments the project version.")
     result = _run(cmd, cwd=path, capture_output=progress is not None)
     if result.returncode != 0:
@@ -758,50 +579,58 @@ def install_or_update(
     build: bool = True,
     progress: ProgressCallback | None = None,
 ) -> list[InstallResult]:
-    """The full manual install/update flow for ONE project - never called
-    for more than one project per invocation (see cli.py's own `install`/
-    `update` subcommands, which always take an explicit project name, and
-    this project's own README for why that is a deliberate, non-optional
-    design choice: explicit operator approval keeps deployment safe).
+    """The full manual install/update flow for ONE project. It never raises: whatever goes wrong (git missing, a folder in use, a full disk) comes back as a failed result, so the
+    window that called it from a worker thread is never left busy for ever, and every attempt that gets as far as starting leaves its line in the evidence file.
 
-    updating an EXISTING checkout now builds/verifies the
-    candidate itself, inside clone_or_pull's own staging clone, BEFORE
-    ever promoting it into the real installation - see that function's
-    own docstring. A brand-new clone has no previous installation to
-    protect, so it still gets its separate run_build_script call here,
-    exactly as before.
+    Takes the workspace lock first (one updater at a time), heals any promotion a previous run left half done, and refuses to build a project when ARMOR-COMMON is not installed next
+    to it (every build-test.sh calls ARMOR-COMMON's script)."""
+    started = time.time()
+    try:
+        with WorkspaceLock(workspace_root):
+            return _install_or_update_locked(entry, workspace_root, build, progress, started)
+    except WorkspaceBusy as busy:
+        return [InstallResult(False, str(busy))]
+    except Exception as error:  # noqa: BLE001 - see the docstring
+        failure = InstallResult(False, f"{type(error).__name__}: {error}")
+        try:
+            record_attempt(
+                workspace_root, project=entry.name, before={}, after=installed_state(workspace_root / entry.name), ok=False, message=failure.message,
+                duration_s=time.time() - started,
+            )
+        except Exception:  # noqa: BLE001 - recording never turns a result into another failure
+            pass
+        return [failure]
 
-    It heals any promotion a PREVIOUS run of this updater started and
-    never finished (a real process crash exactly between clone_or_pull's
-    own 2 promotion renames) before this run's own work begins - see
-    recover_interrupted_promotions()'s own doc comment. A genuine no-op
-    when nothing was pending, or when armor-common isn't installed."""
-    recover_interrupted_promotions(workspace_root)
-    was_existing_checkout = (workspace_root / entry.name / ".git").is_dir()
+
+def _install_or_update_locked(entry: ProjectEntry, workspace_root: Path, build: bool, progress: ProgressCallback | None, started: float) -> list[InstallResult]:
+    healed = recover_interrupted_promotions(workspace_root)
+    for action in healed:
+        _checkpoint(progress, "preflight", action)
     before = installed_state(workspace_root / entry.name)
-    results = [clone_or_pull(entry, workspace_root, verify_build=build, progress=progress)]
-    if results[0].ok and build and not was_existing_checkout:
-        results.append(run_build_script(entry, workspace_root, progress=progress))
-    elif results[0].ok and build:
-        _checkpoint(progress, "build", "Build already verified in an isolated staging clone before promotion.")
-    elif results[0].ok:
-        _checkpoint(progress, "build", "Build-test was deliberately skipped for this one approved source refresh.")
+    if build and entry.name != COMMON_PROJECT and not (workspace_root / COMMON_PROJECT).is_dir():
+        results = [InstallResult(False, f"{COMMON_PROJECT} is not installed in {workspace_root}: every project's build runs its script, so install {COMMON_PROJECT} first (or choose to skip the build)")]
+    else:
+        results = [clone_or_pull(entry, workspace_root, verify_build=build, progress=progress)]
+        if results[0].ok and not build:
+            _checkpoint(progress, "build", "Build-test was deliberately skipped for this one approved source refresh.")
+    after = installed_state(workspace_root / entry.name)
     record_attempt(
         workspace_root,
         project=entry.name,
         before=before,
-        after=installed_state(workspace_root / entry.name),
+        after=after,
         ok=all(r.ok for r in results),
         message="; ".join(r.message for r in results),
+        duration_s=time.time() - started,
     )
-    return results
+    return healed_results(healed) + results
+
+
+def healed_results(actions: list[str]) -> list[InstallResult]:
+    """What a recovery did, as results (a recovered promotion is news the person should see)."""
+    return [InstallResult(True, action) for action in actions]
 
 
 def _command_output(result: subprocess.CompletedProcess[str]) -> str:
-    """Return compact child evidence when a GUI captured it.
-
-    The full command output remains available in the process result while the
-    desktop surface keeps a bounded, readable activity trace instead of
-    attempting to render an unbounded compiler log.
-    """
+    """Compact child evidence when a GUI captured it: the full command output stays in the process result while the desktop surface keeps a bounded, readable activity trace."""
     return "\n".join(part for part in (result.stdout, result.stderr) if part).strip()

@@ -15,21 +15,21 @@
   <a href="README_por.md">🇵🇹 Português</a>
 </p>
 
-### Detects, installs and updates every A.R.M.O.R. repository on the machine it runs on (a Python program with no required dependencies, built for a private ecosystem from the start)
+### Detects, installs and updates every A.R.M.O.R. repository on the machine it runs on (a Python program with no required dependencies)
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-116-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.1-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what runs today:** The manifest discovery, version comparison, signature check, atomic-by-verification install and update, evidence log and the eight-language interface tables are tested (116 tests, 4 skipped without a display), and the Qt Quick shell has been run on Windows. It has not been run against every repository of the family end to end, and the installs it makes need `git` and each repository's own build tools on the machine.
+**Honesty check - what runs today:** The manifest discovery, the version comparison, the signature check, the staged install and update with its lock, journal, backups and rollback, the evidence log and the eight-language interface tables are tested (140 tests), and the Qt Quick shell has been run on Windows. It has not been run against every repository of the family end to end, and the installs it makes need `git` and each repository's own build tools on the machine.
 
 ---
 
@@ -37,16 +37,17 @@
 
 | | |
 |---|---|
-| Version | `0.1.1` |
+| Version | `0.1.2` |
 | Maturity | Established |
-| Tests | 116 (`python -m pytest tests -q`, 4 skipped) |
+| Tests | 140 (`python -m pytest tests -q`) |
 | Stack | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | On real hardware | Not applicable: it is a desktop program; its Qt Quick shell has been run on Windows |
 
 ## 🎯 Overview
 
-* **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every repository a `GITHUB_TOKEN` can see on GitHub is checked the same way - every A.R.M.O.R. repository is private, so that token is required throughout, with no 60-requests-an-hour fallback a public ecosystem could fall back to.
-* **Install and update, never in place:** an update is built and verified in an independent staging clone first, and only promoted - two directory renames, the previous install kept as a backup - once that build actually succeeds; a genuinely uncommitted local edit is refused outright, never silently discarded.
+* **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every public repository of the account is checked the same way. A `GITHUB_TOKEN` is optional: it only raises GitHub's limit of 60 requests an hour.
+* **Install and update, never in place:** a new project and an update are both built and verified in an independent staging clone first, and only promoted - two journalled renames, the replaced checkout kept as a backup under `.armor-updater/backups/` (the newest three) - once that build succeeds; an update to the commit already installed does nothing; a genuinely uncommitted local edit is refused outright, never silently discarded; a crash between the renames is healed at the next run, and `rollback` puts the newest backup back.
+* **One at a time, and ordered:** a lock stops two updaters working on a workspace together; a batch goes ARMOR-COMMON first (every build needs it), and a project is not built without it.
 * **Evidence:** every attempt, successful or not, appends one line to a local log with the project, the version and commit before and after, and the reason for a failure.
 * **A CLI and an optional desktop shell:** `armor-updater status`/`install`/`update`, and a Qt Quick interface (`pip install ".[gui]"`) in the ecosystem's eight languages.
 
@@ -58,7 +59,7 @@ ARMOR-UPDATER is the desktop tool for the person who keeps a copy of the family 
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (atomic staging-clone update), signature (signed updates), evidence, main (CLI), settings, version_parse,
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
 │                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
 ├── tests/              13 test modules
@@ -71,15 +72,14 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 116 tests (4 skipped without a display)
-armor-updater status                                    # local + GitHub state of every repository
-armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
-armor-updater update ARMOR-NETWORK                      # atomic-by-verification update of an installed one
+python -m pytest tests -q                              # 140 tests
+armor-updater --cli status                              # local + GitHub state of every repository
+armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
+armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)
+armor-updater --cli rollback ARMOR-NETWORK              # put the newest backup of a replaced checkout back
 ```
 
 See `docs/CLI_REFERENCE.md`.
-
-See `CONTRIBUTING.md` for how a repository joins the ecosystem `armor.project.json` describes.
 
 ## 🔗 Related Projects
 

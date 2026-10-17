@@ -59,6 +59,7 @@ def test_install_or_update_leaves_evidence_of_a_failed_attempt(tmp_path: Path, m
     class Entry:
         name = "A.R.M.O.R.-DEMO"
 
+    (tmp_path / "ARMOR-COMMON").mkdir()   # every build needs it
     monkeypatch.setattr(install_module, "recover_interrupted_promotions", lambda root: [])
     monkeypatch.setattr(
         install_module, "clone_or_pull", lambda entry, root, **kw: install_module.InstallResult(False, "clone refused")
@@ -68,3 +69,4 @@ def test_install_or_update_leaves_evidence_of_a_failed_attempt(tmp_path: Path, m
     (line,) = read_attempts(tmp_path)
     assert line["project"] == "A.R.M.O.R.-DEMO" and line["ok"] is False
     assert "clone refused" in line["message"]
+    assert line["at"].endswith("Z") and line["durationS"] is not None, "a line says when it happened and how long it took"

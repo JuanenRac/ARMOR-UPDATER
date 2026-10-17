@@ -53,6 +53,9 @@ def discover_workspace(workspace_root: Path) -> LocalDiscovery:
     for project_path in sorted(workspace_root.iterdir(), key=lambda path: path.name.casefold()):
         if not project_path.is_dir():
             continue
+        # a hidden folder is the updater's own (staging clones, its state and backups), and an old-style ".backup-" copy is a replaced checkout, not a project
+        if project_path.name.startswith(".") or ".backup-" in project_path.name:
+            continue
         manifest_path = project_path / MANIFEST_FILE
         if not manifest_path.is_file():
             continue

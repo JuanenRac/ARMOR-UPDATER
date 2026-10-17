@@ -9,21 +9,15 @@ desktop GUI's deploy filter only.
 
 A.R.M.O.R.'s manifest schema deliberately keeps ``deployment_target`` as
 free, human-readable text (see ARMOR-UPDATER's own ``armor.project.json``
-notes) instead of a closed enum the way HYDRA-UMC's manifest does - a
+notes) instead of a closed enum - a
 real project describes its own real hardware ("ESP32-S3-ETH-PoE",
 "NVIDIA Jetson Orin NX") instead of squeezing it into an artificial fixed
 value. The desktop filter still needs a small set of buttons to filter
 by, so this module classifies that free text by real keyword content
 instead of asking every project to declare a second, enum-shaped field.
 
-Earlier, the filter reused HYDRA-UMC's own closed enum verbatim
-(``cm5``/``user-pc``/``mobile``/``wearable``/``dev-server``) and compared
-it against A.R.M.O.R.'s free text with ``==`` - none of A.R.M.O.R.'s real
-projects ever literally equal one of those five strings, so every filter
-button except "all" silently matched zero projects (not just the mobile
-one), and the deploy-target column tried to translate the raw free text
-itself as an i18n key, showing broken strings like "deploy_Android 10+"
-in the table instead of the project's own real text.
+A filter that compared a closed set of five words with that free text with ``==`` would match no project at all, and a column that translated the raw free text as an
+i18n key would show broken strings like "deploy_Android 10+": the classification below is why neither happens.
 """
 
 from __future__ import annotations

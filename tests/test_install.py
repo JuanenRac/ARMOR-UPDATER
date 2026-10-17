@@ -5,50 +5,14 @@
 # =============================================================================
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import subprocess
-import sys
 from pathlib import Path
 
-from armor_updater import install
+from armor_updater import install, promotion
 from armor_updater.install import clone_or_pull, find_build_test_script, run_build_script
 from armor_updater.registry import ProjectEntry
-
-# The sibling ARMOR-COMMON checkout's own src/ tree, if this repo
-# happens to be checked out alongside it (the real, normal layout for
-# this ecosystem's own workspace - see registry.py's own real project
-# list). Not a hard dependency of this test file itself: tests exercising
-# the durable-journal path skip cleanly (rather than fail) when it isn't
-# present, since a standalone ARMOR-UPDATER checkout (no sibling SDK)
-# is exactly the real "armor-common isn't installed" case install.py's
-# own header comment already documents as a supported, honest fallback.
-_SDK_SRC = Path(__file__).resolve().parents[2] / "ARMOR-COMMON" / "clients" / "python" / "src"
-
-
-def _reload_install_with_sdk_on_path():
-    """Adds the sibling SDK's src/ to sys.path and reloads armor_updater.install
-    so its own module-level `_HAS_DURABLE_JOURNAL` try/except re-runs and
-    succeeds - the only way to exercise that branch, since it's decided
-    once at import time. Returns the reloaded module; caller is
-    responsible for restoring the original state via
-    `_reload_install_without_sdk()` once done, so later tests in this
-    same file see the real, default (no-SDK) behavior again."""
-    sys.path.insert(0, str(_SDK_SRC))
-    for name in ("armor_sdk", "armor_sdk.promotion_journal"):
-        sys.modules.pop(name, None)
-    return importlib.reload(install)
-
-
-def _reload_install_without_sdk():
-    if str(_SDK_SRC) in sys.path:
-        sys.path.remove(str(_SDK_SRC))
-    for name in list(sys.modules):
-        if name == "armor_sdk" or name.startswith("armor_sdk."):
-            del sys.modules[name]
-    return importlib.reload(install)
-
 
 def entry() -> ProjectEntry:
     return ProjectEntry("ARMOR-EXAMPLE", "python", "1.0.0")
@@ -207,8 +171,9 @@ def test_update_verifies_build_in_staging_before_promoting_and_keeps_a_backup(tm
     # unique per attempt (`.backup-<uuid>`), not a single fixed
     # name - see clone_or_pull()'s own comment for the real data-loss gap
     # a fixed, reused name left open.
-    backups = list(tmp_path.glob(f"{entry().name}.backup-*"))
+    backups = promotion.list_backups(tmp_path, entry().name)
     assert len(backups) == 1, backups
+    assert not list(tmp_path.glob(f"{entry().name}.backup-*")), "a backup next to the projects would look like one"
     backup = backups[0]
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=backup, text=True).strip() == old_head
 
@@ -261,7 +226,7 @@ def test_two_successive_updates_never_overwrite_the_earlier_backup(tmp_path: Pat
 
     # Both backups survive, each holding the real revision it was made
     # from - neither promotion destroyed the other's own recovery point.
-    backups = sorted(tmp_path.glob(f"{entry().name}.backup-*"))
+    backups = promotion.list_backups(tmp_path, entry().name)
     assert len(backups) == 2, backups
     backup_heads = {
         subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=backup, text=True).strip()
@@ -313,11 +278,12 @@ def test_promotion_self_heals_when_the_second_rename_fails(tmp_path: Path, monke
     result = clone_or_pull(entry(), tmp_path)
 
     assert not result.ok
-    assert "restored the previous installation" in result.message, result.message
+    assert "the previous installation is back in" in result.message, result.message
     assert local.is_dir()
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == old_head
     # Self-heal renamed the backup back - no orphaned backup left behind.
-    assert not list(tmp_path.glob(f"{entry().name}.backup-*"))
+    assert promotion.list_backups(tmp_path, entry().name) == []
+    assert promotion.PromotionJournal(tmp_path).read() is None, "the journal is closed once the restore is done"
 
 
 def test_update_restores_the_real_upstream_remote_on_the_promoted_checkout(tmp_path: Path, monkeypatch):
@@ -584,193 +550,6 @@ def test_refuses_a_remote_manifest_version_lower_than_the_installed_version(tmp_
 # The durable promotion journal (armor-common's promotion_journal module,
 # an optional dependency - see install.py's own header comment).
 # ---------------------------------------------------------------------------
-
-def test_recover_interrupted_promotions_is_a_real_noop_without_the_sdk_installed():
-    # The default state for this whole test file: armor-common is not on
-    # sys.path, so install.py's own top-level try/except left
-    # _HAS_DURABLE_JOURNAL False - the honest, documented fallback for a
-    # standalone checkout, not a crash or a hidden dependency error.
-    assert install._HAS_DURABLE_JOURNAL is False
-    assert install.recover_interrupted_promotions(Path("/does/not/matter")) == []
-
-
-def test_promotion_journal_records_and_completes_a_real_successful_update(tmp_path: Path):
-    if not _SDK_SRC.is_dir():
-        import pytest
-        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
-    reloaded = _reload_install_with_sdk_on_path()
-    try:
-        assert reloaded._HAS_DURABLE_JOURNAL is True
-
-        remote = tmp_path / "remote.git"
-        git("init", "--bare", str(remote), cwd=tmp_path)
-        seed = tmp_path / "seed"
-        git("clone", str(remote), str(seed), cwd=tmp_path)
-        git("config", "user.email", "contract@example.invalid", cwd=seed)
-        git("config", "user.name", "Contract", cwd=seed)
-        write_manifest(seed, "1.0.0")
-        write_build_script(seed, ok=True)
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "base", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        local = tmp_path / entry().name
-        git("clone", str(remote), str(local), cwd=tmp_path)
-
-        write_manifest(seed, "1.1.0")
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "new release", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        result = reloaded.clone_or_pull(entry(), tmp_path)
-
-        assert result.ok, result.message
-        journal_path = tmp_path / reloaded._JOURNAL_FILENAME
-        assert journal_path.exists(), "a real promotion with the SDK installed must write a journal file"
-        journal = reloaded.PromotionJournal(journal_path)
-        assert journal.pending() == [], "a fully successful promotion must leave nothing pending in the journal"
-    finally:
-        _reload_install_without_sdk()
-
-
-def _entry_with_health(*, port: int) -> ProjectEntry:
-    return ProjectEntry(
-        entry().name, "python", "pyproject.toml", r"(\d+)\.(\d+)\.(\d+)",
-        service_port=port, service_health_path="/health",
-    )
-
-
-def test_i13_promotion_completes_only_after_a_real_passing_health_check(tmp_path: Path):
-    if not _SDK_SRC.is_dir():
-        import pytest
-        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
-    import threading
-    from http.server import BaseHTTPRequestHandler, HTTPServer
-
-    class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802
-            self.send_response(200)
-            self.end_headers()
-
-        def log_message(self, *args):
-            pass
-
-    server = HTTPServer(("127.0.0.1", 0), _Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    reloaded = _reload_install_with_sdk_on_path()
-    try:
-        port = server.server_address[1]
-        remote = tmp_path / "remote.git"
-        git("init", "--bare", str(remote), cwd=tmp_path)
-        seed = tmp_path / "seed"
-        git("clone", str(remote), str(seed), cwd=tmp_path)
-        git("config", "user.email", "contract@example.invalid", cwd=seed)
-        git("config", "user.name", "Contract", cwd=seed)
-        write_manifest(seed, "1.0.0")
-        write_build_script(seed, ok=True)
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "base", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        local = tmp_path / entry().name
-        git("clone", str(remote), str(local), cwd=tmp_path)
-
-        write_manifest(seed, "1.1.0")
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "new release", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        result = reloaded.clone_or_pull(_entry_with_health(port=port), tmp_path)
-
-        assert result.ok, result.message
-        assert "passing health check" in result.message
-        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
-        assert journal.pending() == [], "a genuinely passing health check must complete the promotion"
-    finally:
-        _reload_install_without_sdk()
-        server.shutdown()
-        thread.join(timeout=5)
-
-
-def test_i13_promotion_stays_pending_when_the_health_check_fails(tmp_path: Path):
-    if not _SDK_SRC.is_dir():
-        import pytest
-        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
-    import socket
-
-    # A real, guaranteed-closed local port - nothing is listening, so the
-    # freshly-promoted "service" this entry declares can never answer.
-    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    probe.bind(("127.0.0.1", 0))
-    closed_port = probe.getsockname()[1]
-    probe.close()
-
-    reloaded = _reload_install_with_sdk_on_path()
-    try:
-        remote = tmp_path / "remote.git"
-        git("init", "--bare", str(remote), cwd=tmp_path)
-        seed = tmp_path / "seed"
-        git("clone", str(remote), str(seed), cwd=tmp_path)
-        git("config", "user.email", "contract@example.invalid", cwd=seed)
-        git("config", "user.name", "Contract", cwd=seed)
-        write_manifest(seed, "1.0.0")
-        write_build_script(seed, ok=True)
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "base", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        local = tmp_path / entry().name
-        git("clone", str(remote), str(local), cwd=tmp_path)
-
-        write_manifest(seed, "1.1.0")
-        git("add", "-A", cwd=seed)
-        git("commit", "-m", "new release", cwd=seed)
-        git("push", "origin", "HEAD", cwd=seed)
-
-        result = reloaded.clone_or_pull(_entry_with_health(port=closed_port), tmp_path)
-
-        # this project's own real acceptance test, end to end: the files DID
-        # promote (the checkout really is the new version), but a
-        # failing health check must never be reported as success, and
-        # must never be silently pruned from the journal either.
-        assert not result.ok, "a failing health check must not be reported as a successful install"
-        assert "health" in result.message
-        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
-        assert len(journal.pending()) == 1, "the promotion must stay pending for recovery/a human, not be silently completed"
-        assert (local / "armor.project.json").read_text(encoding="utf-8").count("1.1.0") >= 1, "the promotion itself really did happen - only its health is in question"
-    finally:
-        _reload_install_without_sdk()
-
-
-def test_recover_interrupted_promotions_heals_a_real_crash_left_backed_up(tmp_path: Path):
-    if not _SDK_SRC.is_dir():
-        import pytest
-        pytest.skip(f"no sibling ARMOR-COMMON checkout at {_SDK_SRC}")
-    reloaded = _reload_install_with_sdk_on_path()
-    try:
-        # Simulates exactly the real gap clone_or_pull()'s own promotion
-        # step can crash in: the target was already renamed aside to
-        # backup, but staging never got promoted into its place - target
-        # is genuinely missing.
-        target = tmp_path / entry().name
-        backup = tmp_path / f"{entry().name}.backup-deadbeef"
-        backup.mkdir()
-        (backup / "marker.txt").write_text("previous real install", encoding="utf-8")
-
-        journal = reloaded.PromotionJournal(tmp_path / reloaded._JOURNAL_FILENAME)
-        record = journal.begin(entry().name, target, tmp_path / f".{entry().name}.update-x", backup)
-        journal.advance(record.promotion_id, reloaded.PromotionPhase.BACKED_UP)
-
-        actions = reloaded.recover_interrupted_promotions(tmp_path)
-
-        assert target.exists(), "the interrupted promotion must be healed by restoring the backup"
-        assert (target / "marker.txt").read_text(encoding="utf-8") == "previous real install"
-        assert not backup.exists()
-        assert any("restored" in action for action in actions)
-    finally:
-        _reload_install_without_sdk()
-
 
 def test_install_or_update_calls_recovery_before_its_own_work(tmp_path: Path, monkeypatch):
     # install_or_update() must heal a real interrupted promotion from a

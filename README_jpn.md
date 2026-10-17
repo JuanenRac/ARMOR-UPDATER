@@ -15,21 +15,21 @@
   <a href="README_por.md">🇵🇹 Português</a>
 </p>
 
-### 実行しているマシン上であらゆる A.R.M.O.R. リポジトリを検出し、インストールし、更新する(必須の依存関係のない Python プログラムで、最初から非公開のエコシステム向けに作られたもの)
+### 実行中のマシン上のすべての A.R.M.O.R. リポジトリを検出し、インストールし、更新します（必須の依存関係がない Python プログラム）
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-116-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.1-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名検査、検証によるアトミックなインストールと更新、証拠ログ、8 言語のインターフェース表はテストされ（116 件、ディスプレイなしでは 4 件スキップ）、Qt Quick シェルは Windows で動かしました。ファミリーのすべてのリポジトリに対して最初から最後まで実行したわけではなく、そのインストールにはマシン上の `git` と各リポジトリのビルドツールが必要です。
+**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（140 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
 
 ---
 
@@ -37,16 +37,17 @@
 
 | | |
 |---|---|
-| バージョン | `0.1.1` |
+| バージョン | `0.1.2` |
 | 成熟度 | 確立 |
-| テスト | 116 (`python -m pytest tests -q`, 4 skipped) |
+| テスト | 140 (`python -m pytest tests -q`) |
 | 技術 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | 実機での確認 | 該当なし：デスクトッププログラムで、Qt Quick シェルは Windows で動かしました |
 
 ## 🎯 概要
 
-* **固定リストのない発見:** ローカルのフォルダは `ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持てばその時点でエコシステムに加わる。リモートでは `GITHUB_TOKEN` が GitHub 上で見られるすべてのリポジトリを同じ方法で確認する — すべての A.R.M.O.R. リポジトリは非公開なので、このトークンは常に必須であり、公開エコシステムのような 1 時間 60 リクエストという代替手段は存在しない。
-* **その場では行わないインストールと更新:** 更新はまず独立したステージング用クローンで構築・検証され、そのビルドが実際に成功したときにのみ昇格される — 2 回のディレクトリ名変更で、以前のインストールはバックアップとして残される。本当にコミットされていないローカルの変更は即座に拒否され、黙って捨てられることはない。
+* **固定リストのない検出：**ローカルのフォルダーは、`ecosystem: "A.R.M.O.R."` を宣言する有効な `armor.project.json` を持った時点で加わります。リモートでは、アカウントのすべての公開リポジトリが同じ方法で調べられます。`GITHUB_TOKEN` は任意で、GitHub の 1 時間 60 リクエストの上限を上げるだけです。
+* **インストールも更新も、その場では行いません：**新しいプロジェクトも更新も、まず独立したステージングのクローンでビルドして検証し、ビルドが成功してから反映します。ジャーナルに記録された 2 回の名前変更を行い、置き換えたチェックアウトは `.armor-updater/backups/` に（最新の 3 件）保存されます。インストール済みと同じコミットへの更新は何もしません。コミットされていない実際のローカル変更は即座に拒否され、黙って破棄されることはありません。名前変更の間のクラッシュは次の実行で修復され、`rollback` は最新のバックアップを戻します。
+* **一度に一つ、順番どおりに：**ロックにより、2 つの更新ツールが同じワークスペースで同時に動くことはありません。一括処理は ARMOR-COMMON から始まり（すべてのビルドが必要とします）、それがなければプロジェクトはビルドされません。
 * **証跡:** 成功・失敗を問わず、すべての試行はプロジェクト名、前後のバージョンとコミット、失敗の理由をローカルのログに一行追加する。
 * **CLI と任意のデスクトップシェル:** `armor-updater status`/`install`/`update`、およびエコシステムの 8 言語に対応した Qt Quick インターフェース(`pip install ".[gui]"`)。
 
@@ -58,7 +59,7 @@ ARMOR-UPDATER は、PC にファミリーのコピーを持つ人のためのデ
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (atomic staging-clone update), signature (signed updates), evidence, main (CLI), settings, version_parse,
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
 │                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
 ├── tests/              13 test modules
@@ -71,15 +72,14 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 116 tests (4 skipped without a display)
-armor-updater status                                    # local + GitHub state of every repository
-armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
-armor-updater update ARMOR-NETWORK                      # atomic-by-verification update of an installed one
+python -m pytest tests -q                              # 140 tests
+armor-updater --cli status                              # local + GitHub state of every repository
+armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
+armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)
+armor-updater --cli rollback ARMOR-NETWORK              # put the newest backup of a replaced checkout back
 ```
 
-See `docs/CLI_REFERENCE.md`.
-
-リポジトリが `armor.project.json` の説明するエコシステムに加わる方法は `CONTRIBUTING.md` を参照。
+`docs/CLI_REFERENCE.md` を参照してください。
 
 ## 🔗 関連プロジェクト
 

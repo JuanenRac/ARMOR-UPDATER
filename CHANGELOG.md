@@ -5,6 +5,23 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.1.2] - Updates that survive a crash, a project that cannot be left half installed and commands that mean what the README says
+
+- **A promotion is journalled.** The two renames that put a new checkout in place of the old one are recorded on disk first; if the process dies between them (a kill, a power cut) the next run puts the previous checkout back instead of leaving the project without a folder. The journal the earlier code looked for lived in a package that never existed, so the recovery never ran; it is now part of the updater.
+- **Backups out of the way:** the replaced checkout is kept under `<workspace>/.armor-updater/backups/<project>/` (the newest three), not next to the projects, where each one showed as a project with an invalid manifest and took the disk of a whole checkout for ever. `rollback <project>` puts the newest back (and can itself be undone), `backups` lists them with their size and `--prune N` trims them.
+- **An update to the commit already installed does nothing** (before, it cloned, built and promoted again, making another copy).
+- **A new project is built before it takes its place:** a failed build installs nothing, instead of leaving a folder that said *already exists, use update*.
+- **Virtual environments survive the move:** the environment the build made in the staging folder holds its absolute path and broke when the folder was renamed; it is now removed before the promotion and made again in the final place by the project's own `build.sh`/`.bat`.
+- **One updater at a time:** a lock under `.armor-updater/` stops a window and a command, or two windows, from working on one workspace together (one left by a process that is gone is taken over).
+- **The window cannot be left busy for ever:** whatever fails inside an install or update (git missing, a file in the folder open, a full disk) comes back as a failed result with its line of evidence, where before it killed the worker and left every button disabled.
+- **A batch goes ARMOR-COMMON first,** a parent before its children, and a project is not built when ARMOR-COMMON is not installed next to it (every build needs it); a batch used to go alphabetically and fail the first projects.
+- **Local data is carried over right:** a build folder at any depth (`app/build`, `.gradle`, a nested `node_modules`) is no longer copied into the candidate, which made updates slow and the verified build reuse old artifacts.
+- **Commands:** `armor-updater status|install|update|rollback|backups` run the command line without `--cli` (they used to open the window and ignore the arguments), the program exits with 1 when no window can be opened, and installed as a package it asks for `--workspace` (or `ARMOR_WORKSPACE`) instead of cloning into the folders of the Python environment.
+- **Signed commits:** with the policy on, every new commit is checked, not only the last one; the settings file is written whole beside the old one and put in place, and a settings file that cannot be read is no longer taken as *policy off*.
+- The evidence lines say when they happened and how long they took.
+- The documents say the truth: the repositories are public and the token is optional, the commands carry `--cli`, the guarantees are the real ones, and the comments that came from another ecosystem are gone. The old copy of the package under `build/` is no longer in the repository.
+- Tests: 140 (before 120, 6 of them skipped for ever); new ones cover the lock, the journal and its recovery, the backups and the rollback, the order of a batch, the failed installs, the environments, the nested build folders, the command line without `--cli` and the settings.
+
 ## [0.1.1] - Portuguese interface
 
 - The interface now speaks Portuguese as well: the eighth language of the family, with the whole table of texts (menus, states, checkpoints, batch actions, About), selectable in the language box of the window.

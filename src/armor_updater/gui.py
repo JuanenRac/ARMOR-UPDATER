@@ -52,14 +52,13 @@ from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
 from .install import install_or_update
-from .registry import GITHUB_OWNER, ProjectEntry
+from .registry import GITHUB_OWNER
 
 #: Order matters - shown left-to-right in the filter dropdown, "all" first.
 #: Real labels come from i18n.t(lang, f"deploy_{key}") / "deploy_all" at
 #: render time, not hardcoded here - see UpdaterGUI._deploy_label(). One
 #: button per real A.R.M.O.R. hardware-target category (plus "all") - see
-#: deploy_category.py for why these are not HYDRA-UMC's own
-#: cm5/user-pc/wearable/dev-server enum.
+#: deploy_category.py for how the free text of a manifest becomes a category.
 DEPLOY_ORDER = list(DEPLOY_CATEGORIES)
 
 #: The four manifest maturity values, in the same order as the dashboard.

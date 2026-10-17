@@ -107,3 +107,26 @@ def test_workspace_root_and_lang_persist_independently_side_by_side(isolated_set
     settings.save_workspace_root(real_dir)
     assert settings.get_saved_lang() == "de"
     assert settings.get_saved_workspace_root() == real_dir
+
+
+def test_a_save_leaves_the_old_file_or_the_new_one_never_half(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "settings.json"
+    monkeypatch.setattr(settings, "SETTINGS_PATH", path)
+    settings.save_settings(lang="es")
+    settings.save_settings(workspace_root=str(tmp_path))
+    assert json.loads(path.read_text(encoding="utf-8")) == {"lang": "es", "workspace_root": str(tmp_path)}
+    assert not list(tmp_path.glob("*.tmp")), "the temporary file is gone once it was put in place"
+
+
+def test_a_damaged_settings_file_is_not_overwritten_and_turns_the_signature_policy_on(tmp_path, monkeypatch) -> None:
+    from armor_updater import signature
+    path = tmp_path / "settings.json"
+    path.write_text("{ not json", encoding="utf-8")
+    monkeypatch.setattr(settings, "SETTINGS_PATH", path)
+    monkeypatch.delenv("ARMOR_UPDATER_REQUIRE_SIGNED", raising=False)
+    assert settings.settings_damaged()
+    settings.save_settings(lang="es")
+    assert path.read_text(encoding="utf-8") == "{ not json", "a file that cannot be read is left for the person to look at"
+    assert signature.current_policy().required, "the policy lives in that file: unreadable is not the same as off"
+    monkeypatch.setenv("ARMOR_UPDATER_REQUIRE_SIGNED", "0")
+    assert not signature.current_policy().required, "the person can still say it explicitly"

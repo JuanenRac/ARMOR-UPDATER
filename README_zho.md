@@ -15,21 +15,21 @@
   <a href="README_por.md">🇵🇹 Português</a>
 </p>
 
-### 在运行它的机器上发现、安装并更新每一个 A.R.M.O.R. 仓库(一个不需要依赖的 Python 程序,从一开始就为私有生态系统而设计)
+### 检测、安装并更新所在机器上的每个 A.R.M.O.R. 仓库（一个没有必需依赖的 Python 程序）
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-116-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.1-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** 清单发现、版本比较、签名检查、按验证的原子安装和更新、证据日志以及八种语言的界面表格都经过测试（116 个测试，无显示器时跳过 4 个），Qt Quick 界面已在 Windows 上运行过。它还没有对家族的所有仓库端到端运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
+**诚实性检查 - 今天真正能运行的部分:** 清单发现、版本比较、签名检查、带锁、日志、备份和回退的分阶段安装与更新、证据日志以及八种语言的界面表格都已测试（140 个测试），Qt Quick 界面已在 Windows 上运行过。它没有对家族中的每个仓库从头到尾运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
 
 ---
 
@@ -37,16 +37,17 @@
 
 | | |
 |---|---|
-| 版本 | `0.1.1` |
+| 版本 | `0.1.2` |
 | 成熟度 | 成熟 |
-| 测试 | 116 (`python -m pytest tests -q`, 4 skipped) |
+| 测试 | 140 (`python -m pytest tests -q`) |
 | 技术栈 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | 真实硬件 | 不适用：这是桌面程序；其 Qt Quick 界面已在 Windows 上运行过 |
 
 ## 🎯 概述
 
-* **发现,没有固定列表:** 本地文件夹只要携带一个有效的、声明 `ecosystem: "A.R.M.O.R."` 的 `armor.project.json` 就会加入;远程方面,`GITHUB_TOKEN` 能在 GitHub 上看到的每一个仓库都以同样方式核实——每个 A.R.M.O.R. 仓库都是私有的,所以这个令牌始终是必需的,没有公开生态系统那种每小时 60 次请求的退路。
-* **安装与更新,从不就地进行:** 更新先在一个独立的暂存克隆中构建并验证,只有在构建真正成功后才会被提升——两次目录改名,原来的安装保留为备份;真正未提交的本地改动会被直接拒绝,绝不会被悄悄丢弃。
+* **无固定列表的发现：**本地文件夹只要带有声明 `ecosystem: "A.R.M.O.R."` 的有效 `armor.project.json` 就会加入；远程则以同样方式检查账户的每个公开仓库。`GITHUB_TOKEN` 是可选的：它只是提高 GitHub 每小时 60 次请求的限制。
+* **安装和更新，从不原地进行：**新项目和更新都先在独立的暂存克隆中构建并验证，构建成功后才升级——两次有日志的重命名，被替换的检出保存在 `.armor-updater/backups/`（最近三份）；更新到已安装的提交不会做任何事；真正未提交的本地修改会被直接拒绝，绝不会被悄悄丢弃；两次重命名之间的崩溃会在下次运行时修复，`rollback` 会放回最近的备份。
+* **一次一个，并有顺序：**锁可防止两个更新器同时处理一个工作区；批量操作先处理 ARMOR-COMMON（每个构建都需要它），没有它就不会构建项目。
 * **证据:** 每一次尝试,无论成功与否,都会在本地日志里追加一行,记录项目、前后的版本与提交,以及失败的原因。
 * **一个命令行工具和一个可选的桌面界面:** `armor-updater status`/`install`/`update`,以及一个 Qt Quick 界面(`pip install ".[gui]"`),覆盖生态系统的八种语言。
 
@@ -58,7 +59,7 @@ ARMOR-UPDATER 是为在 PC 上保存家族副本的人准备的桌面工具：�
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (atomic staging-clone update), signature (signed updates), evidence, main (CLI), settings, version_parse,
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
 │                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
 ├── tests/              13 test modules
@@ -71,15 +72,14 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 116 tests (4 skipped without a display)
-armor-updater status                                    # local + GitHub state of every repository
-armor-updater install ARMOR-NETWORK                     # clone and build one repository that is not installed yet
-armor-updater update ARMOR-NETWORK                      # atomic-by-verification update of an installed one
+python -m pytest tests -q                              # 140 tests
+armor-updater --cli status                              # local + GitHub state of every repository
+armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
+armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)
+armor-updater --cli rollback ARMOR-NETWORK              # put the newest backup of a replaced checkout back
 ```
 
-See `docs/CLI_REFERENCE.md`.
-
-关于仓库如何加入 `armor.project.json` 描述的生态系统,见 `CONTRIBUTING.md`。
+参见 `docs/CLI_REFERENCE.md`。
 
 ## 🔗 相关项目
 

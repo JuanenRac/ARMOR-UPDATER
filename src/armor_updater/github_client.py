@@ -302,8 +302,7 @@ def discover_remote_projects(
 
     Every A.R.M.O.R. repository is public, so this lists the account's own
     public repositories (``/users/{owner}/repos``) - the same endpoint and
-    the same unauthenticated-by-default design HYDRA-UMC-UPDATER's own
-    discovery already uses. A token (``GITHUB_TOKEN``, or the `token`
+    the same unauthenticated-by-default design. A token (``GITHUB_TOKEN``, or the `token`
     argument) is optional: an unauthenticated call works, just capped at
     GitHub's 60-requests/hour ceiling; an authenticated one raises that to
     ~5000/hour and would also see a private fork of this ecosystem.
@@ -350,7 +349,6 @@ def discover_remote_projects(
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS, thread_name_prefix="armor-discovery") as pool:
         futures = {pool.submit(_fetch_discovered_manifest, owner, name, branch, resolved_token): name for name, branch in candidates}
         for future in as_completed(futures):
-            name = futures[future]
             try:
                 status = future.result()
             except RuntimeError as exc:
