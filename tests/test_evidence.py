@@ -58,6 +58,7 @@ def test_installed_state_reads_the_manifest_and_tolerates_a_missing_checkout(tmp
 def test_install_or_update_leaves_evidence_of_a_failed_attempt(tmp_path: Path, monkeypatch) -> None:
     class Entry:
         name = "A.R.M.O.R.-DEMO"
+        requires = ()
 
     (tmp_path / "ARMOR-COMMON").mkdir()   # every build needs it
     monkeypatch.setattr(install_module, "recover_interrupted_promotions", lambda root: [])

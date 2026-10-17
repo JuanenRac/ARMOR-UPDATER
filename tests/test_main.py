@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 from armor_updater import main as main_module
 from armor_updater.detect import LocalDiscovery, LocalStatus

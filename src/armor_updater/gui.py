@@ -51,8 +51,10 @@ from . import __version__, i18n, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
-from .install import install_or_update
+from .install import backup_summary, clean_previous_copies, install_or_update, restore_previous_copy
 from .registry import GITHUB_OWNER
+from .result_text import localized_message
+from .signature import current_policy
 
 #: Order matters - shown left-to-right in the filter dropdown, "all" first.
 #: Real labels come from i18n.t(lang, f"deploy_{key}") / "deploy_all" at
@@ -391,6 +393,13 @@ class UpdaterGUI:
                                              activeforeground=self.TEXT, selectcolor=self.PANEL_ALT,
                                              justify="left", anchor="w", wraplength=220, font=("Segoe UI", 8))
         self.skip_build_chk.pack(fill="x", pady=(10, 10))
+        self.backups_lbl = tk.Label(right, text="", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 8),
+                                    anchor="w", justify="left", wraplength=220)
+        self.backups_lbl.pack(fill="x")
+        self.restore_btn = self._button(right, command=self._restore_selected, accent=self.WARNING)
+        self.restore_btn.pack(fill="x", pady=(4, 0))
+        self.clean_btn = self._button(right, command=self._clean_selected)
+        self.clean_btn.pack(fill="x", pady=(8, 10))
         self.open_github_btn = self._button(right, command=self._open_selected_github)
         self.open_github_btn.pack(fill="x", pady=(0, 16))
         self.safety_title_lbl = tk.Label(right, text="", bg=self.PANEL, fg=self.TEXT,
@@ -476,6 +485,8 @@ class UpdaterGUI:
         self.lang_lbl.config(text=self.t("lang_label"))
         self.install_btn.config(text=self.t("install_button"))
         self.update_btn.config(text=self.t("update_button"))
+        self.restore_btn.config(text=self.t("restore_button"))
+        self.clean_btn.config(text=self.t("clean_copies_button"))
         self.skip_build_chk.config(text=self.t("skip_build_checkbox"))
 
         self.tree.heading("#0", text=self.t("col_project"))
@@ -566,6 +577,7 @@ class UpdaterGUI:
             return
         self._set_busy(True, self.t("status_scanning"))
         self._append_log(self.t("log_local_scan"))
+        self._append_log(self.t("signature_mode_require" if current_policy().required else "signature_mode_warn"))
         local_discovery = discover_workspace(self.workspace_root)
         self.locals_ = list(local_discovery.projects)
         self.remotes = {}
@@ -708,11 +720,13 @@ class UpdaterGUI:
         if not sel:
             self.note_var.set(self.t("note_default"))
             self.selected_project_lbl.config(text=self.t("selected_project_none"))
+            self._show_backups(None)
             return
         entry = next((ls.entry for ls in self.locals_ if ls.entry.name == sel[0]), None)
         if entry is None:
             self.note_var.set(self.t("note_default"))
             self.selected_project_lbl.config(text=self.t("selected_project_none"))
+            self._show_backups(None)
             return
         parent_suffix = f" · {self.t('note_child_of', parent=entry.parent)}" if entry.parent else ""
         tech_suffix = f" · {self.t('note_tech', tech=', '.join(entry.tech))}" if entry.tech else ""
@@ -720,6 +734,15 @@ class UpdaterGUI:
         build = entry.note or self.t("build_empty")
         self.note_var.set(f"[{entry.family}{parent_suffix}] {notes}{tech_suffix}\n{self.t('note_build', build=build)}")
         self.selected_project_lbl.config(text=entry.name)
+        self._show_backups(entry.name)
+
+    def _show_backups(self, name: str | None) -> None:
+        """The previous copies kept of the selected project (how many, how much disk) and whether the restore and clean buttons apply."""
+        count, size = backup_summary(self.workspace_root, name) if name else (0, 0)
+        self.backups_lbl.config(text=self.t("backups_summary", count=count, size=f"{size / 1024 / 1024:.1f}") if count else "")
+        state = "normal" if count and not self._busy else "disabled"
+        self.restore_btn.config(state=state)
+        self.clean_btn.config(state=state)
 
     # -- Install / update -------------------------------------------------
     def _selected_local(self, *, show_message: bool = True) -> LocalStatus | None:
@@ -748,6 +771,25 @@ class UpdaterGUI:
             return
         self._run_install_or_update(ls, verb_key="action_updating")
 
+    def _restore_selected(self) -> None:
+        self._run_copies_action(restore_previous_copy, "msg_confirm_restore")
+
+    def _clean_selected(self) -> None:
+        self._run_copies_action(clean_previous_copies, "msg_confirm_clean")
+
+    def _run_copies_action(self, action, confirm_key: str) -> None:   # noqa: ANN001 - restore_previous_copy / clean_previous_copies
+        ls = self._selected_local()
+        if ls is None or self._busy:
+            return
+        if not messagebox.askyesno("ARMOR-UPDATER", self.t(confirm_key, name=ls.entry.name)):
+            return
+        self._set_busy(True, self.t("status_scanning"))
+
+        def worker():
+            self._work_queue.put(("copies_done", action(self.workspace_root, ls.entry.name)))
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _run_install_or_update(self, ls: LocalStatus, *, verb_key: str) -> None:
         if self._busy:
             return
@@ -774,6 +816,8 @@ class UpdaterGUI:
         self.refresh_btn.config(state=state)
         self.install_btn.config(state=state)
         self.update_btn.config(state=state)
+        selected = self.tree.selection()
+        self._show_backups(selected[0] if selected else None)   # the restore and clean buttons also depend on there being a previous copy
         self.browse_btn.config(state=state)
         self.open_github_btn.config(state=state)
         self.filter_box.config(state="disabled" if busy else "readonly")
@@ -801,11 +845,19 @@ class UpdaterGUI:
                     self._render_rows()
                     self._set_busy(False, self.t("status_ready"))
                     self._append_log(self.t("log_github_ready", projects=len(self.locals_)))
+                elif kind == "copies_done":
+                    outcome = localized_message(self.lang, payload)   # type: ignore[arg-type]
+                    self._set_busy(False, outcome)
+                    self._append_log(outcome)
+                    self._on_select()
                 elif kind == "install_done":
                     name, results = payload  # type: ignore[misc]
                     ok = all(r.ok for r in results)
-                    lines = "\n".join(("OK  " if r.ok else "FAIL ") + r.message for r in results)
+                    lines = "\n".join(("OK  " if r.ok else "FAIL ") + localized_message(self.lang, r) for r in results)
                     self._set_busy(False, self.t("status_ready"))
+                    for r in results:
+                        if r.code or r.unsigned:
+                            self._append_log(localized_message(self.lang, r))   # a refusal with its own sentence, or a revision installed without a signature
                     self._append_log(self.t("log_action_finished", name=name, result=(self.t("log_result_ok") if ok else self.t("log_result_failed"))))
                     (messagebox.showinfo if ok else messagebox.showerror)(
                         "ARMOR-UPDATER", f"{name}:\n\n{lines}")

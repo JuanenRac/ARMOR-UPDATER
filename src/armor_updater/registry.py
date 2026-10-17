@@ -44,6 +44,8 @@ class ProjectEntry:
     service_systemd_unit: str | None = None
     # The repository's default branch when the remote told us (empty = unknown, "main" is assumed for URLs and no branch check is made from this field).
     default_branch: str = ""
+    # Projects that must be installed (and built) before this one; see the manifest field of the same name.
+    requires: tuple[str, ...] = ()
 
     @property
     def deploy_category(self) -> str:
@@ -71,6 +73,7 @@ def entry_from_manifest(manifest: ProjectManifest) -> ProjectEntry:
         service_port=manifest.service_port,
         service_health_path=manifest.service_health_path,
         service_systemd_unit=manifest.service_systemd_unit,
+        requires=manifest.requires,
     )
 
 

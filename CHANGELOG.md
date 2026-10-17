@@ -5,6 +5,16 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [0.1.4] - Requirements between projects, signatures that warn by default, fresh version reads and buttons for the previous copies
+
+- **Requirements:** a manifest can name the projects that must be installed first with the optional requires field. A batch puts them first (after ARMOR-COMMON, and a parent before its children), and an install or update of a project whose requirement is not installed is refused with a clear message, said in the eight languages of the window; a manifest without the field behaves as before.
+- **Signatures warn by default:** a revision without a valid signature is installed or updated all the same, and the window and the command line state that it is not signed. Choosing require in the settings (signature_policy) refuses it as before, with every new commit checked, and a settings file that cannot be read still counts as require.
+- **Fresh versions:** the version on GitHub is read without the stale cache of raw.githubusercontent.com, through the contents API when there is a token and at the exact commit that git ls-remote reports when there is not; the branch URL is only the fallback.
+- **Previous copies in the window:** both windows (Qt Quick and Tk) have a button to restore the previous copy of the selected project and one to delete the kept copies, each asking first, and show how many copies there are and the disk they take. status shows the same and the signature policy in force.
+- Every new text of the window exists in the eight languages; refusals and unsigned installs carry a code so the window says them in its own language, while the command line stays in English.
+- The install code is split by responsibility (git_ops, staging, promotion and the decisions in install), the lint check ruff runs in build-test, and a test installs a project end to end whose build makes a virtual environment in the final place.
+- Tests: 191 (before 140).
+
 ## [0.1.3] - Default-branch awareness
 
 - An update is refused when the checkout is on a branch other than the repository default branch, instead of merging the default branch into it.

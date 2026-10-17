@@ -18,33 +18,53 @@
 #   * local data kept inside a checkout (ignored or untracked files) is carried into the candidate, except what a build makes again.
 # It does NOT make a rename atomic with respect to a process that is running from the folder, and a project whose build leaves absolute paths in places this module does not know
 # (it removes the CMake trees and the virtual environments) may need its own build run once in the final place.
+#
+# The work is split by what it touches: git_ops.py (running git, reading a revision), staging.py (the folders it builds in), promotion.py (the lock, the journal, the backups) and this
+# module (the decisions: what to install, in which order, what to refuse).
 # =============================================================================
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from shutil import copy2, copytree, rmtree
-from typing import Callable, Iterable
+from typing import Iterable
 from uuid import uuid4
 
 from .evidence import installed_state, record_attempt
-from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
+from .git_ops import (
+    _command_output,
+    _manifest_from_revision,
+    _rev_parse,
+    _run,
+    _wrong_branch_message,
+)
+from .project_manifest import ManifestValidationError, ProjectManifest
 from .promotion import (
     DEFAULT_KEEP,
     Promotion,
     PromotionJournal,
     WorkspaceBusy,
     WorkspaceLock,
+    disk_used,
+    list_backups,
     new_backup_path,
     prune_backups,
     recover_interrupted_promotion,
+    rollback,
 )
 from .registry import ProjectEntry, github_repo_url
-from .signature import current_policy, verify_range, verify_revision
+from .staging import (
+    DirtyCheckError,
+    ProgressCallback,
+    _carry_over_local_data,
+    _checkpoint,
+    _rmtree_best_effort,
+    _tracked_dirty_paths,
+    forget_build_trees,
+    remove_generated_environments,
+)
+from .signature import current_policy, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
 COMMON_PROJECT = "ARMOR-COMMON"
@@ -56,17 +76,20 @@ def recover_interrupted_promotions(workspace_root: Path) -> list[str]:
 
 
 def install_order(entries: Iterable[ProjectEntry]) -> list[ProjectEntry]:
-    """The order to install or update several projects in: ARMOR-COMMON first (every build needs it), then a parent before its children, then by name."""
+    """The order to install or update several projects in: ARMOR-COMMON first (every build needs it), then every project a manifest `requires` or names as `parent` before the
+    project that needs it, then by name. A requirement that is not part of the batch is left to the check that refuses the project when it is not installed."""
     items = sorted(entries, key=lambda e: e.name.casefold())
-    names = {e.name for e in items}
+    by_name = {e.name: e for e in items}
     ordered: list[ProjectEntry] = []
     placed: set[str] = set()
 
     def place(entry: ProjectEntry, trail: tuple[str, ...] = ()) -> None:
         if entry.name in placed or entry.name in trail:
             return
-        if entry.parent and entry.parent in names and entry.parent != entry.name:
-            place(next(e for e in items if e.name == entry.parent), trail + (entry.name,))
+        before = ([entry.parent] if entry.parent else []) + list(entry.requires)
+        for name in before:
+            if name in by_name and name != entry.name:
+                place(by_name[name], trail + (entry.name,))
         ordered.append(entry)
         placed.add(entry.name)
 
@@ -78,47 +101,31 @@ def install_order(entries: Iterable[ProjectEntry]) -> list[ProjectEntry]:
     return ordered
 
 
-#: Build output and environments that are made again by a build and must not be carried over, whatever folder of the checkout they are in.
-_NEVER_CARRIED_OVER_DIR_NAMES = {
-    ".git", "node_modules", "dist", "build", "target", ".venv", "venv", "env",
-    "__pycache__", ".next", ".cache", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox",
-    ".gradle", ".kotlin", ".idea", ".dart_tool", "coverage", ".build", "build-test",
-}
-
-#: Virtual environments: a `venv` holds the absolute path it was made in (activate scripts, the first line of every script in bin/), and an editable install points at its
-#: sources by absolute path, so neither survives the rename that puts the staging folder in its place.
-_ENVIRONMENT_NAMES = (".venv", "venv")
+def missing_requirements(workspace_root: Path, requires: Iterable[str]) -> list[str]:
+    """The required projects that are not installed (a folder of that name) in the workspace."""
+    return [name for name in requires if not (workspace_root / name).is_dir()]
 
 
-def forget_build_trees(root: Path) -> None:
-    """Remove the CMake build directories the candidate's build-test left in the staging clone. CMake writes absolute paths into its cache, and the clone is about to be renamed to
-    its real place: a build-test run by hand there would stop with "CMakeCache.txt directory is different". They are only build output (and ignored by git), so the next build makes them again."""
-    for name in ("build", "build-test", ".build"):
-        tree = root / name
-        if (tree / "CMakeCache.txt").is_file():
-            rmtree(tree, ignore_errors=True)
+def requirements_refusal(entry_name: str, workspace_root: Path, requires: Iterable[str]) -> "InstallResult | None":
+    """A failed result when a project listed in `requires` is not installed, else None. The code and parameters let a window say it in the language of the person."""
+    missing = missing_requirements(workspace_root, requires)
+    if not missing:
+        return None
+    names = ", ".join(missing)
+    return InstallResult(
+        False,
+        f"{entry_name} requires {names}, which {'is' if len(missing) == 1 else 'are'} not installed in {workspace_root}: install {'it' if len(missing) == 1 else 'them'} first "
+        "(an ordered batch does it on its own)",
+        code="requires_missing",
+        params={"project": entry_name, "missing": names, "workspace": str(workspace_root)},
+    )
 
 
-def remove_generated_environments(root: Path) -> bool:
-    """Removes the virtual environments (and the metadata of editable installs) the build-test made in the staging clone: they cannot be moved. True when there was one, which tells
-    the caller to make the environment again in the final place."""
-    removed = False
-    for name in _ENVIRONMENT_NAMES:
-        tree = root / name
-        if tree.is_dir():
-            _rmtree_best_effort(tree)
-            removed = True
-    if removed:
-        for pattern in ("*.egg-info", "src/*.egg-info", "__editable__*"):
-            for leftover in root.glob(pattern):
-                if leftover.is_dir():
-                    _rmtree_best_effort(leftover)
-                else:
-                    try:
-                        leftover.unlink()
-                    except OSError:
-                        pass
-    return removed
+
+
+
+
+
 
 
 BUILD_TEST_SCRIPT_POSIX = "build-test.sh"
@@ -126,9 +133,6 @@ BUILD_TEST_SCRIPT_WINDOWS = "build-test.bat"
 BUILD_SCRIPT_POSIX = "build.sh"
 BUILD_SCRIPT_WINDOWS = "build.bat"
 
-# The GUI consumes these events to show the same real work that the CLI does. A callback is deliberately optional: command-line users retain normal child process output, while the
-# GUI captures it so Windows never needs a second terminal window merely to show a project's build output.
-ProgressCallback = Callable[[str, str], None]
 
 
 @dataclass
@@ -136,141 +140,29 @@ class InstallResult:
     ok: bool
     message: str
     output: str = ""
+    #: A short, stable name of the situation (for example "requires_missing") and its values: a window turns them into a sentence in the language of the person.
+    code: str = ""
+    params: dict[str, str] = field(default_factory=dict)
+    #: The commit (short) of an installed revision that carried no valid signature. Empty when it was signed or the check could not be made.
+    unsigned: str = ""
 
 
-def _run(
-    cmd: list[str], cwd: Path, *, capture_output: bool = False
-) -> subprocess.CompletedProcess[str]:
-    kwargs: dict[str, object] = {"cwd": str(cwd), "check": False}
-    if capture_output:
-        kwargs.update({"capture_output": True, "text": True})
-    # The GUI is started with pythonw on Windows. Do not let git or a child build script create a surprise console while its output is captured for the in-window checkpoint log.
-    if capture_output and os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-    if os.name == "nt":
-        # Ecosystem .bat files finish with `pause` when an operator double-clicks them. Here they run as a child, so give them one harmless newline and never leave a hidden child
-        # waiting for a keypress (also without a captured output: the Tk window starts them too).
-        kwargs["input"] = "\n"
-        kwargs.setdefault("text", True)
-    else:
-        kwargs["stdin"] = subprocess.DEVNULL
-    try:
-        return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
-    except OSError as error:   # git or the shell is not there, the folder is not usable
-        return subprocess.CompletedProcess(cmd, 127, stdout="", stderr=f"{type(error).__name__}: {error}")
 
 
-def _make_writable_and_retry(function, target, _excinfo) -> None:  # noqa: ANN001 - the signature of shutil's error callback
-    """git leaves its object files read-only, which Windows refuses to delete: make the file writable and try again."""
-    try:
-        os.chmod(target, 0o700)
-        function(target)
-    except OSError:
-        pass
 
 
-def _rmtree_best_effort(path: Path) -> None:
-    """Removes a folder this module created and no longer needs, tolerating a Windows rough edge: a child process (git, or a project's own build-test) can leave a file handle open for
-    a brief moment after it has exited. Retries a few times instead of raising: this is always best-effort cleanup of our own temporary folder, never something that should fail the
-    caller's real result."""
-    for attempt in range(5):
-        try:
-            if sys.version_info >= (3, 12):
-                rmtree(path, onexc=_make_writable_and_retry)
-            else:
-                rmtree(path, onerror=_make_writable_and_retry)
-            if not path.exists():
-                return
-            raise PermissionError(str(path))
-        except FileNotFoundError:
-            return
-        except OSError:
-            if attempt == 4:
-                return
-            time.sleep(0.2)
 
 
-def _checkpoint(progress: ProgressCallback | None, phase: str, message: str) -> None:
-    if progress is not None:
-        progress(phase, message)
 
 
-def _real_untracked_paths(path: Path) -> list[str]:
-    """Every path (relative to `path`) git considers untracked or ignored (`??`/`!!`): the local data that `git clone --local` never copies (it only copies the committed objects).
-    A modified TRACKED file is never included - that already blocks the update separately."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "--ignored", "-uall", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True,
-    )
-    if result.returncode != 0 or not result.stdout:
-        return []
-    paths: list[str] = []
-    for entry in result.stdout.split("\0"):
-        if len(entry) < 4:
-            continue
-        status_code, rel_path = entry[:2], entry[3:]
-        if status_code in ("??", "!!"):
-            paths.append(rel_path)
-    return paths
 
 
-class DirtyCheckError(RuntimeError):
-    """`git status` itself failed to run against a checkout (not a git repository, git missing, a permissions error): not being able to verify clean is not the same as clean."""
 
 
-def _tracked_dirty_paths(path: Path) -> list[str]:
-    """Every path git considers a TRACKED file with an uncommitted change. Checked upfront because the staging clone only copies the committed objects: a local edit to a tracked file
-    would be invisible to it, the build would pass, and the promotion would move the edit away to a backup while reporting success."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        raise DirtyCheckError(
-            f"could not verify {path} has no uncommitted changes - `git status` itself failed "
-            f"(exit {result.returncode}): {result.stderr.strip() or '(no stderr)'}"
-        )
-    if not result.stdout:
-        return []
-    paths: list[str] = []
-    for entry_text in result.stdout.split("\0"):
-        if len(entry_text) < 4:
-            continue
-        status_code, rel_path = entry_text[:2], entry_text[3:]
-        if status_code in ("??", "!!"):
-            continue
-        paths.append(rel_path)
-    return paths
 
 
-def _carry_over_local_data(old_path: Path, staging_path: Path, *, progress: ProgressCallback | None = None) -> None:
-    """Copies the untracked/ignored data of `old_path` (a project's own settings, users, database, certificates kept inside its checkout) into `staging_path` before the candidate
-    is built or promoted. Anything that has a build-output or environment folder among the components of its path is left out, however deep it is (`app/build`, `.gradle`, a
-    nested `node_modules`): a build makes them again, and carrying them over would make the verified build reuse stale artifacts."""
-    carried = 0
-    for rel_path in _real_untracked_paths(old_path):
-        if any(part in _NEVER_CARRIED_OVER_DIR_NAMES for part in Path(rel_path).parts):
-            continue
-        source = old_path / rel_path
-        if not source.exists():
-            continue  # removed between `git status` and now
-        destination = staging_path / rel_path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            copytree(source, destination, dirs_exist_ok=True)
-        else:
-            copy2(source, destination)
-        carried += 1
-    if carried:
-        _checkpoint(
-            progress, "validation",
-            f"Carried {carried} local data file(s)/director(y/ies) from the installed checkout into the verified candidate.",
-        )
 
 
-def _validated_manifest_text(text: str, entry: ProjectEntry) -> ProjectManifest:
-    """The repository-owned manifest used as an update precondition: the revision must still identify itself as the selected project."""
-    return parse_manifest(text, expected_name=entry.name)
 
 
 def _version_tuple(manifest: ProjectManifest) -> tuple[int, int, int, int]:
@@ -279,22 +171,8 @@ def _version_tuple(manifest: ProjectManifest) -> tuple[int, int, int, int]:
     return tuple(parts)  # type: ignore[return-value]
 
 
-def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> ProjectManifest:
-    """Read a manifest from Git without modifying the working tree."""
-    result = subprocess.run(
-        ["git", "show", f"{revision}:armor.project.json"],
-        cwd=str(path),
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise ManifestValidationError("candidate revision has no readable armor.project.json")
-    return _validated_manifest_text(result.stdout, entry)
 
 
-def _rev_parse(path: Path, revision: str) -> str:
-    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, text=True).stdout.strip()
 
 
 def _rebuild_environment(path: Path, progress: ProgressCallback | None) -> InstallResult:
@@ -354,21 +232,22 @@ def _promote(entry: ProjectEntry, workspace_root: Path, path: Path, staging_path
     return (backup_path,)
 
 
-def _wrong_branch_message(path: Path, entry: ProjectEntry) -> str:
-    """A message when the checkout sits on a branch other than the repository's default one (the update fetches the remote default branch, so merging it there would mix
-    branches), else an empty string. A detached HEAD, or a default branch that cannot be told, is not refused."""
-    current = _run(["git", "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=path, capture_output=True)
-    if current.returncode != 0:
+
+
+def _unsigned_commit(repo: Path, revision: str, policy) -> str:   # noqa: ANN001 - SignaturePolicy
+    """The short commit of `revision` when it carries no valid signature and the policy only warns (a strict policy has already refused it), else an empty string."""
+    if policy.required or unsigned_reason(repo, revision, policy) is None:
         return ""
-    branch = (current.stdout or "").strip()
-    expected = ""
-    remote_head = _run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], cwd=path, capture_output=True)
-    if remote_head.returncode == 0:
-        expected = (remote_head.stdout or "").strip().removeprefix("origin/")
-    expected = expected or entry.default_branch
-    if branch and expected and branch != expected:
-        return f"{path} is on branch '{branch}', not the default branch '{expected}' - switch back to '{expected}' before updating"
-    return ""
+    return (_rev_parse(repo, revision) or revision)[:12]
+
+
+def _note_unsigned(result: InstallResult, unsigned: str, project: str) -> InstallResult:
+    """Says on a successful result that the installed revision was not signed (the default policy installs it anyway; the window and the command show this sentence)."""
+    if unsigned:
+        result.unsigned = unsigned
+        result.params = {**result.params, "project": project, "commit": unsigned}
+        result.message += f"; WARNING: revision {unsigned} of {project} is not signed (or its signature could not be verified); it was installed because the signature policy is 'warn'"
+    return result
 
 
 def clone_or_pull(
@@ -393,16 +272,22 @@ def clone_or_pull(
         if result.returncode != 0:
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"git clone failed (exit {result.returncode})", _command_output(result))
-        refused = verify_revision(staging_path, "HEAD", current_policy())
+        policy = current_policy()
+        refused = verify_revision(staging_path, "HEAD", policy)
         if refused:
             _rmtree_best_effort(staging_path)
-            return InstallResult(False, f"cloned candidate refused by the signature policy: {refused}")
+            return InstallResult(False, f"cloned candidate refused by the signature policy: {refused}", code="signature_refused", params={"project": entry.name, "reason": refused})
+        unsigned = _unsigned_commit(staging_path, "HEAD", policy)
         try:
             _checkpoint(progress, "validation", "Validating the fetched repository manifest before deployment.")
             candidate = _manifest_from_revision(staging_path, "HEAD", entry)
         except ManifestValidationError as exc:
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"cloned checkout failed manifest validation: {exc}")
+        unmet = requirements_refusal(entry.name, workspace_root, candidate.requires)
+        if unmet is not None:
+            _rmtree_best_effort(staging_path)
+            return unmet
         environment_removed = False
         output = ""
         if verify_build:
@@ -426,7 +311,7 @@ def clone_or_pull(
             message += "; " + rebuilt.message
             if not rebuilt.ok:
                 return InstallResult(False, message, rebuilt.output or output)
-        return InstallResult(True, message, output)
+        return _note_unsigned(InstallResult(True, message, output), unsigned, entry.name)
 
     if not (path / ".git").is_dir():
         return InstallResult(False, f"{path} exists but isn't a git checkout - not touching it")
@@ -463,14 +348,18 @@ def clone_or_pull(
             f"git fetch failed (exit {result.returncode}) - remote unavailable or authentication failed?",
             _command_output(result),
         )
-    refused = verify_range(path, "HEAD", "FETCH_HEAD", current_policy())   # every new commit, not only the last one
+    policy = current_policy()
+    refused = verify_range(path, "HEAD", "FETCH_HEAD", policy)   # every new commit, not only the last one
     if refused:
-        return InstallResult(False, f"remote candidate refused by the signature policy: {refused}")
+        return InstallResult(False, f"remote candidate refused by the signature policy: {refused}", code="signature_refused", params={"project": entry.name, "reason": refused})
     try:
         _checkpoint(progress, "validation", "Checking the candidate manifest and anti-rollback rule.")
         candidate = _manifest_from_revision(path, "FETCH_HEAD", entry)
     except ManifestValidationError as exc:
         return InstallResult(False, f"remote candidate failed manifest validation: {exc}")
+    unmet = requirements_refusal(entry.name, workspace_root, candidate.requires)
+    if unmet is not None:
+        return unmet
     if _version_tuple(candidate) < _version_tuple(installed):
         return InstallResult(
             False,
@@ -483,6 +372,7 @@ def clone_or_pull(
     if candidate_sha == _rev_parse(path, "HEAD"):
         return InstallResult(True, f"{entry.name} is already up to date (v{installed.version}, commit {candidate_sha[:12]}); nothing was changed")
 
+    unsigned = _unsigned_commit(path, candidate_sha, policy)
     if not verify_build:
         _checkpoint(progress, "validation", "Applying the accepted candidate with a fast-forward-only merge.")
         result = _run(["git", "merge", "--ff-only", "FETCH_HEAD"], cwd=path, capture_output=progress is not None)
@@ -492,7 +382,7 @@ def clone_or_pull(
                 f"git merge --ff-only failed (exit {result.returncode}) - local changes or a diverged branch?",
                 _command_output(result),
             )
-        return InstallResult(True, f"Pulled latest into {path}")
+        return _note_unsigned(InstallResult(True, f"Pulled latest into {path}"), unsigned, entry.name)
 
     staging_path = workspace_root / f".{entry.name}.update-{uuid4().hex}"
     _checkpoint(progress, "source", "Cloning the installed checkout into an isolated staging area for verification.")
@@ -557,7 +447,7 @@ def clone_or_pull(
         message += "; " + rebuilt.message
         if not rebuilt.ok:
             return InstallResult(False, message, rebuilt.output or build_result.output)
-    return InstallResult(True, message, build_result.output)
+    return _note_unsigned(InstallResult(True, message, build_result.output), unsigned, entry.name)
 
 
 def find_build_test_script(path: Path) -> Path | None:
@@ -628,7 +518,10 @@ def _install_or_update_locked(entry: ProjectEntry, workspace_root: Path, build: 
     for action in healed:
         _checkpoint(progress, "preflight", action)
     before = installed_state(workspace_root / entry.name)
-    if build and entry.name != COMMON_PROJECT and not (workspace_root / COMMON_PROJECT).is_dir():
+    unmet = requirements_refusal(entry.name, workspace_root, entry.requires)
+    if unmet is not None:
+        results = [unmet]
+    elif build and entry.name != COMMON_PROJECT and not (workspace_root / COMMON_PROJECT).is_dir():
         results = [InstallResult(False, f"{COMMON_PROJECT} is not installed in {workspace_root}: every project's build runs its script, so install {COMMON_PROJECT} first (or choose to skip the build)")]
     else:
         results = [clone_or_pull(entry, workspace_root, verify_build=build, progress=progress)]
@@ -652,6 +545,59 @@ def healed_results(actions: list[str]) -> list[InstallResult]:
     return [InstallResult(True, action) for action in actions]
 
 
-def _command_output(result: subprocess.CompletedProcess[str]) -> str:
-    """Compact child evidence when a GUI captured it: the full command output stays in the process result while the desktop surface keeps a bounded, readable activity trace."""
-    return "\n".join(part for part in (result.stdout, result.stderr) if part).strip()
+
+
+# ---- the previous copies ----------------------------------------------------------------------------------------------------------------------
+
+def backup_summary(workspace_root: Path, project: str | None = None) -> tuple[int, int]:
+    """How many replaced checkouts are kept (of `project`, or of every project) and the bytes they take."""
+    from .promotion import BACKUPS_DIRECTORY, state_directory
+    root = state_directory(workspace_root) / BACKUPS_DIRECTORY
+    if project is not None:
+        names = [project]
+    else:
+        names = sorted(p.name for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
+    count = size = 0
+    for name in names:
+        for backup in list_backups(workspace_root, name):
+            count += 1
+            size += disk_used(backup)
+    return count, size
+
+
+def restore_previous_copy(workspace_root: Path, project: str) -> InstallResult:
+    """Puts the newest previous copy of `project` back in its place (the checkout that is there becomes the newest copy, so the restore can be undone). It takes the workspace lock,
+    heals an interrupted promotion first and never raises."""
+    try:
+        with WorkspaceLock(workspace_root):
+            healed = recover_interrupted_promotions(workspace_root)
+            if not list_backups(workspace_root, project):
+                return InstallResult(False, f"{project} has no previous copy to go back to", code="no_backup", params={"project": project})
+            try:
+                what = rollback(workspace_root, project)
+            except (RuntimeError, OSError) as error:
+                return InstallResult(False, f"{project}: the previous copy could not be restored ({error})", code="restore_failed", params={"project": project, "reason": str(error)})
+            newest = list_backups(workspace_root, project)
+            return InstallResult(True, "; ".join(healed + [what]), code="restored", params={"project": project, "backup": newest[0].name if newest else ""})
+    except WorkspaceBusy as busy:
+        return InstallResult(False, str(busy), code="busy")
+    except Exception as error:  # noqa: BLE001 - a window calls this from a worker thread
+        return InstallResult(False, f"{type(error).__name__}: {error}", code="restore_failed", params={"project": project, "reason": str(error)})
+
+
+def clean_previous_copies(workspace_root: Path, project: str, keep: int = 0) -> InstallResult:
+    """Deletes all but the newest `keep` previous copies of `project` and says how many went and how much disk came back. It takes the workspace lock and never raises."""
+    try:
+        with WorkspaceLock(workspace_root):
+            freed = 0
+            doomed = list_backups(workspace_root, project)[max(0, keep):]
+            for old in doomed:
+                freed += disk_used(old)
+            removed = prune_backups(workspace_root, project, keep)
+            megabytes = f"{freed / 1024 / 1024:.1f}"
+            return InstallResult(True, f"{project}: {len(removed)} previous copy(ies) deleted, {megabytes} MB freed", code="cleaned",
+                                 params={"project": project, "count": str(len(removed)), "size": megabytes})
+    except WorkspaceBusy as busy:
+        return InstallResult(False, str(busy), code="busy")
+    except Exception as error:  # noqa: BLE001 - a window calls this from a worker thread
+        return InstallResult(False, f"{type(error).__name__}: {error}", code="clean_failed", params={"project": project, "reason": str(error)})

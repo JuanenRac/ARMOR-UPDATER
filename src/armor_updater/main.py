@@ -35,8 +35,8 @@ from pathlib import Path
 from . import __version__, settings
 from .detect import LocalStatus, discover_workspace
 from .github_client import MissingTokenError, RemoteStatus, discover_remote_projects, fetch_all
-from .install import install_or_update
-from .version_parse import Version
+from .install import backup_summary, install_or_update
+from .signature import current_policy
 
 
 class WorkspaceUnknown(RuntimeError):
@@ -175,6 +175,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         payload["installed_count"] = installed_count
         payload["outdated_count"] = outdated_count
         payload["total"] = len(locals_)
+        copies, copies_bytes = backup_summary(workspace_root)
+        payload["backups"] = {"count": copies, "bytes": copies_bytes}
+        payload["signature_policy"] = current_policy().mode
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
 
@@ -207,6 +210,11 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"{installed_count}/{len(locals_)} installed, {outdated} outdated" + (" (GitHub not checked)" if args.offline else ""))
     if outdated:
         print("Run `armor-updater update <project>` to update one by hand - never automatic, see this tool's own README.")
+    copies, copies_bytes = backup_summary(workspace_root)
+    if copies:
+        print(f"Previous copies kept: {copies} ({copies_bytes / 1024 / 1024:.1f} MB) - `armor-updater --cli backups` lists them, `rollback <project>` restores the newest.")
+    policy = current_policy()
+    print("Signature policy: " + ("require - an unsigned revision is refused." if policy.required else "warn - an unsigned revision is installed and reported."))
     if args.notes:
         print("\nNotes (what's actually real per project, from its own manifest):")
         for ls in locals_:

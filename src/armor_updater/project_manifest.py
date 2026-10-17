@@ -70,6 +70,8 @@ class ProjectManifest:
     # the live-status probe above. Absent for anything not deployed as a
     # systemd service.
     service_systemd_unit: str | None = None
+    # Optional: names of projects that must be installed (and built) before this one. Empty when the manifest declares none.
+    requires: tuple[str, ...] = ()
 
 
 def _require_string(data: dict[str, Any], field: str) -> str:
@@ -100,7 +102,8 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
     # "deployment_target_note": a real, human-readable clarification for a
     # deployment_target value whose meaning isn't self-evident from the
     # prose alone - optional, most values need no such note.
-    optional_fields = {"service", "deployment_target_note"}
+    # "requires": the projects that must be installed before this one (see _parse_requires).
+    optional_fields = {"service", "deployment_target_note", "requires"}
     unknown = sorted(set(data) - expected_fields - optional_fields)
     missing = sorted(expected_fields - set(data))
     if missing:
@@ -166,6 +169,7 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
         raise ManifestValidationError("build must be a string")
 
     service_port, service_health_path, service_systemd_unit = _parse_service(data.get("service"))
+    requires = _parse_requires(data.get("requires"), name)
 
     return ProjectManifest(
         schema_version=schema_version,
@@ -185,7 +189,28 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
         service_port=service_port,
         service_health_path=service_health_path,
         service_systemd_unit=service_systemd_unit,
+        requires=requires,
     )
+
+
+REQUIRES_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _parse_requires(raw_requires: Any, own_name: str) -> tuple[str, ...]:
+    """Validate the optional `requires` list: project names (repository names) that must be installed, and built, before this project. Absent means no requirement. The list holds
+    unique names, none of them the project itself."""
+    if raw_requires is None:
+        return ()
+    if (
+        not isinstance(raw_requires, list)
+        or any(not isinstance(item, str) or not REQUIRES_NAME_RE.fullmatch(item) for item in raw_requires)
+    ):
+        raise ManifestValidationError("requires must be an array of project names")
+    if len(set(raw_requires)) != len(raw_requires):
+        raise ManifestValidationError("requires must not repeat a project")
+    if own_name in raw_requires:
+        raise ManifestValidationError("requires must not name the project itself")
+    return tuple(raw_requires)
 
 
 def _parse_service(raw_service: Any) -> tuple[int | None, str | None, str | None]:

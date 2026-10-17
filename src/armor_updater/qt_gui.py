@@ -33,8 +33,10 @@ from . import __version__, i18n, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
-from .install import install_or_update, install_order
+from .install import backup_summary, clean_previous_copies, install_or_update, install_order, restore_previous_copy
 from .registry import GITHUB_OWNER
+from .result_text import localized_message
+from .signature import current_policy
 
 
 #: One filter button per real A.R.M.O.R. hardware-target category (plus
@@ -106,6 +108,8 @@ class UpdaterBridge(QObject):
     _actionResult = Signal(str, object)
     _operationCheckpoint = Signal(str, str)
     _batchProject = Signal(int, int, str)
+    _copiesResult = Signal(object)
+    backupsChanged = Signal()
 
     def __init__(self, workspace_root: Path, log_file_path: Path | None = None):
         super().__init__()
@@ -117,6 +121,7 @@ class UpdaterBridge(QObject):
         self._selected = ""
         self._busy = False
         self._status = ""
+        self._notice = ""   # a sentence that stays in the status line after the refresh that follows an action (for example the warning of an unsigned revision)
         self._activity: list[str] = []
         self._operation_steps: list[dict[str, str]] = []
         self._operation_progress = 0
@@ -130,6 +135,7 @@ class UpdaterBridge(QObject):
         self._actionResult.connect(self._on_action_result)
         self._operationCheckpoint.connect(self._on_operation_checkpoint)
         self._batchProject.connect(self._on_batch_project)
+        self._copiesResult.connect(self._on_copies_result)
         self.refresh(False)
 
     # -- QML-visible properties -----------------------------------------
@@ -223,6 +229,20 @@ class UpdaterBridge(QObject):
             return False
         remote = self._remotes.get(selected.entry.name)
         return remote is not None and remote.version is not None and selected.version < remote.version
+
+    @Property(bool, notify=backupsChanged)
+    def canRestore(self) -> bool:
+        """A project that is installed and has a previous copy kept by the updater."""
+        selected = self._selected_status()
+        return selected is not None and selected.installed and backup_summary(self._workspace_root, selected.entry.name)[0] > 0
+
+    @Property(str, notify=backupsChanged)
+    def backupsSummary(self) -> str:
+        """How many previous copies of the selected project are kept and the disk they take (empty when none)."""
+        if self._selected_status() is None:
+            return ""
+        count, size = backup_summary(self._workspace_root, self._selected)
+        return self._t("backups_summary", count=count, size=f"{size / 1024 / 1024:.1f}") if count else ""
 
     @Property(int, notify=summaryChanged)
     def missingCount(self) -> int:
@@ -335,6 +355,7 @@ class UpdaterBridge(QObject):
             self._operation_visible = False
             self.operationChanged.emit()
         self.selectionChanged.emit()
+        self.backupsChanged.emit()
 
     @Slot(str)
     def setWorkspaceUrl(self, url: str) -> None:
@@ -361,6 +382,7 @@ class UpdaterBridge(QObject):
             return
         self._set_busy(True, self.text("status_scanning"))
         self._append_activity(self.text("log_local_scan"))
+        self._append_activity(self.text("signature_mode_require" if current_policy().required else "signature_mode_warn"))
         local_discovery = discover_workspace(self._workspace_root)
         self._locals = list(local_discovery.projects)
         self._remotes = {}
@@ -369,7 +391,7 @@ class UpdaterBridge(QObject):
         self.selectionChanged.emit()
         self.deployOptionsChanged.emit()
         if offline:
-            self._set_busy(False, self.text("status_ready_offline"))
+            self._set_busy(False, self._notice or self.text("status_ready_offline"))
             self._append_activity(self.text("log_offline_ready").format(projects=len(self._locals)))
             return
         self._status = self.text("status_checking_github")
@@ -410,6 +432,7 @@ class UpdaterBridge(QObject):
             self._append_activity(self.text("msg_not_installed_yet").format(name=selected.entry.name))
             return
         verb = self.text("action_installing" if action == "install" else "action_updating")
+        self._notice = ""
         self._start_operation(skip_build)
         self._set_busy(True, self.text("status_action_progress").format(verb=verb, name=selected.entry.name))
         self._append_activity(self.text("log_action_started").format(verb=verb, name=selected.entry.name))
@@ -456,6 +479,7 @@ class UpdaterBridge(QObject):
         targets.sort(key=lambda item: rank[item.entry.name])
 
         verb = self.text("action_installing" if action == "install" else "action_updating")
+        self._notice = ""
         self._start_operation(skip_build, batch_total=len(targets))
         self._set_busy(True, self._t("status_batch_progress", verb=verb, total=len(targets)))
         self._append_activity(self._t("log_batch_started", verb=verb, total=len(targets)))
@@ -480,6 +504,35 @@ class UpdaterBridge(QObject):
 
         threading.Thread(target=worker, daemon=True, name="armor-updater-batch").start()
 
+    @Slot()
+    def restoreSelected(self) -> None:
+        """Puts the newest previous copy of the selected project back (the checkout that is there is kept as a copy)."""
+        self._run_copies_action(restore_previous_copy)
+
+    @Slot()
+    def cleanSelectedBackups(self) -> None:
+        """Deletes the previous copies of the selected project."""
+        self._run_copies_action(clean_previous_copies)
+
+    def _run_copies_action(self, action) -> None:   # noqa: ANN001 - restore_previous_copy / clean_previous_copies
+        selected = self._selected_status()
+        if self._busy or selected is None:
+            return
+        name = selected.entry.name
+        self._set_busy(True, self.text("status_scanning"))
+
+        def worker() -> None:
+            self._copiesResult.emit(action(self._workspace_root, name))
+
+        threading.Thread(target=worker, daemon=True, name="armor-updater-copies").start()
+
+    @Slot(object)
+    def _on_copies_result(self, result: object) -> None:
+        self._append_activity(localized_message(self._lang, result))   # type: ignore[arg-type]
+        self._set_busy(False, self.text("status_ready"))
+        self.backupsChanged.emit()
+        self.refresh(False)
+
     @Slot(result=str)
     def selectedNotes(self) -> str:
         selected = next((item for item in self._locals if item.entry.name == self._selected), None)
@@ -499,7 +552,8 @@ class UpdaterBridge(QObject):
         self.summaryChanged.emit()
         self.selectionChanged.emit()
         self.deployOptionsChanged.emit()
-        self._set_busy(False, "; ".join(error_list[:2]) if error_list else self.text("status_ready"))
+        self._set_busy(False, "; ".join(error_list[:2]) if error_list else (self._notice or self.text("status_ready")))
+        self.backupsChanged.emit()
         self._append_activity(self.text("log_github_ready").format(projects=len(self._locals)))
 
     @Slot(str, object)
@@ -507,7 +561,14 @@ class UpdaterBridge(QObject):
         outcome = list(results)  # type: ignore[arg-type]
         ok = all(result.ok for result in outcome)
         self._finish_operation(ok, outcome)
-        self._set_busy(False, self.text("status_ready"))
+        # a refusal with its own sentence (a missing requirement, the signature policy) and a revision installed without a signature are said in the language of the window
+        unsigned = [result for result in outcome if result.unsigned]
+        for result in outcome:
+            if result.code or result.unsigned:
+                self._append_activity(localized_message(self._lang, result))
+        self._notice = localized_message(self._lang, unsigned[0]) if unsigned else ""
+        self._set_busy(False, self._notice or self.text("status_ready"))
+        self.backupsChanged.emit()
         result_key = "log_result_ok" if ok else "log_result_failed"
         self._append_activity(self.text("log_action_finished").format(name=name, result=self.text(result_key)))
         self.refresh(False)
@@ -585,7 +646,7 @@ class UpdaterBridge(QObject):
         else:
             active = next((step for step in self._operation_steps if step["state"] == "active"), self._operation_steps[0])
             active["state"] = "failed"
-            active["detail"] = failed_step.message if failed_step is not None else self.text("checkpoint_failed")
+            active["detail"] = localized_message(self._lang, failed_step) if failed_step is not None else self.text("checkpoint_failed")
             self._active_phase = active["id"]
         for result in outcome:
             output = getattr(result, "output", "")

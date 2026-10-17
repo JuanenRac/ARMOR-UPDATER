@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-191-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** La découverte par manifeste, la comparaison des versions, la vérification de signature, l'installation et la mise à jour par étapes avec leur verrou, leur journal, leurs sauvegardes et leur retour arrière, le journal de preuves et les tables de l'interface en huit langues sont testés (140 tests), et l'interface Qt Quick a tourné sous Windows. Elle n'a pas été exécutée de bout en bout sur chaque dépôt de la famille, et les installations qu'elle fait exigent `git` et les outils de compilation de chaque dépôt sur la machine.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** La découverte par manifeste, la comparaison des versions, la vérification de signature, l'installation et la mise à jour par étapes avec leur verrou, leur journal, leurs sauvegardes et leur retour arrière, le journal de preuves et les tables de l'interface en huit langues sont testés (191 tests), et l'interface Qt Quick a tourné sous Windows. Elle n'a pas été exécutée de bout en bout sur chaque dépôt de la famille, et les installations qu'elle fait exigent `git` et les outils de compilation de chaque dépôt sur la machine.
 
 ---
 
@@ -37,9 +37,9 @@
 
 | | |
 |---|---|
-| Version | `0.1.2` |
+| Version | `0.1.4` |
 | Maturité | Établi |
-| Tests | 140 (`python -m pytest tests -q`) |
+| Tests | 191 (`python -m pytest tests -q`) |
 | Technologie | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | Sur matériel réel | Sans objet : c'est un programme de bureau ; son interface Qt Quick a été exécutée sous Windows |
 
@@ -49,6 +49,9 @@
 * **Installer et mettre à jour, jamais sur place :** un nouveau projet et une mise à jour sont d'abord construits et vérifiés dans un clone de préparation indépendant, puis promus seulement - deux renommages journalisés, la copie remplacée gardée sous `.armor-updater/backups/` (les trois plus récentes) - quand cette construction réussit ; une mise à jour vers le commit déjà installé ne fait rien ; une vraie modification locale non validée est refusée net, jamais écartée en silence ; une panne entre les renommages est réparée à l'exécution suivante, et `rollback` remet la copie la plus récente.
 * **Un à la fois, et dans l'ordre :** un verrou empêche deux outils de travailler ensemble sur un espace de travail ; un lot commence par ARMOR-COMMON (toute construction en a besoin) et un projet n'est pas construit sans lui.
 * **Preuves :** chaque tentative, réussie ou non, ajoute une ligne à un journal local avec le projet, la version et le commit avant et après, et la raison d'un échec.
+* **Prérequis :** un manifeste peut lister, dans le champ facultatif `requires`, les projets à installer d'abord ; un lot les place en premier, et une installation ou une mise à jour est refusée avec un message clair, dans la langue de la fenêtre, si l'un d'eux manque.
+* **Signatures, avertir par défaut :** une révision sans signature valide est tout de même installée ou mise à jour, et la fenêtre comme la ligne de commande indiquent qu'elle n'est pas signée ; choisir *exiger* dans les réglages (`"signature_policy": "require"`) la refuse à la place.
+* **Copies précédentes :** la fenêtre peut restaurer la copie précédente d'un projet ou supprimer les copies conservées, et `status` indique combien il y en a et l'espace disque qu'elles occupent.
 * **Une CLI et une interface de bureau optionnelle :** `armor-updater status`/`install`/`update`, et une interface Qt Quick (`pip install ".[gui]"`) dans les huit langues de l'écosystème.
 
 ## 🧩 Rôle dans A.R.M.O.R.
@@ -59,10 +62,10 @@ ARMOR-UPDATER est l'outil de bureau pour qui garde une copie de la famille sur u
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
-│                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + git_ops + staging + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
+│                       i18n + i18n_pt + i18n_recovery + result_text (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
-├── tests/              13 test modules
+├── tests/              18 test modules
 └── docs/               CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ```
 
@@ -72,7 +75,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 140 tests
+python -m pytest tests -q                              # 191 tests
 armor-updater --cli status                              # local + GitHub state of every repository
 armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
 armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)

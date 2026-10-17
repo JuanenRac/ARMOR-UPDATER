@@ -836,6 +836,12 @@ from .i18n_pt import PT as _PT  # noqa: E402
 
 TRANSLATIONS["pt"] = dict(_PT)
 
+# Requirements, signature policy and previous copies: one table with the eight languages.
+from .i18n_recovery import COPY as _RECOVERY_COPY  # noqa: E402
+
+for _language, _recovery in _RECOVERY_COPY.items():
+    TRANSLATIONS[_language].update(_recovery)
+
 
 def t(lang: str, key: str, **kwargs: object) -> str:
     """Real translation lookup with real `{placeholder}` substitution

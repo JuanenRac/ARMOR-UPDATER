@@ -15,5 +15,8 @@ if errorlevel 1 ( echo VENV ACTIVATION FAILED. & pause & exit /b 1 )
 python -m pip install -e ".[dev,gui]"
 if errorlevel 1 ( echo DEPENDENCY INSTALL FAILED. & pause & exit /b 1 )
 
+python -m ruff check src tests
+if errorlevel 1 ( echo LINT FAILED. & pause & exit /b 1 )
+
 call "%~dp0..\ARMOR-COMMON\scripts\armor-project.bat" build-test "%~dp0."
 exit /b %ERRORLEVEL%

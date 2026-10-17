@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-191-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** 清单发现、版本比较、签名检查、带锁、日志、备份和回退的分阶段安装与更新、证据日志以及八种语言的界面表格都已测试（140 个测试），Qt Quick 界面已在 Windows 上运行过。它没有对家族中的每个仓库从头到尾运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
+**诚实性检查 - 今天真正能运行的部分:** 清单发现、版本比较、签名检查、带锁、日志、备份和回退的分阶段安装与更新、证据日志以及八种语言的界面表格都已测试（191 个测试），Qt Quick 界面已在 Windows 上运行过。它没有对家族中的每个仓库从头到尾运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
 
 ---
 
@@ -37,9 +37,9 @@
 
 | | |
 |---|---|
-| 版本 | `0.1.2` |
+| 版本 | `0.1.4` |
 | 成熟度 | 成熟 |
-| 测试 | 140 (`python -m pytest tests -q`) |
+| 测试 | 191 (`python -m pytest tests -q`) |
 | 技术栈 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | 真实硬件 | 不适用：这是桌面程序；其 Qt Quick 界面已在 Windows 上运行过 |
 
@@ -49,6 +49,9 @@
 * **安装和更新，从不原地进行：**新项目和更新都先在独立的暂存克隆中构建并验证，构建成功后才升级——两次有日志的重命名，被替换的检出保存在 `.armor-updater/backups/`（最近三份）；更新到已安装的提交不会做任何事；真正未提交的本地修改会被直接拒绝，绝不会被悄悄丢弃；两次重命名之间的崩溃会在下次运行时修复，`rollback` 会放回最近的备份。
 * **一次一个，并有顺序：**锁可防止两个更新器同时处理一个工作区；批量操作先处理 ARMOR-COMMON（每个构建都需要它），没有它就不会构建项目。
 * **证据:** 每一次尝试,无论成功与否,都会在本地日志里追加一行,记录项目、前后的版本与提交,以及失败的原因。
+* **前置要求：**清单可以在可选字段 `requires` 中列出必须先安装的项目；批量操作会把它们排在前面，若其中任何一个缺失，安装或更新会被拒绝，并以窗口所用的语言给出清晰的提示。
+* **签名，默认为警告：**没有有效签名的修订仍会被安装或更新，窗口和命令行都会明确指出它没有签名；在设置中选择*要求*（`"signature_policy": "require"`）则会改为拒绝它。
+* **先前副本：**窗口可以恢复项目的先前副本，或删除保留的副本，`status` 会显示副本数量及其占用的磁盘空间。
 * **一个命令行工具和一个可选的桌面界面:** `armor-updater status`/`install`/`update`,以及一个 Qt Quick 界面(`pip install ".[gui]"`),覆盖生态系统的八种语言。
 
 ## 🧩 在 A.R.M.O.R. 中的角色
@@ -59,10 +62,10 @@ ARMOR-UPDATER 是为在 PC 上保存家族副本的人准备的桌面工具：�
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
-│                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + git_ops + staging + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
+│                       i18n + i18n_pt + i18n_recovery + result_text (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
-├── tests/              13 test modules
+├── tests/              18 test modules
 └── docs/               CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ```
 
@@ -72,7 +75,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 140 tests
+python -m pytest tests -q                              # 191 tests
 armor-updater --cli status                              # local + GitHub state of every repository
 armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
 armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)

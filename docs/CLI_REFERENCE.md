@@ -169,6 +169,29 @@ diverged git history is built, the fast-forward is proven to fail, and
 `test_refuses_a_remote_manifest_version_lower_than_the_installed_version`
 proves that an otherwise fast-forwardable downgrade leaves `HEAD` unchanged.)
 
+## Requirements
+
+A manifest may carry the optional `requires` field, a list of project names that must be installed (and built) first. `install` and `update` refuse a project whose requirement is not
+installed in the workspace and say which one is missing; the window does the same in its own language, and a batch puts every required project first (after ARMOR-COMMON, and a parent
+before its children). A manifest without the field behaves as before.
+
+## Signatures
+
+By default (`warn`) an install or update goes ahead when the new revision carries no valid signature, and the output ends with a `WARNING:` line that says the revision is not signed;
+`status` prints the policy in force. To refuse such a revision instead, choose `require`:
+
+```json
+{"signature_policy": "require", "allowed_signers_file": "/home/me/.config/armor/allowed_signers"}
+```
+
+in `~/.armor_updater_settings.json` (the older `"require_signed_commits": true` still means the same), or set `ARMOR_UPDATER_REQUIRE_SIGNED=1` for one run. With `require`, every new commit of
+an update is checked before anything is built, and a refused candidate leaves the installed checkout untouched. A settings file that cannot be read is treated as `require`.
+
+## How a version is read
+
+The version on GitHub is read from the manifest at the tip of the default branch without going through the cache of `raw.githubusercontent.com` (which can show the previous file for a few minutes
+after a push): with a `GITHUB_TOKEN` through the contents API, otherwise from the commit that `git ls-remote` reports, and from the branch URL only when neither works.
+
 ## Exit codes
 
 `status` always exits `0` (even when projects are outdated — that's
@@ -202,10 +225,9 @@ meant to be scripted/piped).
 
 ## An update that survives a crash
 
-Promoting an update takes two renames (the old checkout is moved aside as `<name>.backup`, then the new one takes its place). Without anything else, a crash or a power cut exactly between them is
-repaired the next time the tool runs, by the same process that notices the gap. For an installation that matters, install the optional durable journal (the `armor_sdk` package of the ecosystem's SDK, which this tool
-uses when it finds it, with no setting to change): it writes down each phase of the promotion in a small file in the workspace, so that the next run finishes or undoes an interrupted promotion even after the whole process
-died. Without the journal, an update is still correct as long as the process lives; with it, it is also correct after a crash.
+Promoting an update takes two renames (the old checkout is moved aside into `.armor-updater/backups/<name>/`, then the new one takes its place). Both are written to a small journal in the
+workspace before the first one happens, so a crash or a power cut between them is repaired the next time the tool runs: it finishes or undoes the promotion. An update is therefore correct
+whether the process lives or not.
 
 ### `rollback <PROJECT-NAME> [--workspace PATH]`
 

@@ -15,7 +15,7 @@ import pytest
 
 from armor_updater import install, promotion
 from armor_updater.detect import discover_workspace
-from armor_updater.install import InstallResult, install_order, install_or_update
+from armor_updater.install import install_order, install_or_update
 from armor_updater.promotion import (
     Promotion,
     PromotionJournal,

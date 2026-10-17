@@ -88,6 +88,14 @@ complete operator report without falsely declaring the whole batch successful.
 The checkpoint heading identifies the current project and its position in the
 approved batch.
 
+## Previous copies, requirements and signatures
+
+The action panel also shows how many previous copies of the selected project the updater keeps (and the disk they take), with two buttons, each behind a confirmation dialog:
+**Restore previous copy** puts the newest copy back (the version that was there is kept as a copy, so it can be undone) and **Delete previous copies** removes them.
+
+A project whose `requires` list names a project that is not installed is refused with a sentence in the language of the window, and an install or update of a revision that carries no valid
+signature goes ahead under the default `warn` policy, with a warning in the activity log and the status line; the policy in force is written to the log at every scan.
+
 ## Real update evidence in the window
 
 The update panel is not a cosmetic progress animation. An approved action

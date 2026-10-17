@@ -251,9 +251,11 @@ ApplicationWindow {
         background: Rectangle { color: window.panel; radius: 16; border.color: window.border; border.width: 1 }
         contentItem: ColumnLayout {
             spacing: 14
-            LabelText { text: confirmDialog.batch ? ui("confirm_batch_title") : ui("confirm_action_title"); font.pixelSize: 18; font.bold: true }
+            LabelText { text: confirmDialog.action === "restore" ? ui("restore_button") : (confirmDialog.action === "clean" ? ui("clean_copies_button") : (confirmDialog.batch ? ui("confirm_batch_title") : ui("confirm_action_title"))); font.pixelSize: 18; font.bold: true }
             LabelText {
                 text: {
+                    if (confirmDialog.action === "restore") return ui("msg_confirm_restore").replace("{name}", backend.selectedProject)
+                    if (confirmDialog.action === "clean") return ui("msg_confirm_clean").replace("{name}", backend.selectedProject)
                     if (!confirmDialog.batch) return ui("confirm_action_body").replace("{project}", backend.selectedProject)
                     var count = confirmDialog.action === "install" ? backend.missingCount : backend.updateCount
                     var key = confirmDialog.action === "install" ? "confirm_batch_install_body" : "confirm_batch_update_body"
@@ -266,9 +268,11 @@ ApplicationWindow {
                 Item { Layout.fillWidth: true }
                 GameButton { text: ui("confirm_cancel_button"); accent: "#27445d"; onClicked: confirmDialog.close() }
                 GameButton {
-                    text: confirmDialog.action === "install" ? ui("install_button") : ui("update_button")
+                    text: confirmDialog.action === "install" ? ui("install_button") : (confirmDialog.action === "restore" ? ui("restore_button") : (confirmDialog.action === "clean" ? ui("clean_copies_button") : ui("update_button")))
                     onClicked: {
-                        if (confirmDialog.batch) backend.performBatch(confirmDialog.action, skipBuild.checked)
+                        if (confirmDialog.action === "restore") backend.restoreSelected()
+                        else if (confirmDialog.action === "clean") backend.cleanSelectedBackups()
+                        else if (confirmDialog.batch) backend.performBatch(confirmDialog.action, skipBuild.checked)
                         else backend.performSelected(confirmDialog.action, skipBuild.checked)
                         confirmDialog.close()
                     }
@@ -540,6 +544,9 @@ ApplicationWindow {
                         GameButton { text: ui("install_button"); enabled: !backend.busy && backend.canInstall; Layout.fillWidth: true; accent: window.blue; onClicked: { confirmDialog.batch = false; confirmDialog.action = "install"; confirmDialog.open() } }
                         GameButton { text: ui("update_button"); enabled: !backend.busy && backend.canUpdate; Layout.fillWidth: true; accent: window.green; onClicked: { confirmDialog.batch = false; confirmDialog.action = "update"; confirmDialog.open() } }
                         GameCheck { id: skipBuild; text: ui("skip_build_checkbox"); Layout.fillWidth: true }
+                        LabelText { text: backend.backupsSummary; visible: text !== ""; color: window.textMuted; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        GameButton { text: ui("restore_button"); enabled: !backend.busy && backend.canRestore; Layout.fillWidth: true; accent: window.amber; onClicked: { confirmDialog.batch = false; confirmDialog.action = "restore"; confirmDialog.open() } }
+                        GameButton { text: ui("clean_copies_button"); enabled: !backend.busy && backend.canRestore; Layout.fillWidth: true; accent: "#7a3f4b"; onClicked: { confirmDialog.batch = false; confirmDialog.action = "clean"; confirmDialog.open() } }
                         GameButton { text: ui("open_github_button"); enabled: backend.selectedProject !== ui("selected_project_none"); Layout.fillWidth: true; accent: "#264966"; onClicked: backend.openSelectedGithub() }
                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: window.border }
                         LabelText { text: ui("batch_actions_title"); color: window.textMuted; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1 }

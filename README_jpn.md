@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-140-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.2-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Tests-191-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（140 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
+**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（191 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
 
 ---
 
@@ -37,9 +37,9 @@
 
 | | |
 |---|---|
-| バージョン | `0.1.2` |
+| バージョン | `0.1.4` |
 | 成熟度 | 確立 |
-| テスト | 140 (`python -m pytest tests -q`) |
+| テスト | 191 (`python -m pytest tests -q`) |
 | 技術 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | 実機での確認 | 該当なし：デスクトッププログラムで、Qt Quick シェルは Windows で動かしました |
 
@@ -49,6 +49,9 @@
 * **インストールも更新も、その場では行いません：**新しいプロジェクトも更新も、まず独立したステージングのクローンでビルドして検証し、ビルドが成功してから反映します。ジャーナルに記録された 2 回の名前変更を行い、置き換えたチェックアウトは `.armor-updater/backups/` に（最新の 3 件）保存されます。インストール済みと同じコミットへの更新は何もしません。コミットされていない実際のローカル変更は即座に拒否され、黙って破棄されることはありません。名前変更の間のクラッシュは次の実行で修復され、`rollback` は最新のバックアップを戻します。
 * **一度に一つ、順番どおりに：**ロックにより、2 つの更新ツールが同じワークスペースで同時に動くことはありません。一括処理は ARMOR-COMMON から始まり（すべてのビルドが必要とします）、それがなければプロジェクトはビルドされません。
 * **証跡:** 成功・失敗を問わず、すべての試行はプロジェクト名、前後のバージョンとコミット、失敗の理由をローカルのログに一行追加する。
+* **前提条件：**マニフェストは任意のフィールド `requires` に、先にインストールしておくべきプロジェクトを列挙できます。一括処理ではそれらが先頭に置かれ、いずれかが欠けている場合、インストールや更新は、ウィンドウの言語で分かりやすいメッセージとともに拒否されます。
+* **署名、既定は警告：**有効な署名のないリビジョンも、そのままインストールまたは更新され、ウィンドウとコマンドラインは署名されていないことを明示します。設定で*必須*（`"signature_policy": "require"`）を選ぶと、代わりに拒否されます。
+* **以前のコピー：**ウィンドウからプロジェクトの以前のコピーを復元したり、保管されているコピーを削除したりでき、`status` はコピーの数とそれが使うディスク容量を表示します。
 * **CLI と任意のデスクトップシェル:** `armor-updater status`/`install`/`update`、およびエコシステムの 8 言語に対応した Qt Quick インターフェース(`pip install ".[gui]"`)。
 
 ## 🧩 A.R.M.O.R. での役割
@@ -59,10 +62,10 @@ ARMOR-UPDATER は、PC にファミリーのコピーを持つ人のためのデ
 
 ```text
 ARMOR-UPDATER/
-├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
-│                       i18n + i18n_pt (eight languages), gui / qt_gui / qml (the Qt Quick shell)
+├── src/armor_updater/  project_manifest, registry, detect (local), github_client, install (staged install and update) + git_ops + staging + promotion (lock, journal, backups), signature (signed updates), evidence, main (CLI), settings, version_parse,
+│                       i18n + i18n_pt + i18n_recovery + result_text (eight languages), gui / qt_gui / qml (the Qt Quick shell)
 ├── tools/              armor_ci_validate.py, _armor_readme_parity.py, armor_project_tool.py (vendored from ARMOR-COMMON), generate_app_icon.py
-├── tests/              13 test modules
+├── tests/              18 test modules
 └── docs/               CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ```
 
@@ -72,7 +75,7 @@ ARMOR-UPDATER/
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 140 tests
+python -m pytest tests -q                              # 191 tests
 armor-updater --cli status                              # local + GitHub state of every repository
 armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
 armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)

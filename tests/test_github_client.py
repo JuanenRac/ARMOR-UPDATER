@@ -172,8 +172,9 @@ def test_discover_remote_projects_isolates_one_malformed_manifest_from_the_rest(
 
     routes = {
         "/users/JuanenRac/repos?type=owner&per_page=100&page=1": (200, repo_list),
-        "/JuanenRac/GoodProject/main/armor.project.json": (200, json.dumps(valid_manifest("GoodProject")).encode()),
-        "/JuanenRac/BadProject/main/armor.project.json": (200, b"{not valid json"),
+        # a token reads the manifest through the contents API (not the cached raw URL)
+        "/repos/JuanenRac/GoodProject/contents/armor.project.json?ref=main": (200, json.dumps(valid_manifest("GoodProject")).encode()),
+        "/repos/JuanenRac/BadProject/contents/armor.project.json?ref=main": (200, b"{not valid json"),
         # NoManifestHere deliberately has no route at all - the fixture
         # server's do_GET() answers with a real 404, exactly like a
         # repository that never published armor.project.json.
@@ -380,8 +381,9 @@ def test_fetch_one_retries_a_real_unreachable_host_before_reporting_network_erro
     monkeypatch.setattr(github_client, "RETRY_MAX_ATTEMPTS", 2)
     monkeypatch.setattr(github_client, "RETRY_BACKOFF_BASE_S", 0.01)
 
-    unreachable = "http://127.0.0.1:1/armor.project.json"
-    monkeypatch.setattr(github_client, "github_raw_url", lambda _entry: unreachable)
+    unreachable = "http://127.0.0.1:1"
+    monkeypatch.setattr(github_client, "GITHUB_API_BASE", unreachable)
+    monkeypatch.setattr(github_client, "GITHUB_RAW_BASE", unreachable)
 
     entry = ProjectEntry("ARMOR-EXAMPLE", "python", "1.2.3")
     status = _fetch_one(entry, "fake-token")

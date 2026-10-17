@@ -3,7 +3,7 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0 - see LICENSE
 #
-# Fetches each project's universal manifest directly from GitHub raw content.
+# Fetches each project's universal manifest from GitHub (raw content at the current commit, or the contents API).
 #
 # IMPORTANT:
 #
@@ -18,7 +18,7 @@
 #   registry.py
 #        |
 #        v
-#   github_raw_url()
+#   _read_manifest()   (contents API with a token, otherwise ls-remote + raw at the commit)
 #        |
 #        v
 #   GitHub raw content
@@ -39,8 +39,10 @@ from __future__ import annotations
 import json
 import os
 import socket
+import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from concurrent.futures import (
@@ -57,9 +59,10 @@ from .project_manifest import (
     parse_manifest,
 )
 from .registry import (
+    GITHUB_BRANCH,
+    GITHUB_OWNER,
     ProjectEntry,
     entry_from_manifest,
-    github_raw_url,
 )
 from .version_parse import Version
 
@@ -84,6 +87,7 @@ USER_AGENT = "ARMOR-UPDATER"
 # ecosystem's Go projects using net/http/httptest.
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
+GITHUB_GIT_BASE = "https://github.com"
 
 # Real, bounded retry for genuinely transient network failures - a
 # connection that never got a response (DNS, refused, reset, timeout), or
@@ -199,6 +203,78 @@ def _urlopen_with_retries(
 
 
 # ---------------------------------------------------------------------------
+# Reading a manifest that is not stale
+# ---------------------------------------------------------------------------
+#
+# raw.githubusercontent.com is served from a cache that can keep the previous file for a few minutes after a push, so "up to date" could be said about a repository that has just
+# published a new version (the update itself runs `git fetch` and does see it). A manifest is therefore read in this order:
+#
+#   * with a token: the contents API with the branch as `ref` (not cached, and a token has the rate budget for it);
+#   * without one: `git ls-remote` gives the commit the branch points to now, and the file is read from raw at that commit - a URL that has never been requested before cannot be stale,
+#     and it does not use the 60 requests an hour an unauthenticated API client has;
+#   * when neither works (no git, the API refused): the branch URL of raw, as before.
+#
+# A 404 from the first two is an answer (the repository has no manifest at that revision), not a reason to try the cache.
+
+LS_REMOTE_TIMEOUT_S = 20
+
+
+def _remote_tip(owner: str, name: str, branch: str) -> str | None:
+    """The commit the branch of a public repository points to right now (`git ls-remote`), or None when git is missing, the repository or branch does not exist or it times out."""
+    environment = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "never"}
+    try:
+        completed = subprocess.run(
+            ["git", "ls-remote", f"{GITHUB_GIT_BASE}/{owner}/{name}", f"refs/heads/{branch}"],
+            capture_output=True, text=True, timeout=LS_REMOTE_TIMEOUT_S, check=False, env=environment, stdin=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    for line in completed.stdout.splitlines():
+        sha, _, ref = line.partition("\t")
+        if ref.strip() == f"refs/heads/{branch}" and len(sha) == 40:
+            return sha
+    return None
+
+
+def _manifest_candidates(owner: str, name: str, branch: str, token: str) -> list[tuple[str, str, bool]]:
+    """(url, Accept header, a 404 here is final) in the order they are tried."""
+    candidates: list[tuple[str, str, bool]] = []
+    if token:
+        ref = urllib.parse.quote(branch, safe="")
+        candidates.append((f"{GITHUB_API_BASE}/repos/{owner}/{name}/contents/{MANIFEST_FILE}?ref={ref}", "application/vnd.github.raw+json", True))
+    else:
+        tip = _remote_tip(owner, name, branch)
+        if tip:
+            candidates.append((f"{GITHUB_RAW_BASE}/{owner}/{name}/{tip}/{MANIFEST_FILE}", "text/plain,*/*", True))
+    candidates.append((f"{GITHUB_RAW_BASE}/{owner}/{name}/{branch}/{MANIFEST_FILE}", "text/plain,*/*", True))
+    return candidates
+
+
+def _read_manifest(owner: str, name: str, branch: str, token: str = "") -> tuple[str, str]:
+    """(text, url) of the repository's manifest at the tip of `branch`, read without the stale cache whenever it can be. Raises urllib's HTTPError / URLError / OSError like a plain
+    request would; a 404 is raised as such at once."""
+    candidates = _manifest_candidates(owner, name, branch, token)
+    last_error: Exception | None = None
+    for url, accept, final_404 in candidates:
+        headers = {"User-Agent": USER_AGENT, "Accept": accept}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        request = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            return _urlopen_with_retries(request, timeout=REQUEST_TIMEOUT_S).decode("utf-8", errors="replace"), url
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404 and final_404:
+                raise
+            last_error = exc
+        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error
+
+
+# ---------------------------------------------------------------------------
 # Result
 # ---------------------------------------------------------------------------
 
@@ -249,13 +325,8 @@ def _fetch_discovered_manifest(owner: str, name: str, branch: str, token: str = 
     unauthenticated read of a public repository's raw content always works;
     passing one only raises the caller's overall rate-limit budget.
     """
-    url = f"{GITHUB_RAW_BASE}/{owner}/{name}/{branch}/{MANIFEST_FILE}"
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        text = _urlopen_with_retries(request, timeout=REQUEST_TIMEOUT_S).decode("utf-8", errors="replace")
+        text, url = _read_manifest(owner, name, branch, token)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return None
@@ -378,16 +449,11 @@ def _fetch_one(
     optional here too.
     """
 
-    url = github_raw_url(entry)
-
-    headers = {"User-Agent": USER_AGENT, "Accept": "text/plain,*/*"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(url, headers=headers, method="GET")
+    branch = entry.default_branch or GITHUB_BRANCH
+    url = f"{GITHUB_RAW_BASE}/{GITHUB_OWNER}/{entry.name}/{branch}/{MANIFEST_FILE}"
 
     try:
-        raw = _urlopen_with_retries(request, timeout=REQUEST_TIMEOUT_S)
-        text = raw.decode("utf-8", errors="replace")
+        text, url = _read_manifest(GITHUB_OWNER, entry.name, branch, token)
 
     except urllib.error.HTTPError as exc:
         # Typical cases:
@@ -560,7 +626,7 @@ def fetch_all(
                         "worker failure: "
                         f"{type(exc).__name__}: {exc}"
                     ),
-                    url=github_raw_url(entry),
+                    url=f"{GITHUB_RAW_BASE}/{GITHUB_OWNER}/{entry.name}/{entry.default_branch or GITHUB_BRANCH}/{MANIFEST_FILE}",
                 )
 
             results[
