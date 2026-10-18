@@ -1,4 +1,8 @@
 @echo off
+rem Keep the window open for people, never in automation (CI / HYDRA_UMC_CI).
+set "KEEP_OPEN=pause"
+if defined CI set "KEEP_OPEN=ver >nul"
+if "%HYDRA_UMC_CI%"=="1" set "KEEP_OPEN=ver >nul"
 REM ARMOR_SCRIPT_STANDARD_HEADER_BEGIN
 REM *****************************************************************************
 REM Project   : ARMOR-UPDATER
@@ -48,4 +52,4 @@ if exist .venv\Scripts\python.exe (
     python -m armor_updater.main %*
 )
 
-pause
+%KEEP_OPEN%
