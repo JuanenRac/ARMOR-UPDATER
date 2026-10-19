@@ -17,6 +17,7 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Any
+from .console_flags import NO_WINDOW
 
 EVIDENCE_DIRECTORY = ".armor-updater"
 EVIDENCE_FILE = "evidence.jsonl"
@@ -33,7 +34,7 @@ def installed_state(project_path: Path) -> dict[str, str | None]:
     try:
         completed = subprocess.run(
             ["git", "-C", str(project_path), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=15, check=False,
+            capture_output=True, text=True, timeout=15, check=False, creationflags=NO_WINDOW,
         )
         if completed.returncode == 0:
             commit = completed.stdout.strip() or None

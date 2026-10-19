@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .settings import load_settings, settings_damaged
+from .console_flags import NO_WINDOW
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ def verify_range(repo: Path, base: str, tip: str, policy: SignaturePolicy, *, li
     if not policy.required:
         return None
     try:
-        listing = subprocess.run(["git", "rev-list", f"{base}..{tip}"], cwd=repo, capture_output=True, text=True, timeout=60)
+        listing = subprocess.run(["git", "rev-list", f"{base}..{tip}"], cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"could not list the new commits: {exc}"
     if listing.returncode != 0:
@@ -99,7 +100,7 @@ def unsigned_reason(repo: Path, revision: str, policy: SignaturePolicy) -> str |
         cmd += ["-c", f"gpg.ssh.allowedSignersFile={policy.allowed_signers_file}"]
     cmd += ["verify-commit", revision]
     try:
-        result = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"could not run git verify-commit: {exc}"
     if result.returncode != 0:

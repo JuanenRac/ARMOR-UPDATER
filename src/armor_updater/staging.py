@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from shutil import copy2, copytree, rmtree
 from typing import Callable
+from .console_flags import NO_WINDOW
 
 
 # The GUI consumes these events to show the same real work that the CLI does. A callback is deliberately optional: command-line users retain normal child process output, while the
@@ -104,7 +105,7 @@ def _real_untracked_paths(path: Path) -> list[str]:
     A modified TRACKED file is never included - that already blocks the update separately."""
     result = subprocess.run(
         ["git", "status", "--porcelain", "--ignored", "-uall", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True,
+        cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW,
     )
     if result.returncode != 0 or not result.stdout:
         return []
@@ -127,7 +128,7 @@ def _tracked_dirty_paths(path: Path) -> list[str]:
     would be invisible to it, the build would pass, and the promotion would move the edit away to a backup while reporting success."""
     result = subprocess.run(
         ["git", "status", "--porcelain", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True,
+        cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW,
     )
     if result.returncode != 0:
         raise DirtyCheckError(

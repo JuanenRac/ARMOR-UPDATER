@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
 from .registry import ProjectEntry
+from .console_flags import NO_WINDOW, headless
 
 
 def _run(
@@ -21,8 +22,8 @@ def _run(
     if capture_output:
         kwargs.update({"capture_output": True, "text": True})
     # The GUI is started with pythonw on Windows. Do not let git or a child build script create a surprise console while its output is captured for the in-window checkpoint log.
-    if capture_output and os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    if os.name == "nt" and (capture_output or headless()):
+        kwargs["creationflags"] = NO_WINDOW
     if os.name == "nt":
         # Ecosystem .bat files finish with `pause` when an operator double-clicks them. Here they run as a child, so give them one harmless newline and never leave a hidden child
         # waiting for a keypress (also without a captured output: the Tk window starts them too).
@@ -42,7 +43,7 @@ def _command_output(result: subprocess.CompletedProcess[str]) -> str:
 
 
 def _rev_parse(path: Path, revision: str) -> str:
-    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW).stdout.strip()
 
 
 def _validated_manifest_text(text: str, entry: ProjectEntry) -> ProjectManifest:
@@ -58,6 +59,7 @@ def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> P
         check=False,
         capture_output=True,
         text=True,
+        creationflags=NO_WINDOW,
     )
     if result.returncode != 0:
         raise ManifestValidationError("candidate revision has no readable armor.project.json")

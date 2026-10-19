@@ -5,6 +5,10 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
+## [Unreleased]
+
+- **No more console windows:** every git call the graphical updater makes (version reads, the remote check, signatures, the dirty check of a project, the manifest of a revision) now starts without a console of its own. Started from the silent launcher (pythonw.exe has no console) each one used to open a command window, and a screen that checks many projects filled the desktop with them. A test fails if any child process of the updater is started without the flag.
+
 ## [0.1.4] - Requirements between projects, signatures that warn by default, fresh version reads and buttons for the previous copies
 
 - **Requirements:** a manifest can name the projects that must be installed first with the optional requires field. A batch puts them first (after ARMOR-COMMON, and a parent before its children), and an install or update of a project whose requirement is not installed is refused with a clear message, said in the eight languages of the window; a manifest without the field behaves as before.

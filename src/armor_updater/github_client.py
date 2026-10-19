@@ -65,6 +65,7 @@ from .registry import (
     entry_from_manifest,
 )
 from .version_parse import Version
+from .console_flags import NO_WINDOW
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +226,7 @@ def _remote_tip(owner: str, name: str, branch: str) -> str | None:
     try:
         completed = subprocess.run(
             ["git", "ls-remote", f"{GITHUB_GIT_BASE}/{owner}/{name}", f"refs/heads/{branch}"],
-            capture_output=True, text=True, timeout=LS_REMOTE_TIMEOUT_S, check=False, env=environment, stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, timeout=LS_REMOTE_TIMEOUT_S, check=False, env=environment, stdin=subprocess.DEVNULL, creationflags=NO_WINDOW,
         )
     except (OSError, subprocess.SubprocessError):
         return None
