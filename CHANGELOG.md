@@ -7,6 +7,8 @@ bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
 ## [Unreleased]
 
+- **Signers of the ecosystem:** the public keys that sign the ecosystem's commits ship with the updater and their fingerprints are pinned in the code; without a file of the person's own, signatures are checked against them, and a changed, added or missing key fails closed. A test fails when the file and the pin differ.
+- **Releases layout (optional):** `deploy_layout: releases` builds each candidate in its final folder and puts it in service by switching a link, keeping the previous releases so that going back is one more switch. Off by default, never applied to the updater itself, with a journalled first migration, tests for the build failure, the migration, the rollback and the pruning, and the risks written in the CLI reference.
 - The repository has a security policy, a code of conduct, a contributing guide and a support file.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 - **No more console windows:** every git call the graphical updater makes (version reads, the remote check, signatures, the dirty check of a project, the manifest of a revision) now starts without a console of its own. Started from the silent launcher (pythonw.exe has no console) each one used to open a command window, and a screen that checks many projects filled the desktop with them. A test fails if any child process of the updater is started without the flag.

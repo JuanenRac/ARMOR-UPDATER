@@ -187,6 +187,25 @@ By default (`warn`) an install or update goes ahead when the new revision carrie
 in `~/.armor_updater_settings.json` (the older `"require_signed_commits": true` still means the same), or set `ARMOR_UPDATER_REQUIRE_SIGNED=1` for one run. With `require`, every new commit of
 an update is checked before anything is built, and a refused candidate leaves the installed checkout untouched. A settings file that cannot be read is treated as `require`.
 
+### The signers of the ecosystem
+
+The updater ships the public key(s) that sign the commits of the ecosystem in `src/armor_updater/data/allowed_signers`, and pins their SHA256 fingerprints in `signature.py`. When no
+`allowed_signers_file` is chosen, a signature is checked against that file, and only while the keys in it are exactly the pinned ones: a changed, added or missing key makes the check
+fail (it never falls back to "trust anything"). A file chosen with `allowed_signers_file` replaces it on purpose. A test fails when the shipped file and the pin drift apart. The
+default policy stays `warn`, so an unsigned revision is still installed with a warning until the commits are signed; `require` makes the ecosystem key mandatory.
+
+## Releases layout (optional, high risk)
+
+By default a project is a plain checkout that is built in a staging folder and moved into place. With `{"deploy_layout": "releases"}` in `~/.armor_updater_settings.json` (or
+`ARMOR_UPDATER_LAYOUT=releases`) the project folder becomes a link (a symbolic link, a junction on Windows) to `<workspace>/.armor-updater/releases/<project>/<commit>/`. The candidate
+is cloned and built in that final folder, so a virtual environment or an editable install is never made in one place and moved to another, and it is put in service by switching the
+link. The previous release stays untouched; `rollback` (and the restore button) switch the link back; the newest three releases are kept, never the one in service.
+
+Risks and safeguards: the first update of a real checkout moves it to its own release folder (journalled; the next run undoes an interrupted move, and a link that cannot be made moves it
+back), so a program that keeps files of the old folder open makes the update fail without changing anything; the environment of a release that was left behind keeps the paths it was
+built with, so after going back to it run its own `build.sh` once; on Windows the switch of the link is two operations and the next run finishes one a crash cut in two. ARMOR-UPDATER
+itself never moves to this layout. The default stays `checkout`.
+
 ## How a version is read
 
 The version on GitHub is read from the manifest at the tip of the default branch without going through the cache of `raw.githubusercontent.com` (which can show the previous file for a few minutes

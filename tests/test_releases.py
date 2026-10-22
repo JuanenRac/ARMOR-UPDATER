@@ -1,0 +1,161 @@
+# =============================================================================
+# ARMOR-UPDATER - tests/test_releases.py
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0 - see LICENSE
+# =============================================================================
+"""The optional releases layout: the project folder is a link to a release folder that was built where it stays; a failed build changes nothing; going back is a link switch; the
+default layout and the updater itself are left alone."""
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from armor_updater import install, releases
+from armor_updater.install import clone_or_pull, restore_previous_copy
+from armor_updater.registry import ProjectEntry
+from test_install import entry, git, write_build_script, write_manifest
+
+
+def _head(path: Path) -> str:
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=path, text=True).strip()
+
+
+def _remote(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
+    remote = tmp_path / "remote.git"
+    git("init", "--bare", str(remote), cwd=tmp_path)
+    seed = tmp_path / "seed"
+    git("clone", str(remote), str(seed), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=seed)
+    git("config", "user.name", "Contract", cwd=seed)
+    write_manifest(seed, "1.0.0")
+    write_build_script(seed, ok=True)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", "v1", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    monkeypatch.setattr(install, "github_repo_url", lambda _entry: str(remote))
+    return remote, seed
+
+
+def _push(seed: Path, version: str, *, build_ok: bool = True) -> str:
+    write_manifest(seed, version)
+    write_build_script(seed, ok=build_ok)
+    git("add", "-A", cwd=seed)
+    git("commit", "-m", f"v{version}", cwd=seed)
+    git("push", "origin", "HEAD", cwd=seed)
+    return _head(seed)
+
+
+@pytest.fixture
+def releases_layout(monkeypatch):
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "releases")
+    monkeypatch.setenv("ARMOR_UPDATER_REQUIRE_SIGNED", "0")
+
+
+def test_the_default_layout_is_checkout(monkeypatch):
+    monkeypatch.delenv("ARMOR_UPDATER_LAYOUT", raising=False)
+    monkeypatch.setattr(releases, "load_settings", lambda: {})
+    assert releases.current_layout() == "checkout"
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "nonsense")
+    assert releases.current_layout() == "checkout"
+
+
+def test_the_updater_never_moves_itself(monkeypatch):
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "releases")
+    assert releases.wants_releases("ARMOR-UPDATER") is False
+    assert releases.wants_releases("ARMOR-SERVER") is True
+
+
+def test_a_fresh_install_is_built_where_it_stays_and_linked(tmp_path: Path, monkeypatch, releases_layout):
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    result = clone_or_pull(entry(), workspace)
+    assert result.ok, result.message
+    link = workspace / entry().name
+    target = releases.in_service(workspace, entry().name)
+    assert target is not None and releases.link_target(link) is not None
+    assert (link / "built.txt").exists() and (target / "built.txt").exists()
+    assert not list(workspace.glob(".*.clone-*"))
+
+
+def test_a_real_checkout_is_migrated_by_an_update_and_the_old_one_is_kept(tmp_path: Path, monkeypatch, releases_layout):
+    remote, seed = _remote(tmp_path, monkeypatch)
+    local = tmp_path / entry().name
+    git("clone", str(remote), str(local), cwd=tmp_path)
+    old = _head(local)
+    new = _push(seed, "1.1.0")
+
+    result = clone_or_pull(entry(), tmp_path)
+
+    assert result.ok, result.message
+    assert releases.link_target(local) is not None
+    assert _head(local) == new
+    assert (local / "built.txt").exists()
+    kept = releases.list_releases(tmp_path, entry().name)
+    assert sorted(_head(r) for r in kept) == sorted([old, new])
+    assert releases.in_service(tmp_path, entry().name).name == new[:12]
+
+
+def test_a_failed_build_leaves_the_link_and_the_release_in_service_untouched(tmp_path: Path, monkeypatch, releases_layout):
+    remote, seed = _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    assert clone_or_pull(entry(), workspace).ok
+    serving = releases.in_service(workspace, entry().name)
+    served_head = _head(workspace / entry().name)
+    _push(seed, "1.1.0", build_ok=False)
+
+    result = clone_or_pull(entry(), workspace)
+
+    assert not result.ok and "build failed" in result.message
+    assert releases.in_service(workspace, entry().name) == serving
+    assert _head(workspace / entry().name) == served_head
+    assert [r.name for r in releases.list_releases(workspace, entry().name)] == [serving.name], "the failed release folder must be removed"
+
+
+def test_going_back_is_a_switch_of_the_link_and_can_be_undone(tmp_path: Path, monkeypatch, releases_layout):
+    remote, seed = _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    assert clone_or_pull(entry(), workspace).ok
+    first = _head(workspace / entry().name)
+    second = _push(seed, "1.1.0")
+    assert clone_or_pull(entry(), workspace).ok
+    assert _head(workspace / entry().name) == second
+
+    back = restore_previous_copy(workspace, entry().name)
+    assert back.ok, back.message
+    assert _head(workspace / entry().name) == first
+    again = restore_previous_copy(workspace, entry().name)
+    assert again.ok and _head(workspace / entry().name) == second
+
+
+def test_only_the_newest_releases_are_kept_and_never_the_one_in_service(tmp_path: Path, monkeypatch, releases_layout):
+    remote, seed = _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    assert clone_or_pull(entry(), workspace).ok
+    for number in range(1, 5):
+        _push(seed, f"1.{number}.0")
+        assert clone_or_pull(entry(), workspace).ok
+    names = [r.name for r in releases.list_releases(workspace, entry().name)]
+    assert len(names) == releases.DEFAULT_KEEP_RELEASES
+    assert releases.in_service(workspace, entry().name).name in names
+
+
+def test_the_updater_itself_keeps_the_checkout_flow(tmp_path: Path, monkeypatch, releases_layout):
+    remote, seed = _remote(tmp_path, monkeypatch)
+    me = ProjectEntry("ARMOR-UPDATER", "python", "1.0.0")
+    write_manifest(seed, "1.0.0")
+    assert me.name == "ARMOR-UPDATER" and releases.wants_releases(me.name) is False
+
+
+def test_a_crash_between_the_two_steps_of_a_windows_switch_is_finished_by_the_next_run(tmp_path: Path):
+    target = tmp_path / "rel"
+    target.mkdir()
+    fresh = tmp_path / ".proj.link-new"
+    releases.make_link(fresh, target)
+    assert releases.heal_link(tmp_path) == ["proj: an interrupted switch of the release in service was finished"]
+    assert releases.link_target(tmp_path / "proj") is not None

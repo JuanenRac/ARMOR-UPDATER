@@ -64,6 +64,7 @@ from .staging import (
     forget_build_trees,
     remove_generated_environments,
 )
+from .releases import activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, wants_releases, DEFAULT_KEEP_RELEASES
 from .signature import current_policy, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
@@ -72,7 +73,7 @@ COMMON_PROJECT = "ARMOR-COMMON"
 
 def recover_interrupted_promotions(workspace_root: Path) -> list[str]:
     """Heals a promotion that a crash, a kill or a power cut left half done (see promotion.py). Returns what it did."""
-    return recover_interrupted_promotion(workspace_root)
+    return recover_interrupted_promotion(workspace_root) + heal_link(workspace_root)
 
 
 def install_order(entries: Iterable[ProjectEntry]) -> list[ProjectEntry]:
@@ -250,6 +251,60 @@ def _note_unsigned(result: InstallResult, unsigned: str, project: str) -> Instal
     return result
 
 
+def _activate_release(entry: ProjectEntry, workspace_root: Path, path: Path, new_release: Path, progress: ProgressCallback | None) -> InstallResult | tuple[Path | None]:
+    """Puts a built release in service (see releases.py). Returns an InstallResult when it failed - the release in service is then the one that was - else the folder the previous
+    installation is in (None for a new project)."""
+    _checkpoint(progress, "validation", "Switching the project to the verified release; the previous one is kept.")
+    journal = PromotionJournal(workspace_root)
+    current_commit = _rev_parse(path, "HEAD") if path.exists() else None
+    try:
+        previous = activate_release(workspace_root, entry.name, path, new_release, journal, current_commit)
+    except OSError as exc:
+        _rmtree_best_effort(new_release)
+        return InstallResult(False, f"could not put the new release in service ({exc}); {path} was left as it was")
+    return (previous,)
+
+
+def _update_as_release(
+    entry: ProjectEntry, workspace_root: Path, path: Path, installed: ProjectManifest, candidate: ProjectManifest, candidate_sha: str, unsigned: str, progress: ProgressCallback | None,
+) -> InstallResult:
+    """The update of a project in the releases layout: the candidate is cloned and built in its own release folder (its final place) and the link is switched to it only when the
+    build passed. Any failure removes only that new folder."""
+    new_release = release_path(workspace_root, entry.name, candidate_sha)
+    _rmtree_best_effort(new_release)   # a leftover of an earlier attempt at the same commit
+    new_release.parent.mkdir(parents=True, exist_ok=True)
+    _checkpoint(progress, "source", "Cloning the installed release into its own release folder for verification.")
+    capture = progress is not None
+    steps = (
+        (["git", "clone", "--local", "--no-hardlinks", str(path), str(new_release)], workspace_root, "could not create the release folder"),
+        (["git", "remote", "set-url", "origin", github_repo_url(entry)], new_release, "could not restore the real upstream remote on the new release"),
+    )
+    for cmd, cwd, what in steps:
+        result = _run(cmd, cwd=cwd, capture_output=capture)
+        if result.returncode != 0:
+            _rmtree_best_effort(new_release)
+            return InstallResult(False, f"{what} (exit {result.returncode}); {path} was not modified", _command_output(result))
+    _carry_over_local_data(path, new_release, progress=progress)
+    result = _run(["git", "merge", "--ff-only", candidate_sha], cwd=new_release, capture_output=capture)
+    if result.returncode != 0:
+        _rmtree_best_effort(new_release)
+        return InstallResult(False, f"git merge --ff-only failed (exit {result.returncode}) in the new release; {path} was not modified.", _command_output(result))
+    _checkpoint(progress, "build", "Building and verifying the candidate in its final folder before the link is switched.")
+    build_result = _run_build_script_at(new_release, progress=progress)
+    if not build_result.ok:
+        _rmtree_best_effort(new_release)
+        return InstallResult(False, f"candidate build failed - {path} was left completely untouched and remains the operative installation: {build_result.message}", build_result.output)
+    promoted = _activate_release(entry, workspace_root, path, new_release, progress)
+    if isinstance(promoted, InstallResult):
+        return promoted
+    (previous,) = promoted
+    pruned = prune_releases(workspace_root, entry.name, DEFAULT_KEEP_RELEASES)
+    message = f"Updated {path} to v{candidate.version} (commit {candidate_sha[:12]}) after a verified build in its own release folder; previous installation kept at {previous}"
+    if pruned:
+        message += f" ({len(pruned)} older release(s) deleted)"
+    return _note_unsigned(InstallResult(True, message, build_result.output), unsigned, entry.name)
+
+
 def clone_or_pull(
     entry: ProjectEntry,
     workspace_root: Path,
@@ -290,6 +345,17 @@ def clone_or_pull(
             return unmet
         environment_removed = False
         output = ""
+        release_mode = verify_build and wants_releases(entry.name)
+        if release_mode:   # the releases layout builds in the folder the project will stay in, so nothing has to be made again afterwards
+            final = release_path(workspace_root, entry.name, _rev_parse(staging_path, "HEAD") or uuid4().hex)
+            _rmtree_best_effort(final)
+            final.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                staging_path.rename(final)
+            except OSError as exc:
+                _rmtree_best_effort(staging_path)
+                return InstallResult(False, f"could not prepare the release folder ({exc}); nothing was installed")
+            staging_path = final
         if verify_build:
             _checkpoint(progress, "build", "Building and verifying the new project in the staging directory before it takes its place.")
             built = _run_build_script_at(staging_path, progress=progress)
@@ -297,12 +363,16 @@ def clone_or_pull(
             if not built.ok:
                 _rmtree_best_effort(staging_path)
                 return InstallResult(False, f"the build failed, so {entry.name} was not installed: {built.message}", built.output)
-            forget_build_trees(staging_path)
-            environment_removed = remove_generated_environments(staging_path)
-        if path.exists():
+            if not release_mode:
+                forget_build_trees(staging_path)
+                environment_removed = remove_generated_environments(staging_path)
+        if path.exists() or in_service(workspace_root, entry.name) is not None:
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"{path} appeared while cloning - not replacing it")
-        promoted = _promote(entry, workspace_root, path, staging_path, "", progress)
+        if release_mode:
+            promoted = _activate_release(entry, workspace_root, path, staging_path, progress)
+        else:
+            promoted = _promote(entry, workspace_root, path, staging_path, "", progress)
         if isinstance(promoted, InstallResult):
             return promoted
         message = f"Installed {path} (v{candidate.version})" + (" after a verified build" if verify_build else "")
@@ -383,6 +453,9 @@ def clone_or_pull(
                 _command_output(result),
             )
         return _note_unsigned(InstallResult(True, f"Pulled latest into {path}"), unsigned, entry.name)
+
+    if wants_releases(entry.name) or in_service(workspace_root, entry.name) is not None:   # a project already in the releases layout stays in it
+        return _update_as_release(entry, workspace_root, path, installed, candidate, candidate_sha, unsigned, progress)
 
     staging_path = workspace_root / f".{entry.name}.update-{uuid4().hex}"
     _checkpoint(progress, "source", "Cloning the installed checkout into an isolated staging area for verification.")
@@ -571,6 +644,12 @@ def restore_previous_copy(workspace_root: Path, project: str) -> InstallResult:
     try:
         with WorkspaceLock(workspace_root):
             healed = recover_interrupted_promotions(workspace_root)
+            if in_service(workspace_root, project) is not None:   # releases layout: going back is a switch of the link
+                try:
+                    what = go_back(workspace_root, project)
+                except (RuntimeError, OSError) as error:
+                    return InstallResult(False, f"{project}: the previous release could not be restored ({error})", code="restore_failed", params={"project": project, "reason": str(error)})
+                return InstallResult(True, "; ".join(healed + [what]), code="restored", params={"project": project, "backup": ""})
             if not list_backups(workspace_root, project):
                 return InstallResult(False, f"{project} has no previous copy to go back to", code="no_backup", params={"project": project})
             try:
