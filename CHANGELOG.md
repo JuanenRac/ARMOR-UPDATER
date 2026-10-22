@@ -1,9 +1,6 @@
-# Changelog: ARMOR-UPDATER 🛠️
+# Changelog
 
-All notable changes to this project will be documented in this file. The
-version number follows this ecosystem's "odometer" scheme: PATCH +1 on
-every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
-bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
+All notable changes to this project are documented here.
 
 ## [Unreleased]
 
@@ -69,17 +66,14 @@ bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
 - **The evidence file:** when the line of evidence of an install or update attempt cannot be written, the log now says so (it used to return nothing without a word).
 
-
 ## [0.0.6] - The logo shows when the updater is opened from Electro Hobby 3D Updater
 
 - **Real bug, reported by the user:** the window icon and the logo at the top of the window were looked for next to the project's folder, which does not exist when the updater is installed as a package (as Electro Hobby 3D Updater installs it) - so they never showed when opened from there. The icons now live inside the package (`assets/`) and are shipped with it.
-
 
 ## [0.0.5] - The logo was never shown
 
 - **Real bug, reported by the user:** the header of the window and the About window pointed at `images/ARMOR_UPDATER_ICON.svg`, a file that does not exist (the project's icon is `ARMOR_ICON.svg`), so the logo at the top left stayed empty. They now point at the real file.
 - **Window and taskbar icon:** an `.ico` with seven sizes (`images/ARMOR_ICON.ico`, made from the SVG) is now shipped, the window is given its icon itself, and on Windows the process gets its own identity so the taskbar shows it and not the one of Python.
-
 
 ## [0.0.4] - The CLI status table glued ROLE straight into STACK
 
