@@ -7,6 +7,7 @@ bumped manually only. See `ARMOR-COMMON/tools/armor_project_tool.py`.
 
 ## [Unreleased]
 
+- The repository has a security policy, a code of conduct, a contributing guide and a support file.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 - **No more console windows:** every git call the graphical updater makes (version reads, the remote check, signatures, the dirty check of a project, the manifest of a revision) now starts without a console of its own. Started from the silent launcher (pythonw.exe has no console) each one used to open a command window, and a screen that checks many projects filled the desktop with them. A test fails if any child process of the updater is started without the flag.
 
