@@ -10,11 +10,14 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-if [ ! -d .venv ]; then
-    python3 -m venv .venv
+# The venv is put first on the PATH instead of being activated: the python first on the PATH may be a stripped one (for example the one of ESP-IDF) whose venv has no activate script.
+if [ ! -x .venv/bin/python ] && [ ! -x .venv/Scripts/python.exe ]; then
+    (python3 -m venv .venv 2>/dev/null || python -m venv .venv)
 fi
-# shellcheck disable=SC1091
-source .venv/bin/activate
+if [ -x .venv/bin/python ]; then VENV_BIN="$PWD/.venv/bin"; else VENV_BIN="$PWD/.venv/Scripts"; fi
+if [ ! -x "$VENV_BIN/python" ] && [ ! -x "$VENV_BIN/python.exe" ]; then echo "ERROR: the venv has no python; delete the .venv folder and run this again." >&2; exit 1; fi
+export VIRTUAL_ENV="$PWD/.venv"
+export PATH="$VENV_BIN:$PATH"
 
 python -m pip install -e ".[dev]"
 

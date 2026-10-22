@@ -11,12 +11,17 @@ REM so there is a completely console-free double-click entry point - it
 REM needs that venv to actually exist. GPL-3.0-or-later.
 cd /d "%~dp0"
 
-if not exist .venv (
-    python -m venv .venv
+REM The py launcher makes the venv when there is one (the python first on the PATH may be a stripped one, like the one of ESP-IDF, whose venv has no activate script),
+REM and the venv is put first on the PATH instead of being activated.
+set "PYMAKE=python"
+where py >nul 2>nul && set "PYMAKE=py -3"
+if not exist .venv\Scripts\python.exe (
+    %PYMAKE% -m venv .venv
     if errorlevel 1 ( echo VENV CREATION FAILED. & %KEEP_OPEN% & exit /b 1 )
 )
-call .venv\Scripts\activate.bat
-if errorlevel 1 ( echo VENV ACTIVATION FAILED. & %KEEP_OPEN% & exit /b 1 )
+if not exist .venv\Scripts\python.exe ( echo THE VENV HAS NO PYTHON: delete the .venv folder and run this again. & %KEEP_OPEN% & exit /b 1 )
+set "VIRTUAL_ENV=%CD%\.venv"
+set "PATH=%CD%\.venv\Scripts;%PATH%"
 
 python -m pip install -e ".[dev,gui]"
 if errorlevel 1 ( echo DEPENDENCY INSTALL FAILED. & %KEEP_OPEN% & exit /b 1 )

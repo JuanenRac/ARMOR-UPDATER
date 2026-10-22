@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The build scripts work when the python first on the PATH makes a venv with no activate script** (for example the python that ESP-IDF installs): the venv is made with the `py` launcher when there is one and its own python, or its folder first on the PATH, is used instead of the activate script.
+
 - **Signers of the ecosystem:** the public keys that sign the ecosystem's commits ship with the updater and their fingerprints are pinned in the code; without a file of the person's own, signatures are checked against them, and a changed, added or missing key fails closed. A test fails when the file and the pin differ.
 - **Releases layout (optional):** `deploy_layout: releases` builds each candidate in its final folder and puts it in service by switching a link, keeping the previous releases so that going back is one more switch. Off by default, never applied to the updater itself, with a journalled first migration, tests for the build failure, the migration, the rollback and the pruning, and the risks written in the CLI reference.
 - The repository has a security policy, a code of conduct, a contributing guide and a support file.
