@@ -158,10 +158,10 @@ def test_the_state_folder_and_the_staging_folders_are_not_projects(tmp_path: Pat
 # ---- the order of a batch --------------------------------------------------------------------------------------------------------
 
 def test_armor_common_comes_first_then_parents_before_children():
-    names = [e.name for e in install_order([entry("ARMOR-ALARM"), entry("ARMOR-CHILD", parent="ARMOR-ZETA"), entry("ARMOR-ZETA"), entry("ARMOR-COMMON")])]
+    names = [e.name for e in install_order([entry("ARMOR-NODE-ALARM"), entry("ARMOR-CHILD", parent="ARMOR-ZETA"), entry("ARMOR-ZETA"), entry("ARMOR-COMMON")])]
     assert names[0] == "ARMOR-COMMON"
     assert names.index("ARMOR-ZETA") < names.index("ARMOR-CHILD")
-    assert sorted(names) == sorted(["ARMOR-ALARM", "ARMOR-CHILD", "ARMOR-ZETA", "ARMOR-COMMON"])
+    assert sorted(names) == sorted(["ARMOR-NODE-ALARM", "ARMOR-CHILD", "ARMOR-ZETA", "ARMOR-COMMON"])
 
 
 def test_a_loop_of_parents_does_not_hang():

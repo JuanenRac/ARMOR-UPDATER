@@ -23,7 +23,7 @@ _REAL_MANIFEST_VALUES = {
     "ARMOR-COMMON": ("All A.R.M.O.R. services and tools", "shared"),
     "ARMOR-DEVOPS": ("NVIDIA Jetson Orin NX and administration host", "server"),
     "ARMOR-DOCS": ("All users and maintainers", "shared"),
-    "ARMOR-ELECTRICAL": (
+    "ARMOR-NODE-ELECTRICAL": (
         "ESP32-S3 nodes inside the electrical panels (the firmware builds; it has never run on a board)",
         "field-node",
     ),
@@ -32,11 +32,11 @@ _REAL_MANIFEST_VALUES = {
         "Any machine on the network being watched (a PC, the CM5, a Raspberry Pi); it reports to ARMOR-SERVER",
         "workstation",
     ),
-    "ARMOR-RADAR": ("ESP32-S3-ETH-PoE", "field-node"),
+    "ARMOR-NODE-RADAR": ("ESP32-S3-ETH-PoE", "field-node"),
     "ARMOR-SERVER-AI": ("NVIDIA Jetson Orin NX", "server"),
     "ARMOR-SERVER": ("NVIDIA Jetson Orin NX", "server"),
     "ARMOR-SIMULATOR": ("Developer workstation and CI", "workstation"),
-    "ARMOR-SOLAR": (
+    "ARMOR-NODE-SOLAR": (
         "ESP32-S3 gateway nodes: N16R8 on Wi-Fi, or Waveshare ESP32-S3-ETH on Ethernet",
         "field-node",
     ),
