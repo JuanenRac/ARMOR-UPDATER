@@ -20,6 +20,7 @@ _CODE_KEYS = {
     "restored": "msg_restored",
     "rolled_back": "msg_rolled_back",
     "rollback_failed": "msg_rollback_failed",
+    "layout_migrated": "msg_layout_migrated",
     "restore_failed": "msg_restore_failed",
     "cleaned": "msg_cleaned",
     "clean_failed": "msg_clean_failed",

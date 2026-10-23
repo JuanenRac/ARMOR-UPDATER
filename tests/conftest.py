@@ -20,3 +20,4 @@ def _signature_policy_off(monkeypatch, tmp_path_factory):
     empty.write_text("", encoding="utf-8")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "checkout")   # the layout of most tests is the older one; test_releases.py chooses the default layout on purpose

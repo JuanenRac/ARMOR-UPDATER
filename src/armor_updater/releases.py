@@ -3,22 +3,24 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0 - see LICENSE
 # =============================================================================
-"""An optional way to lay out an installed project, chosen with `"deploy_layout": "releases"` in `~/.armor_updater_settings.json` (or `ARMOR_UPDATER_LAYOUT=releases`).
+"""How an installed project is laid out. The default is the `releases` layout; `"deploy_layout": "checkout"` in `~/.armor_updater_settings.json` (or `ARMOR_UPDATER_LAYOUT=checkout`) keeps
+the older one.
 
-The default layout (`"checkout"`) is the one the updater has always used: `<workspace>/<project>` is the checkout, a candidate is built in a staging folder and moved into place
-with two renames. Its weak point is that a build that bakes absolute paths (a virtual environment, an editable install) was made in the staging folder and has to be made again in
-the final place.
+The older layout (`"checkout"`): `<workspace>/<project>` is the checkout, a candidate is built in a staging folder and moved into place with two renames. Its weak point is that a
+build that bakes absolute paths (a virtual environment, an editable install) was made in the staging folder and has to be made again in the final place.
 
 In the `releases` layout `<workspace>/<project>` is a LINK (a symbolic link, or a junction on Windows) to a folder
 `<workspace>/.armor-updater/releases/<project>/<commit>/`. A candidate is cloned and built directly in its final folder, so nothing has to be rebuilt afterwards, and it is put in
 service by switching the link: the previous release stays on disk untouched, so going back is one more switch of the link (`rollback`).
 
 Safeguards:
-* the default stays `checkout`; nothing changes unless the person asks for it;
+* a project that is a real checkout is migrated by its own next update (journalled; a backup of its history is written first, and the checkout is kept as a release); the person can
+  keep the old layout by choosing `checkout`, and where links cannot be made at all the updater falls back to it by itself;
 * a failed clone or build deletes only its own new release folder and never touches the link or the release in service;
 * the first switch of a project that is a real checkout moves that checkout to `releases/<project>/<commit>/` (journalled, undone by the next run after a crash) and, if the link
   cannot be made, moves it back;
-* ARMOR-UPDATER itself is never moved to this layout by an update (the running program would change folders under its own feet): it keeps the checkout flow;
+* ARMOR-UPDATER migrates itself like any other project; where the running program cannot be moved from under its own feet (Windows locks the folder) the move is undone and the
+  checkout flow is used, with no loss;
 * only the newest few releases are kept, and never the one in service.
 """
 from __future__ import annotations
@@ -38,18 +40,71 @@ LAYOUT_RELEASES = "releases"
 RELEASES_DIRECTORY = "releases"
 #: How many releases of a project are kept (the one in service included).
 DEFAULT_KEEP_RELEASES = 3
-#: The updater never moves itself to the releases layout.
 SELF_PROJECT = "ARMOR-UPDATER"
+BACKUPS_OF_LAYOUT = "layout-backups"
+
+
+def chosen_layout() -> str | None:
+    """What the person asked for (`checkout` or `releases`), or None when they said nothing valid. The environment wins over the saved settings."""
+    chosen = os.environ.get("ARMOR_UPDATER_LAYOUT", "").strip().lower() or str(load_settings().get("deploy_layout", "")).strip().lower()
+    return chosen if chosen in (LAYOUT_CHECKOUT, LAYOUT_RELEASES) else None
 
 
 def current_layout() -> str:
-    """`checkout` (the default) or `releases`. The environment wins over the saved settings; anything unknown means `checkout`."""
-    chosen = os.environ.get("ARMOR_UPDATER_LAYOUT", "").strip().lower() or str(load_settings().get("deploy_layout", "")).strip().lower()
-    return LAYOUT_RELEASES if chosen == LAYOUT_RELEASES else LAYOUT_CHECKOUT
+    """`releases` (the default) or `checkout` when the person chose it. Anything unknown means the default."""
+    return LAYOUT_CHECKOUT if chosen_layout() == LAYOUT_CHECKOUT else LAYOUT_RELEASES
 
 
-def wants_releases(project: str) -> bool:
-    return current_layout() == LAYOUT_RELEASES and project != SELF_PROJECT
+_LINK_SUPPORT: dict[str, bool] = {}
+
+
+def links_supported(workspace_root: Path) -> bool:
+    """Whether a link to a folder can be made in the updater's state folder (a file system without links, or a user without the right, cannot). Tried once per workspace."""
+    key = str(workspace_root)
+    if key not in _LINK_SUPPORT:
+        probe = state_directory(workspace_root) / ".link-probe"
+        target = probe.with_name(".link-probe-target")
+        ok = False
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            if link_target(probe) is not None:
+                _remove_link(probe)
+            make_link(probe, target)
+            ok = link_target(probe) is not None
+        except OSError:
+            ok = False
+        finally:
+            try:
+                if link_target(probe) is not None:
+                    _remove_link(probe)
+                target.rmdir()
+            except OSError:
+                pass
+        _LINK_SUPPORT[key] = ok
+    return _LINK_SUPPORT[key]
+
+
+def wants_releases(project: str, workspace_root: Path | None = None) -> bool:
+    """Whether `project` is installed in the releases layout. When the person did not choose and the workspace cannot hold links, the answer is no (the old layout works everywhere)."""
+    if current_layout() != LAYOUT_RELEASES:
+        return False
+    if chosen_layout() is None and workspace_root is not None and not links_supported(workspace_root):
+        return False
+    return True
+
+
+def backup_history(workspace_root: Path, project: str, path: Path) -> Path | None:
+    """Writes a git bundle with the whole history of the checkout at `path` before it is moved into the releases layout. Returns the file, or None when it could not be made (the
+    migration is then not attempted)."""
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=60).stdout.strip() or "unknown"
+    directory = state_directory(workspace_root) / BACKUPS_OF_LAYOUT / project
+    target = directory / f"{commit[:12]}.bundle"
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        done = subprocess.run(["git", "bundle", "create", str(target), "--all"], cwd=path, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=600)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return target if done.returncode == 0 and target.is_file() else None
 
 
 def releases_directory(workspace_root: Path, project: str) -> Path:
@@ -175,8 +230,14 @@ def activate(workspace_root: Path, project: str, path: Path, new_release: Path, 
         moved = releases_directory(workspace_root, project) / f"{commit[:12]}-{number}"
         number += 1
     moved.parent.mkdir(parents=True, exist_ok=True)
+    if backup_history(workspace_root, project, path) is None:
+        raise OSError("a backup of the history of the current checkout could not be written, so it was not moved")
     journal.begin(Promotion(project, str(path), str(new_release), str(moved), "begun"))
-    path.rename(moved)
+    try:
+        path.rename(moved)
+    except OSError:   # the folder is in use (the running updater on Windows): nothing moved, the checkout flow takes over
+        journal.complete()
+        raise
     journal.advance("backed_up")
     try:
         make_link(path, new_release)

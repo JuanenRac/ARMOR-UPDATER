@@ -194,17 +194,22 @@ The updater ships the public key(s) that sign the commits of the ecosystem in `s
 fail (it never falls back to "trust anything"). A file chosen with `allowed_signers_file` replaces it on purpose. A test fails when the shipped file and the pin drift apart. The
 default policy stays `warn`, so an unsigned revision is still installed with a warning until the commits are signed; `require` makes the ecosystem key mandatory.
 
-## Releases layout (optional, high risk)
+## Releases layout (the default)
 
-By default a project is a plain checkout that is built in a staging folder and moved into place. With `{"deploy_layout": "releases"}` in `~/.armor_updater_settings.json` (or
-`ARMOR_UPDATER_LAYOUT=releases`) the project folder becomes a link (a symbolic link, a junction on Windows) to `<workspace>/.armor-updater/releases/<project>/<commit>/`. The candidate
+A project is laid out as releases unless the person chooses otherwise: `{"deploy_layout": "checkout"}` in `~/.armor_updater_settings.json` (or `ARMOR_UPDATER_LAYOUT=checkout`) keeps
+the older layout, in which the project is a plain checkout built in a staging folder and moved into place. Where the workspace cannot hold links (and nothing was chosen) the older
+layout is used by itself. In the releases layout the project folder is a link (a symbolic link, a junction on Windows) to `<workspace>/.armor-updater/releases/<project>/<commit>/`. The candidate
 is cloned and built in that final folder, so a virtual environment or an editable install is never made in one place and moved to another, and it is put in service by switching the
 link. The previous release stays untouched; `rollback` (and the restore button) switch the link back; the newest three releases are kept, never the one in service.
 
-Risks and safeguards: the first update of a real checkout moves it to its own release folder (journalled; the next run undoes an interrupted move, and a link that cannot be made moves it
-back), so a program that keeps files of the old folder open makes the update fail without changing anything; the environment of a release that was left behind keeps the paths it was
-built with, so after going back to it run its own `build.sh` once; on Windows the switch of the link is two operations and the next run finishes one a crash cut in two. ARMOR-UPDATER
-itself never moves to this layout. The default stays `checkout`.
+**Migration.** The first update of a project that is a real checkout (ARMOR-UPDATER included) migrates it: a git bundle with its whole history is written to
+`<workspace>/.armor-updater/layout-backups/<project>/` first (no backup, no move), then the checkout is moved to its own release folder and kept there, and the new release is linked
+in (journalled; the next run undoes an interrupted move, and a link that cannot be made moves it back). When the folder cannot be moved because a program has files of it open (the
+running updater on Windows), nothing changes and that update goes on in the older layout; the migration is tried again at the next one. The result says it (`layout_migrated`).
+
+Risks and safeguards: the environment of a release that was left behind keeps the paths it was
+built with, so after going back to it run its own `build.sh` once; on Windows the switch of the link is two operations and the next run finishes one a crash cut in two. any
+update can be taken back with `rollback`.
 
 **The check after the switch.** Right after the link is switched the updater looks at what the project's path leads to: that it is the new release, that its manifest can be read and has a
 version, and that the commit checked out is the one that was built. If any of it is wrong the link goes back by itself to the release that was in service (or, for a project that had

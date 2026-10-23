@@ -14,7 +14,6 @@ import pytest
 
 from armor_updater import install, releases
 from armor_updater.install import clone_or_pull, restore_previous_copy
-from armor_updater.registry import ProjectEntry
 from test_install import entry, git, write_build_script, write_manifest
 
 
@@ -53,18 +52,88 @@ def releases_layout(monkeypatch):
     monkeypatch.setenv("ARMOR_UPDATER_REQUIRE_SIGNED", "0")
 
 
-def test_the_default_layout_is_checkout(monkeypatch):
+def test_the_default_layout_is_releases_and_checkout_is_a_choice(monkeypatch):
     monkeypatch.delenv("ARMOR_UPDATER_LAYOUT", raising=False)
     monkeypatch.setattr(releases, "load_settings", lambda: {})
-    assert releases.current_layout() == "checkout"
+    assert releases.current_layout() == "releases"
     monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "nonsense")
-    assert releases.current_layout() == "checkout"
+    assert releases.current_layout() == "releases"
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "checkout")
+    assert releases.current_layout() == "checkout" and releases.wants_releases("ARMOR-SERVER") is False
 
 
-def test_the_updater_never_moves_itself(monkeypatch):
+def test_the_updater_is_moved_like_any_other_project(monkeypatch):
     monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "releases")
-    assert releases.wants_releases("ARMOR-UPDATER") is False
+    assert releases.wants_releases("ARMOR-UPDATER") is True
     assert releases.wants_releases("ARMOR-SERVER") is True
+
+
+def test_without_links_and_without_a_choice_the_old_layout_is_used(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("ARMOR_UPDATER_LAYOUT", raising=False)
+    monkeypatch.setattr(releases, "load_settings", lambda: {})
+    monkeypatch.setattr(releases, "_LINK_SUPPORT", {})
+    def refuse(link, target):
+        raise OSError("no links here")
+    monkeypatch.setattr(releases, "make_link", refuse)
+    assert releases.wants_releases("ARMOR-SERVER", tmp_path) is False
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "releases")   # an explicit choice is respected (and then fails loudly)
+    assert releases.wants_releases("ARMOR-SERVER", tmp_path) is True
+
+
+def test_the_first_update_migrates_a_checkout_with_a_backup_and_says_it_in_eight_languages(tmp_path: Path, monkeypatch):
+    from armor_updater.result_text import localized_message
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "checkout")
+    assert clone_or_pull(entry(), workspace).ok   # an installation made in the old layout
+    name = entry().name
+    assert releases.link_target(workspace / name) is None
+    first_head = _head(workspace / name)
+    _push(tmp_path / "seed", "1.1.0")
+    monkeypatch.delenv("ARMOR_UPDATER_LAYOUT", raising=False)
+    monkeypatch.setattr(releases, "load_settings", lambda: {})
+
+    result = clone_or_pull(entry(), workspace)
+
+    assert result.ok and result.code == "layout_migrated", result.message
+    serving = releases.in_service(workspace, name)
+    assert serving is not None and _head(workspace / name) != first_head
+    assert any(r.name == first_head[:12] for r in releases.list_releases(workspace, name)), "the old checkout is kept as a release"
+    bundle = workspace / ".armor-updater" / "layout-backups" / name / f"{first_head[:12]}.bundle"
+    assert bundle.is_file(), "a backup of the history was written before the move"
+    for language in ("en", "es", "de", "fr", "it", "ja", "zh", "pt"):
+        said = localized_message(language, result)
+        assert name in said and "1.1.0" in said, language
+
+
+def test_a_checkout_that_cannot_be_moved_is_updated_in_the_old_layout(tmp_path: Path, monkeypatch):
+    """The running updater on Windows cannot rename its own folder: nothing is lost and the update goes on in the checkout layout."""
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    monkeypatch.setenv("ARMOR_UPDATER_LAYOUT", "checkout")
+    assert clone_or_pull(entry(), workspace).ok
+    name = entry().name
+    served = workspace / name
+    first_head = _head(served)
+    _push(tmp_path / "seed", "1.1.0")
+    monkeypatch.delenv("ARMOR_UPDATER_LAYOUT", raising=False)
+    monkeypatch.setattr(releases, "load_settings", lambda: {})
+    real_rename = Path.rename
+    def locked(self, target):
+        if self == served and "releases" in str(target):
+            raise PermissionError("in use")
+        return real_rename(self, target)
+    monkeypatch.setattr(Path, "rename", locked)
+
+    result = clone_or_pull(entry(), workspace)
+
+    monkeypatch.undo()
+    assert result.ok, result.message
+    assert releases.link_target(served) is None and (served / ".git").is_dir()
+    assert _head(served) != first_head, "the update was applied in the older layout"
+    assert releases.list_releases(workspace, name) == []
 
 
 def test_a_fresh_install_is_built_where_it_stays_and_linked(tmp_path: Path, monkeypatch, releases_layout):
@@ -143,13 +212,6 @@ def test_only_the_newest_releases_are_kept_and_never_the_one_in_service(tmp_path
     names = [r.name for r in releases.list_releases(workspace, entry().name)]
     assert len(names) == releases.DEFAULT_KEEP_RELEASES
     assert releases.in_service(workspace, entry().name).name in names
-
-
-def test_the_updater_itself_keeps_the_checkout_flow(tmp_path: Path, monkeypatch, releases_layout):
-    remote, seed = _remote(tmp_path, monkeypatch)
-    me = ProjectEntry("ARMOR-UPDATER", "python", "1.0.0")
-    write_manifest(seed, "1.0.0")
-    assert me.name == "ARMOR-UPDATER" and releases.wants_releases(me.name) is False
 
 
 def test_a_crash_between_the_two_steps_of_a_windows_switch_is_finished_by_the_next_run(tmp_path: Path):

@@ -64,7 +64,7 @@ from .staging import (
     forget_build_trees,
     remove_generated_environments,
 )
-from .releases import activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, revert_to, verify_in_service, wants_releases, DEFAULT_KEEP_RELEASES
+from .releases import chosen_layout, activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, revert_to, verify_in_service, wants_releases, DEFAULT_KEEP_RELEASES
 from .signature import current_policy, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
@@ -251,7 +251,7 @@ def _note_unsigned(result: InstallResult, unsigned: str, project: str) -> Instal
     return result
 
 
-def _activate_release(entry: ProjectEntry, workspace_root: Path, path: Path, new_release: Path, progress: ProgressCallback | None) -> InstallResult | tuple[Path | None]:
+def _activate_release(entry: ProjectEntry, workspace_root: Path, path: Path, new_release: Path, progress: ProgressCallback | None, *, migrating: bool = False) -> InstallResult | tuple[Path | None]:
     """Puts a built release in service (see releases.py). Returns an InstallResult when it failed - the release in service is then the one that was - else the folder the previous
     installation is in (None for a new project)."""
     _checkpoint(progress, "validation", "Switching the project to the verified release; the previous one is kept.")
@@ -261,7 +261,8 @@ def _activate_release(entry: ProjectEntry, workspace_root: Path, path: Path, new
         previous = activate_release(workspace_root, entry.name, path, new_release, journal, current_commit)
     except OSError as exc:
         _rmtree_best_effort(new_release)
-        return InstallResult(False, f"could not put the new release in service ({exc}); {path} was left as it was")
+        return InstallResult(False, f"could not put the new release in service ({exc}); {path} was left as it was", code="layout_unavailable" if migrating and chosen_layout() is None else "",
+                             params={"project": entry.name, "reason": str(exc)})
     return (previous,)
 
 
@@ -283,6 +284,7 @@ def _check_after_switch(entry: ProjectEntry, workspace_root: Path, path: Path, n
 
 def _update_as_release(
     entry: ProjectEntry, workspace_root: Path, path: Path, installed: ProjectManifest, candidate: ProjectManifest, candidate_sha: str, unsigned: str, progress: ProgressCallback | None,
+    *, migrating: bool = False,
 ) -> InstallResult:
     """The update of a project in the releases layout: the candidate is cloned and built in its own release folder (its final place) and the link is switched to it only when the
     build passed. Any failure removes only that new folder."""
@@ -310,7 +312,7 @@ def _update_as_release(
     if not build_result.ok:
         _rmtree_best_effort(new_release)
         return InstallResult(False, f"candidate build failed - {path} was left completely untouched and remains the operative installation: {build_result.message}", build_result.output)
-    promoted = _activate_release(entry, workspace_root, path, new_release, progress)
+    promoted = _activate_release(entry, workspace_root, path, new_release, progress, migrating=migrating)
     if isinstance(promoted, InstallResult):
         return promoted
     (previous,) = promoted
@@ -321,6 +323,10 @@ def _update_as_release(
     message = f"Updated {path} to v{candidate.version} (commit {candidate_sha[:12]}) after a verified build in its own release folder; previous installation kept at {previous}"
     if pruned:
         message += f" ({len(pruned)} older release(s) deleted)"
+    if migrating:
+        message += "; the project was moved to the releases layout (a backup of its history was written first)"
+        return _note_unsigned(InstallResult(True, message, build_result.output, code="layout_migrated", params={"project": entry.name, "version": candidate.version, "previous": str(previous or "")}),
+                              unsigned, entry.name)
     return _note_unsigned(InstallResult(True, message, build_result.output), unsigned, entry.name)
 
 
@@ -364,7 +370,7 @@ def clone_or_pull(
             return unmet
         environment_removed = False
         output = ""
-        release_mode = verify_build and wants_releases(entry.name)
+        release_mode = verify_build and wants_releases(entry.name, workspace_root)
         if release_mode:   # the releases layout builds in the folder the project will stay in, so nothing has to be made again afterwards
             final = release_path(workspace_root, entry.name, _rev_parse(staging_path, "HEAD") or uuid4().hex)
             _rmtree_best_effort(final)
@@ -477,8 +483,12 @@ def clone_or_pull(
             )
         return _note_unsigned(InstallResult(True, f"Pulled latest into {path}"), unsigned, entry.name)
 
-    if wants_releases(entry.name) or in_service(workspace_root, entry.name) is not None:   # a project already in the releases layout stays in it
-        return _update_as_release(entry, workspace_root, path, installed, candidate, candidate_sha, unsigned, progress)
+    if wants_releases(entry.name, workspace_root) or in_service(workspace_root, entry.name) is not None:   # a project already in the releases layout stays in it
+        moved = in_service(workspace_root, entry.name) is None   # a real checkout: this update migrates it to the layout
+        done = _update_as_release(entry, workspace_root, path, installed, candidate, candidate_sha, unsigned, progress, migrating=moved)
+        if done.code != "layout_unavailable":
+            return done
+        _checkpoint(progress, "source", "The releases layout could not be used here; the update goes on in the older layout.")
 
     staging_path = workspace_root / f".{entry.name}.update-{uuid4().hex}"
     _checkpoint(progress, "source", "Cloning the installed checkout into an isolated staging area for verification.")
