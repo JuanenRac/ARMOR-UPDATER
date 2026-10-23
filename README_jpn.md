@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-191-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-283-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（191 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
+**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（283 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
 
 ---
 
@@ -39,7 +39,7 @@
 |---|---|
 | バージョン | `0.1.4` |
 | 成熟度 | 確立 |
-| テスト | 191 (`python -m pytest tests -q`) |
+| テスト | 283 (`python -m pytest tests -q`) |
 | 技術 | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | 実機での確認 | 該当なし：デスクトッププログラムで、Qt Quick シェルは Windows で動かしました |
 
@@ -71,11 +71,11 @@ ARMOR-UPDATER/
 
 ## 🛠️ 開発環境
 
-**必要なもの:** Python 3.10+, `git` and the build tools of the repositories you install, optional: PySide6 for the desktop shell
+**必要なもの:** Python 3.10+, `git` と、インストールするリポジトリのビルドツール, 任意：デスクトップシェル用の PySide6
 
 ```bash
 pip install -e ".[dev]"                                # or ".[dev,gui]" for the optional Qt Quick desktop shell
-python -m pytest tests -q                              # 191 tests
+python -m pytest tests -q                              # 283 tests
 armor-updater --cli status                              # local + GitHub state of every repository
 armor-updater --cli install ARMOR-NETWORK               # clone, build and install one repository that is not installed yet
 armor-updater --cli update ARMOR-NETWORK                # update an installed one (built and verified before it is put in place)

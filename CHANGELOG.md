@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A release that fails its check goes back by itself:** right after the link of the releases layout is switched, the updater checks that the path leads to the new release, that its manifest can be read and that the commit is the one built; if not, the link returns to the release that was in service (a new project is left without a link), the failed release is deleted and the window and the command say why, in the eight languages (`rolled_back`, `rollback_failed`).
 - **The window no longer fills the console with `Cannot read property ... of null` when it closes:** the windows are deleted before the object their bindings read, instead of the other way round.
 
 - **The build scripts work when the python first on the PATH makes a venv with no activate script** (for example the python that ESP-IDF installs): the venv is made with the `py` launcher when there is one and its own python, or its folder first on the PATH, is used instead of the activate script.

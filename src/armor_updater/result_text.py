@@ -18,6 +18,8 @@ _CODE_KEYS = {
     "signature_refused": "msg_signature_refused",
     "no_backup": "msg_restore_none",
     "restored": "msg_restored",
+    "rolled_back": "msg_rolled_back",
+    "rollback_failed": "msg_rollback_failed",
     "restore_failed": "msg_restore_failed",
     "cleaned": "msg_cleaned",
     "clean_failed": "msg_clean_failed",

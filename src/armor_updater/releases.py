@@ -23,6 +23,7 @@ Safeguards:
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -186,6 +187,49 @@ def activate(workspace_root: Path, project: str, path: Path, new_release: Path, 
     journal.advance("promoted")
     journal.complete()
     return moved
+
+
+def verify_in_service(workspace_root: Path, project: str, release: Path, expected_commit: str) -> str | None:
+    """The check made right after a link was switched, on what a program will really meet: the project's path leads to the new release, its manifest is there and can be read, and the
+    commit that is checked out is the one that was built. Returns what is wrong in one sentence, or None when all is well."""
+    link = workspace_root / project
+    target = link_target(link)
+    if target is None:
+        return "the project's path is not a link to a release"
+    try:
+        if target.resolve() != release.resolve():
+            return "the project's path leads to another release than the new one"
+    except OSError as exc:
+        return f"the new release cannot be reached ({exc})"
+    manifest = link / "armor.project.json"
+    try:
+        document = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return f"the manifest of the new release cannot be read ({exc.__class__.__name__})"
+    if not isinstance(document, dict) or not isinstance(document.get("version"), str):
+        return "the manifest of the new release has no version"
+    try:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=link, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "the commit of the new release cannot be read"
+    if expected_commit and not head.startswith(expected_commit[:12]):
+        return "the new release is not at the commit that was built"
+    return None
+
+
+def revert_to(workspace_root: Path, project: str, previous: Path | None, new_release: Path) -> str:
+    """Undoes a switch whose check failed: the link goes back to the release that was in service, or - for a project that had none - the link is removed. The release that failed is
+    deleted either way. Returns what was done, in one sentence."""
+    link = workspace_root / project
+    if previous is not None and previous.is_dir():
+        switch_link(link, previous)
+        what = f"{project} is back on the release it was on ({previous.name})"
+    else:
+        if link_target(link) is not None:
+            _remove_link(link)
+        what = f"{project} was not put in service"
+    _rmtree_best_effort(new_release)
+    return what
 
 
 def go_back(workspace_root: Path, project: str) -> str:

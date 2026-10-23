@@ -206,6 +206,12 @@ back), so a program that keeps files of the old folder open makes the update fai
 built with, so after going back to it run its own `build.sh` once; on Windows the switch of the link is two operations and the next run finishes one a crash cut in two. ARMOR-UPDATER
 itself never moves to this layout. The default stays `checkout`.
 
+**The check after the switch.** Right after the link is switched the updater looks at what the project's path leads to: that it is the new release, that its manifest can be read and has a
+version, and that the commit checked out is the one that was built. If any of it is wrong the link goes back by itself to the release that was in service (or, for a project that had
+none, is removed), the release that failed is deleted, and the result says why (`rolled_back`; `rollback_failed` if going back failed too, with the folder of the previous installation).
+Nobody has to notice the problem and ask for a rollback. A project that is already a link, ARMOR-UPDATER included, is updated this way: the running program stays in its own release
+folder, which is not touched by the switch.
+
 ## How a version is read
 
 The version on GitHub is read from the manifest at the tip of the default branch without going through the cache of `raw.githubusercontent.com` (which can show the previous file for a few minutes

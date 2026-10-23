@@ -159,3 +159,72 @@ def test_a_crash_between_the_two_steps_of_a_windows_switch_is_finished_by_the_ne
     releases.make_link(fresh, target)
     assert releases.heal_link(tmp_path) == ["proj: an interrupted switch of the release in service was finished"]
     assert releases.link_target(tmp_path / "proj") is not None
+
+
+def test_the_check_after_the_switch_sees_a_good_release_and_each_way_it_can_be_wrong(tmp_path: Path, monkeypatch, releases_layout):
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    assert clone_or_pull(entry(), workspace).ok
+    name = entry().name
+    serving = releases.in_service(workspace, name)
+    head = _head(workspace / name)
+    assert releases.verify_in_service(workspace, name, serving, head) is None
+    assert "another release" in releases.verify_in_service(workspace, name, tmp_path / "elsewhere", head)
+    assert "not at the commit" in releases.verify_in_service(workspace, name, serving, "0" * 40)
+    manifest = serving / "armor.project.json"
+    saved = manifest.read_text(encoding="utf-8")
+    manifest.write_text("{ not json", encoding="utf-8")
+    assert "cannot be read" in releases.verify_in_service(workspace, name, serving, head)
+    manifest.write_text("[]", encoding="utf-8")
+    assert "no version" in releases.verify_in_service(workspace, name, serving, head)
+    manifest.unlink()
+    assert "cannot be read" in releases.verify_in_service(workspace, name, serving, head)
+    manifest.write_text(saved, encoding="utf-8")
+    assert releases.verify_in_service(workspace, name, serving, head) is None
+    plain = tmp_path / "plain"
+    (plain / "P").mkdir(parents=True)
+    assert "not a link" in releases.verify_in_service(plain, "P", plain / "P", head)
+
+
+def test_a_release_that_fails_its_check_after_the_switch_is_taken_out_of_service_by_itself(tmp_path: Path, monkeypatch, releases_layout):
+    from armor_updater.result_text import localized_message
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    assert clone_or_pull(entry(), workspace).ok
+    name = entry().name
+    serving = releases.in_service(workspace, name)
+    served_head = _head(workspace / name)
+    seed = tmp_path / "seed"
+    _push(seed, "1.1.0")
+    real = releases.verify_in_service
+    monkeypatch.setattr(install, "verify_in_service", lambda *args: "the manifest of the new release cannot be read (OSError)")
+
+    result = clone_or_pull(entry(), workspace)
+
+    assert not result.ok and result.code == "rolled_back", result.message
+    assert releases.in_service(workspace, name) == serving, "the link is back on the release that was in service"
+    assert _head(workspace / name) == served_head
+    assert [r.name for r in releases.list_releases(workspace, name)] == [serving.name], "the release that failed is gone"
+    for language in ("en", "es", "de", "fr", "it", "ja", "zh", "pt"):
+        said = localized_message(language, result)
+        assert name in said and "cannot be read" in said, language
+    # nothing is stuck: the next update, whose check passes, goes through
+    monkeypatch.setattr(install, "verify_in_service", real)
+    again = clone_or_pull(entry(), workspace)
+    assert again.ok, again.message
+    assert _head(workspace / name) != served_head
+
+
+def test_a_first_install_that_fails_its_check_leaves_no_link_and_no_folder(tmp_path: Path, monkeypatch, releases_layout):
+    _remote(tmp_path, monkeypatch)
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    monkeypatch.setattr(install, "verify_in_service", lambda *args: "the new release is not at the commit that was built")
+
+    result = clone_or_pull(entry(), workspace)
+
+    assert not result.ok and result.code == "rolled_back", result.message
+    assert not (workspace / entry().name).exists() and releases.link_target(workspace / entry().name) is None
+    assert releases.list_releases(workspace, entry().name) == []

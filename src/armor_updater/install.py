@@ -64,7 +64,7 @@ from .staging import (
     forget_build_trees,
     remove_generated_environments,
 )
-from .releases import activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, wants_releases, DEFAULT_KEEP_RELEASES
+from .releases import activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, revert_to, verify_in_service, wants_releases, DEFAULT_KEEP_RELEASES
 from .signature import current_policy, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
@@ -265,6 +265,22 @@ def _activate_release(entry: ProjectEntry, workspace_root: Path, path: Path, new
     return (previous,)
 
 
+def _check_after_switch(entry: ProjectEntry, workspace_root: Path, path: Path, new_release: Path, commit: str, previous: Path | None, progress: ProgressCallback | None) -> InstallResult | None:
+    """The check right after a link was switched (see releases.verify_in_service). When it finds a problem the link goes back by itself to what it was - nobody has to notice and ask for
+    it - and the result says so. None when all is well."""
+    _checkpoint(progress, "validation", "Checking what the project's path leads to now.")
+    problem = verify_in_service(workspace_root, entry.name, new_release, commit)
+    if problem is None:
+        return None
+    try:
+        undone = revert_to(workspace_root, entry.name, previous, new_release)
+    except OSError as exc:
+        return InstallResult(False, f"the new release of {entry.name} failed its check ({problem}) AND going back failed ({exc}); the previous installation is at {previous}", code="rollback_failed",
+                             params={"project": entry.name, "reason": problem, "previous": str(previous or "")})
+    return InstallResult(False, f"the new release of {entry.name} failed its check ({problem}); it was taken out of service and removed: {undone}", code="rolled_back",
+                         params={"project": entry.name, "reason": problem, "what": undone})
+
+
 def _update_as_release(
     entry: ProjectEntry, workspace_root: Path, path: Path, installed: ProjectManifest, candidate: ProjectManifest, candidate_sha: str, unsigned: str, progress: ProgressCallback | None,
 ) -> InstallResult:
@@ -298,6 +314,9 @@ def _update_as_release(
     if isinstance(promoted, InstallResult):
         return promoted
     (previous,) = promoted
+    refused = _check_after_switch(entry, workspace_root, path, new_release, candidate_sha, previous, progress)
+    if refused is not None:
+        return refused
     pruned = prune_releases(workspace_root, entry.name, DEFAULT_KEEP_RELEASES)
     message = f"Updated {path} to v{candidate.version} (commit {candidate_sha[:12]}) after a verified build in its own release folder; previous installation kept at {previous}"
     if pruned:
@@ -371,6 +390,10 @@ def clone_or_pull(
             return InstallResult(False, f"{path} appeared while cloning - not replacing it")
         if release_mode:
             promoted = _activate_release(entry, workspace_root, path, staging_path, progress)
+            if not isinstance(promoted, InstallResult):
+                refused = _check_after_switch(entry, workspace_root, path, staging_path, _rev_parse(staging_path, "HEAD") or "", promoted[0], progress)
+                if refused is not None:
+                    return refused
         else:
             promoted = _promote(entry, workspace_root, path, staging_path, "", progress)
         if isinstance(promoted, InstallResult):
