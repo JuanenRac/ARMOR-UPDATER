@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
   <img src="https://img.shields.io/badge/Tests-288-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.4-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.1.5-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -37,7 +37,7 @@
 
 | | |
 |---|---|
-| Versione | `0.1.4` |
+| Versione | `0.1.5` |
 | Maturità | Consolidato |
 | Test | 288 (`python -m pytest tests -q`) |
 | Tecnologia | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
