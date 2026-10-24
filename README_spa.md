@@ -43,6 +43,21 @@
 | Tecnología | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | En hardware real | No aplica: es un programa de escritorio; su interfaz Qt Quick se ha ejecutado en Windows |
 
+## 🚦 Estado del proyecto
+
+Cada línea es una parte de este repositorio y la luz dice hasta dónde llega hoy. Se escribe con lo que el repositorio puede demostrar (pruebas, compilaciones, ejecuciones), no con lo previsto.
+
+🟢 Hecho y verificado · 🟡 Funciona, con límites conocidos · 🟠 Hecho a medias o sin verificar · 🔴 Sin hacer o sin funcionar
+
+| Área | Estado | Qué significa aquí |
+|---|---|---|
+| Software | 🟡 | El descubrimiento de manifiestos, la comparación de versiones y la instalación y actualización por etapas funcionan; no se han ejecutado de principio a fin contra todos los repositorios de la familia. |
+| Pruebas | 🟢 | Pasan 288 pruebas (`python -m pytest tests -q`): el descubrimiento, la comparación de versiones, la comprobación de la firma, la instalación por etapas con su bloqueo, diario, copias y vuelta atrás, el registro de evidencias y las tablas de los ocho idiomas. |
+| Interfaz | 🟡 | La interfaz Qt Quick solo se ha ejecutado en Windows. |
+| Seguridad | 🟡 | La comprobación de la firma y el registro de evidencias están probados en el host; no ha habido una revisión independiente. |
+| Actualizaciones | 🟡 | Las instalaciones que hace necesitan `git` y las herramientas de compilación propias de cada repositorio en la máquina. |
+| Documentación | 🟢 | Ocho idiomas y el historial de cambios están al día. |
+
 ## 🎯 Descripción general
 
 * **Descubrimiento, sin lista fija:** una carpeta local se une en cuanto lleva un `armor.project.json` válido que declara `ecosystem: "A.R.M.O.R."`; en remoto, se revisa igual cada repositorio público de la cuenta. Un `GITHUB_TOKEN` es opcional: solo sube el límite de 60 peticiones a la hora de GitHub.

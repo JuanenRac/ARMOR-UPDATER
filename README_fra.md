@@ -43,6 +43,21 @@
 | Technologie | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | Sur matériel réel | Sans objet : c'est un programme de bureau ; son interface Qt Quick a été exécutée sous Windows |
 
+## 🚦 État du projet
+
+Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'hui. Elle est écrite d'après ce que le dépôt peut montrer (tests, compilations, exécutions), pas d'après ce qui est prévu.
+
+🟢 Fait et vérifié · 🟡 Fonctionne, avec des limites connues · 🟠 À moitié fait ou pas encore vérifié · 🔴 Pas fait ou ne fonctionne pas
+
+| Domaine | État | Ce que cela veut dire ici |
+|---|---|---|
+| Logiciel | 🟡 | La découverte des manifestes, la comparaison des versions et l'installation et mise à jour par étapes fonctionnent ; elles n'ont pas été exécutées de bout en bout contre tous les dépôts de la famille. |
+| Tests | 🟢 | 288 tests réussissent (`python -m pytest tests -q`) : la découverte, la comparaison des versions, la vérification de la signature, l'installation par étapes avec son verrou, son journal, ses sauvegardes et son retour arrière, le journal de preuves et les tables des huit langues. |
+| Interface | 🟡 | L'interface Qt Quick n'a été exécutée que sous Windows. |
+| Sécurité | 🟡 | La vérification de la signature et le journal de preuves sont testés sur l'hôte ; il n'y a pas eu de revue indépendante. |
+| Mises à jour | 🟡 | Les installations qu'il fait demandent `git` et les outils de compilation propres à chaque dépôt sur la machine. |
+| Documentation | 🟢 | Huit langues et le journal des modifications sont à jour. |
+
 ## 🎯 Présentation
 
 * **Découverte, sans liste fixe :** un dossier local rejoint l'écosystème dès qu'il porte un `armor.project.json` valide déclarant `ecosystem: "A.R.M.O.R."` ; à distance, chaque dépôt public du compte est examiné de la même façon. Un `GITHUB_TOKEN` est facultatif : il relève seulement la limite de 60 requêtes par heure de GitHub.

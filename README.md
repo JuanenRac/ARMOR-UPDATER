@@ -43,6 +43,21 @@
 | Stack | Python 3.10+ (standard library only; PySide6 optional for the desktop shell) |
 | On real hardware | Not applicable: it is a desktop program; its Qt Quick shell has been run on Windows |
 
+## 🚦 Project status
+
+Each line is one part of this repository and the light says how far it is today. It is written from what the repository can show (tests, builds, runs), not from what is planned.
+
+🟢 Done and verified · 🟡 Works, with known limits · 🟠 Partly done or not verified yet · 🔴 Not done or not working
+
+| Area | State | What it means here |
+|---|---|---|
+| Software | 🟡 | The manifest discovery, the version comparison and the staged install and update work; they have not been run end to end against every repository of the family. |
+| Tests | 🟢 | 288 tests pass (`python -m pytest tests -q`): the discovery, the version comparison, the signature check, the staged install with its lock, journal, backups and rollback, the evidence log and the eight-language tables. |
+| Interface | 🟡 | The Qt Quick shell has been run on Windows only. |
+| Security | 🟡 | The signature check and the evidence log are tested on the host; there has been no independent review. |
+| Updates | 🟡 | The installs it makes need `git` and each repository's own build tools on the machine. |
+| Documentation | 🟢 | Eight languages and the changelog are up to date. |
+
 ## 🎯 Overview
 
 * **Discovery, no fixed list:** a local folder joins the moment it carries a valid `armor.project.json` declaring `ecosystem: "A.R.M.O.R."`; remotely, every public repository of the account is checked the same way. A `GITHUB_TOKEN` is optional: it only raises GitHub's limit of 60 requests an hour.
