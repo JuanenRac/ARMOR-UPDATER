@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The updater and the registry of the family are held together by tests:** every repository that the registry of ARMOR-COMMON names has to publish a manifest this updater accepts, with the name and the group the registry gives it, and what a manifest requires to be installed first has to be a repository of the family (`tests/test_family_registry.py`).
 - **The releases layout is the default:** every project, ARMOR-UPDATER included, is a link to `releases/<commit>`. The first update of an existing checkout migrates it by itself: a git bundle of its whole history is written first, the checkout is kept as a release, and if anything fails the link goes back (or, where the folder cannot be moved or the workspace cannot hold links, that update goes on in the older layout with nothing lost). `deploy_layout: checkout` keeps the older layout. Said in the eight languages (`layout_migrated`), with tests for the migration, the backup and the fallback.
 
 - **A release that fails its check goes back by itself:** right after the link of the releases layout is switched, the updater checks that the path leads to the new release, that its manifest can be read and that the commit is the one built; if not, the link returns to the release that was in service (a new project is left without a link), the failed release is deleted and the window and the command say why, in the eight languages (`rolled_back`, `rollback_failed`).
