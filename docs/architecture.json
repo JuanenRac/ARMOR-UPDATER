@@ -1,0 +1,206 @@
+{
+  "repo": "ARMOR-UPDATER",
+  "ecosystem": "armor",
+  "tagline": "Finds the family on this PC, compares it with GitHub and installs or updates one project at a time, verified before anything is replaced.",
+  "description": "ARMOR-UPDATER discovers the A.R.M.O.R. repositories of a workspace by their armor.project.json and, remotely, of the account on GitHub; compares versions; builds and verifies every install or update in an independent staging clone; checks the signature of the revision against pinned keys; and promotes it with two journalled renames, keeping the replaced checkout as a backup and an evidence line for every attempt. It has a command line and an optional Qt Quick window.",
+  "columns": [
+    "WHAT IT LOOKS AT",
+    "THE UPDATER",
+    "WHAT IT CHANGES"
+  ],
+  "nodes": [
+    {
+      "id": "person",
+      "column": 0,
+      "level": "external",
+      "title": "A person",
+      "lines": [
+        "at the terminal (armor-updater",
+        "--cli) or in the Qt Quick",
+        "window, in eight languages"
+      ]
+    },
+    {
+      "id": "workspace",
+      "column": 0,
+      "level": "external",
+      "title": "The workspace",
+      "lines": [
+        "the folders that carry a valid",
+        "armor.project.json with",
+        "ecosystem A.R.M.O.R."
+      ]
+    },
+    {
+      "id": "github",
+      "column": 0,
+      "level": "external",
+      "title": "GitHub",
+      "lines": [
+        "the public repositories of the",
+        "account: API, raw files and git;",
+        "GITHUB_TOKEN is optional"
+      ]
+    },
+    {
+      "id": "detect",
+      "column": 1,
+      "level": "tested",
+      "title": "detect.py + github_client.py",
+      "lines": [
+        "local and remote discovery with",
+        "no fixed list; 10 s timeout,",
+        "3 retries, 8 at a time"
+      ],
+      "code": [
+        "src/armor_updater/detect.py",
+        "src/armor_updater/github_client.py"
+      ],
+      "title_size": 12
+    },
+    {
+      "id": "install",
+      "column": 1,
+      "level": "tested",
+      "title": "install.py",
+      "lines": [
+        "a new project or an update is",
+        "built and verified in a staging",
+        "clone; requires go first"
+      ],
+      "code": [
+        "src/armor_updater/install.py",
+        "src/armor_updater/staging.py"
+      ]
+    },
+    {
+      "id": "signature",
+      "column": 1,
+      "level": "contract",
+      "title": "signature.py",
+      "lines": [
+        "the signature of the revision",
+        "against pinned keys: warn by",
+        "default, require if chosen"
+      ],
+      "code": [
+        "src/armor_updater/signature.py::PINNED_SIGNER_FINGERPRINTS",
+        "src/armor_updater/data/allowed_signers"
+      ]
+    },
+    {
+      "id": "promotion",
+      "column": 1,
+      "level": "contract",
+      "title": "promotion.py",
+      "lines": [
+        "a lock (6 h), two journalled",
+        "renames and the newest three",
+        "backups kept"
+      ],
+      "code": [
+        "src/armor_updater/promotion.py::DEFAULT_KEEP"
+      ]
+    },
+    {
+      "id": "main",
+      "column": 1,
+      "level": "tested",
+      "title": "main.py + qt_gui.py",
+      "lines": [
+        "status, install, update,",
+        "rollback and backups; the",
+        "window is optional"
+      ],
+      "code": [
+        "src/armor_updater/main.py",
+        "src/armor_updater/qt_gui.py"
+      ]
+    },
+    {
+      "id": "evidence",
+      "column": 1,
+      "level": "tested",
+      "title": "evidence.py",
+      "lines": [
+        "one line per attempt: project,",
+        "version and commit before and",
+        "after, reason of a failure"
+      ],
+      "code": [
+        "src/armor_updater/evidence.py"
+      ]
+    },
+    {
+      "id": "live",
+      "column": 2,
+      "level": "external",
+      "title": "The live checkout",
+      "lines": [
+        "of each repository, replaced",
+        "only after its build passed"
+      ]
+    },
+    {
+      "id": "build",
+      "column": 2,
+      "level": "external",
+      "title": "Build of each repository",
+      "lines": [
+        "its own build.sh / build.bat and",
+        "build-test, run in the staging",
+        "clone before promotion"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "person",
+      "to": "main",
+      "level": "tested",
+      "label": "CLI or window"
+    },
+    {
+      "from": "workspace",
+      "to": "detect",
+      "level": "tested"
+    },
+    {
+      "from": "github",
+      "to": "detect",
+      "level": "tested"
+    },
+    {
+      "from": "detect",
+      "to": "install",
+      "level": "tested"
+    },
+    {
+      "from": "install",
+      "to": "promotion",
+      "level": "contract"
+    },
+    {
+      "from": "signature",
+      "to": "promotion",
+      "level": "contract"
+    },
+    {
+      "from": "promotion",
+      "to": "evidence",
+      "level": "tested"
+    },
+    {
+      "from": "promotion",
+      "to": "live",
+      "level": "contract",
+      "label": "renames"
+    },
+    {
+      "from": "install",
+      "to": "build",
+      "level": "tested"
+    }
+  ],
+  "footer": "It has not been run against every repository of the family end to end."
+}

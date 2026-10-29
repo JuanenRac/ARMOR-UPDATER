@@ -1,0 +1,436 @@
+{
+ "repo": "ARMOR-UPDATER",
+ "ecosystem": "armor",
+ "svg": "en",
+ "cards": [
+  {
+   "name": "src/armor_updater/",
+   "span": 3,
+   "accent": "a",
+   "sub": {
+    "en": "the tool, in Python",
+    "es": "la herramienta, en Python",
+    "de": "das Werkzeug, in Python",
+    "fr": "l'outil, en Python",
+    "it": "lo strumento, in Python",
+    "ja": "Python 製のツール",
+    "zh": "用 Python 编写的工具",
+    "pt": "a ferramenta, em Python"
+   },
+   "rows": [
+    {
+     "name": "project_manifest.py  registry.py  ecosystem_catalog.py",
+     "desc": {
+      "en": "the manifest, the list, the catalogue",
+      "es": "el manifiesto, la lista, el catálogo",
+      "de": "das Manifest, die Liste, der Katalog",
+      "fr": "le manifeste, la liste, le catalogue",
+      "it": "il manifesto, l'elenco, il catalogo",
+      "ja": "マニフェスト、一覧、カタログ",
+      "zh": "清单、列表、目录",
+      "pt": "o manifesto, a lista, o catálogo"
+     },
+     "tree_name": "project_manifest.py registry.py ecosystem_catalog.py"
+    },
+    {
+     "name": "detect.py  github_client.py  version_parse.py",
+     "desc": {
+      "en": "local and remote discovery, versions",
+      "es": "descubrimiento local y remoto, versiones",
+      "de": "lokale und entfernte Suche, Versionen",
+      "fr": "découverte locale et distante, versions",
+      "it": "scoperta locale e remota, versioni",
+      "ja": "ローカルとリモートの検出、バージョン",
+      "zh": "本地与远程发现、版本",
+      "pt": "descoberta local e remota, versões"
+     },
+     "tree_name": "detect.py github_client.py version_parse.py"
+    },
+    {
+     "name": "install.py  git_ops.py  staging.py",
+     "desc": {
+      "en": "staged install and update",
+      "es": "instalación y actualización por etapas",
+      "de": "gestufte Installation und Aktualisierung",
+      "fr": "installation et mise à jour par étapes",
+      "it": "installazione e aggiornamento a fasi",
+      "ja": "段階的なインストールと更新",
+      "zh": "分阶段安装与更新",
+      "pt": "instalação e atualização por fases"
+     },
+     "tree_name": "install.py git_ops.py staging.py"
+    },
+    {
+     "name": "promotion.py  releases.py  deploy_category.py",
+     "desc": {
+      "en": "lock, journal, backups, layouts",
+      "es": "bloqueo, diario, copias, disposiciones",
+      "de": "Sperre, Journal, Sicherungen, Layouts",
+      "fr": "verrou, journal, copies, dispositions",
+      "it": "blocco, diario, copie, disposizioni",
+      "ja": "ロック、ジャーナル、バックアップ、配置",
+      "zh": "锁、日志、备份、布局",
+      "pt": "bloqueio, diário, cópias, disposições"
+     },
+     "tree_name": "promotion.py releases.py deploy_category.py"
+    },
+    {
+     "name": "signature.py",
+     "desc": {
+      "en": "signed updates, pinned keys",
+      "es": "actualizaciones firmadas, claves fijadas",
+      "de": "signierte Updates, fixierte Schlüssel",
+      "fr": "mises à jour signées, clés épinglées",
+      "it": "aggiornamenti firmati, chiavi fissate",
+      "ja": "署名付き更新と固定された鍵",
+      "zh": "签名更新与固定密钥",
+      "pt": "atualizações assinadas, chaves fixadas"
+     }
+    },
+    {
+     "name": "evidence.py  settings.py  console_flags.py",
+     "desc": {
+      "en": "the log, the settings, the flags",
+      "es": "el registro, los ajustes, las opciones",
+      "de": "das Protokoll, die Einstellungen, die Optionen",
+      "fr": "le journal, les réglages, les options",
+      "it": "il registro, le impostazioni, le opzioni",
+      "ja": "ログ、設定、フラグ",
+      "zh": "日志、设置、选项",
+      "pt": "o registo, as definições, as opções"
+     },
+     "tree_name": "evidence.py settings.py console_flags.py"
+    },
+    {
+     "name": "main.py",
+     "desc": {
+      "en": "the command line",
+      "es": "la línea de órdenes",
+      "de": "die Kommandozeile",
+      "fr": "la ligne de commande",
+      "it": "la riga di comando",
+      "ja": "コマンドライン",
+      "zh": "命令行",
+      "pt": "a linha de comandos"
+     }
+    },
+    {
+     "name": "i18n.py  i18n_pt.py  i18n_recovery.py  result_text.py",
+     "desc": {
+      "en": "the eight languages",
+      "es": "los ocho idiomas",
+      "de": "die acht Sprachen",
+      "fr": "les huit langues",
+      "it": "le otto lingue",
+      "ja": "8 言語",
+      "zh": "八种语言",
+      "pt": "os oito idiomas"
+     },
+     "tree_name": "i18n.py i18n_pt.py i18n_recovery.py result_text.py"
+    },
+    {
+     "name": "gui.py  qt_gui.py  qml/",
+     "desc": {
+      "en": "the optional Qt Quick window",
+      "es": "la ventana Qt Quick opcional",
+      "de": "das optionale Qt-Quick-Fenster",
+      "fr": "la fenêtre Qt Quick facultative",
+      "it": "la finestra Qt Quick opzionale",
+      "ja": "任意の Qt Quick ウィンドウ",
+      "zh": "可选的 Qt Quick 窗口",
+      "pt": "a janela Qt Quick opcional"
+     },
+     "tree_name": "gui.py qt_gui.py qml/"
+    },
+    {
+     "name": "data/  assets/",
+     "desc": {
+      "en": "allowed_signers; the icon",
+      "es": "allowed_signers; el icono",
+      "de": "allowed_signers; das Symbol",
+      "fr": "allowed_signers ; l'icône",
+      "it": "allowed_signers; l'icona",
+      "ja": "allowed_signers とアイコン",
+      "zh": "allowed_signers 与图标",
+      "pt": "allowed_signers; o ícone"
+     },
+     "tree_name": "data/ assets/"
+    }
+   ]
+  },
+  {
+   "name": {
+    "en": "tests, docs and tools",
+    "es": "pruebas, docs y herramientas",
+    "de": "Tests, Doku und Werkzeuge",
+    "fr": "tests, docs et outils",
+    "it": "test, documenti e strumenti",
+    "ja": "テスト・文書・ツール",
+    "zh": "测试、文档和工具",
+    "pt": "testes, docs e ferramentas"
+   },
+   "kind": "group",
+   "span": 3,
+   "accent": "b",
+   "columns": 2,
+   "sub": {
+    "en": "checked in CI",
+    "es": "comprobado en CI",
+    "de": "in der CI geprüft",
+    "fr": "vérifié en CI",
+    "it": "verificato in CI",
+    "ja": "CI で検証",
+    "zh": "CI 检查",
+    "pt": "verificado na CI"
+   },
+   "rows": [
+    {
+     "name": "tests/",
+     "desc": {
+      "en": "288 tests in 25 modules",
+      "es": "288 pruebas en 25 módulos",
+      "de": "288 Tests in 25 Modulen",
+      "fr": "288 tests en 25 modules",
+      "it": "288 test in 25 moduli",
+      "ja": "25 モジュール 288 件",
+      "zh": "25 个模块 288 项测试",
+      "pt": "288 testes em 25 módulos"
+     }
+    },
+    {
+     "name": "docs/",
+     "desc": {
+      "en": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md",
+      "es": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md",
+      "de": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md",
+      "fr": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md",
+      "it": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md",
+      "ja": "CLI_REFERENCE.md、QML_DESKTOP_GUI.md",
+      "zh": "CLI_REFERENCE.md、QML_DESKTOP_GUI.md",
+      "pt": "CLI_REFERENCE.md, QML_DESKTOP_GUI.md"
+     }
+    },
+    {
+     "name": "tools/",
+     "desc": {
+      "en": "shared CI checks, launcher, icon generator",
+      "es": "comprobaciones de CI, lanzador, generador del icono",
+      "de": "CI-Prüfungen, Starter, Symbol-Generator",
+      "fr": "vérifications CI, lanceur, générateur d'icône",
+      "it": "controlli CI, avviatore, generatore dell'icona",
+      "ja": "CI 検査、ランチャー、アイコン生成",
+      "zh": "CI 检查、启动器、图标生成器",
+      "pt": "verificações de CI, lançador, gerador do ícone"
+     },
+     "tree_desc": {
+      "en": "the shared CI checks, the launcher and generate_app_icon.py",
+      "es": "las comprobaciones de CI, el lanzador y generate_app_icon.py",
+      "de": "die gemeinsamen CI-Prüfungen, der Starter und generate_app_icon.py",
+      "fr": "les vérifications CI, le lanceur et generate_app_icon.py",
+      "it": "i controlli CI, l'avviatore e generate_app_icon.py",
+      "ja": "共通の CI 検査、ランチャー、generate_app_icon.py",
+      "zh": "共用的 CI 检查、启动器和 generate_app_icon.py",
+      "pt": "as verificações de CI, o lançador e generate_app_icon.py"
+     }
+    },
+    {
+     "name": "images/",
+     "desc": {
+      "en": "banner, icon, README pictures",
+      "es": "banner, icono, imágenes del README",
+      "de": "Banner, Symbol, README-Bilder",
+      "fr": "bannière, icône, images du README",
+      "it": "banner, icona, immagini del README",
+      "ja": "バナー、アイコン、README の画像",
+      "zh": "横幅图、图标、README 图片",
+      "pt": "faixa, ícone, imagens do README"
+     },
+     "tree_desc": {
+      "en": "banner, icon and the pictures of the README",
+      "es": "banner, icono y las imágenes del README",
+      "de": "Banner, Symbol und die Bilder des READMEs",
+      "fr": "bannière, icône et images du README",
+      "it": "banner, icona e immagini del README",
+      "ja": "バナー、アイコン、README の画像",
+      "zh": "横幅图、图标和 README 的图片",
+      "pt": "faixa, ícone e as imagens do README"
+     }
+    },
+    {
+     "name": ".github/",
+     "desc": {
+      "en": "CI, dashboard notice, templates",
+      "es": "CI, aviso al panel, plantillas",
+      "de": "CI, Dashboard-Hinweis, Vorlagen",
+      "fr": "CI, avis au tableau de bord, modèles",
+      "it": "CI, avviso alla dashboard, modelli",
+      "ja": "CI、ダッシュボード通知、テンプレート",
+      "zh": "CI、仪表板通知、模板",
+      "pt": "CI, aviso ao painel, modelos"
+     },
+     "tree_desc": {
+      "en": "CI workflow, dashboard notice, issue and pull-request templates",
+      "es": "flujo de CI, aviso al panel, plantillas de incidencias y pull requests",
+      "de": "CI-Workflow, Dashboard-Hinweis, Vorlagen für Issues und Pull Requests",
+      "fr": "workflow CI, avis au tableau de bord, modèles d'issues et de pull requests",
+      "it": "workflow CI, avviso alla dashboard, modelli per issue e pull request",
+      "ja": "CI ワークフロー、ダッシュボード通知、Issue と Pull Request のテンプレート",
+      "zh": "CI 工作流、仪表板通知、议题和 pull request 模板",
+      "pt": "fluxo de CI, aviso ao painel, modelos de issues e pull requests"
+     }
+    }
+   ]
+  },
+  {
+   "name": {
+    "en": "project files",
+    "es": "ficheros del proyecto",
+    "de": "Projektdateien",
+    "fr": "fichiers du projet",
+    "it": "file del progetto",
+    "ja": "プロジェクトのファイル",
+    "zh": "项目文件",
+    "pt": "ficheiros do projeto"
+   },
+   "kind": "group",
+   "span": 3,
+   "accent": "c",
+   "columns": 2,
+   "sub": {
+    "en": "at the root",
+    "es": "en la raíz",
+    "de": "im Stammordner",
+    "fr": "à la racine",
+    "it": "alla radice",
+    "ja": "ルート",
+    "zh": "根目录",
+    "pt": "na raiz"
+   },
+   "rows": [
+    {
+     "name": "armor.project.json",
+     "desc": {
+      "en": "manifest: version, role, maturity",
+      "es": "manifiesto: versión, función, madurez",
+      "de": "Manifest: Version, Rolle, Reife",
+      "fr": "manifeste : version, rôle, maturité",
+      "it": "manifesto: versione, ruolo, maturità",
+      "ja": "マニフェスト：版・役割・成熟度",
+      "zh": "清单：版本、角色、成熟度",
+      "pt": "manifesto: versão, função, maturidade"
+     }
+    },
+    {
+     "name": "pyproject.toml",
+     "desc": {
+      "en": "package metadata, entry points",
+      "es": "metadatos del paquete, entradas",
+      "de": "Paket-Metadaten, Einstiege",
+      "fr": "métadonnées du paquet, entrées",
+      "it": "metadati del pacchetto, ingressi",
+      "ja": "パッケージ情報とエントリー",
+      "zh": "包元数据、入口",
+      "pt": "metadados do pacote, entradas"
+     }
+    },
+    {
+     "name": "CHANGELOG.md",
+     "desc": {
+      "en": "what changed in each version",
+      "es": "qué cambió en cada versión",
+      "de": "was sich in jeder Version geändert hat",
+      "fr": "ce qui a changé à chaque version",
+      "it": "cosa è cambiato in ogni versione",
+      "ja": "各バージョンの変更点",
+      "zh": "每个版本的变化",
+      "pt": "o que mudou em cada versão"
+     }
+    },
+    {
+     "name": "run-gui.vbs",
+     "desc": {
+      "en": "opens the window on Windows without a console",
+      "es": "abre la ventana en Windows sin consola",
+      "de": "öffnet das Fenster unter Windows ohne Konsole",
+      "fr": "ouvre la fenêtre sous Windows sans console",
+      "it": "apre la finestra su Windows senza console",
+      "ja": "Windows でコンソールなしにウィンドウを開く",
+      "zh": "在 Windows 上无控制台地打开窗口",
+      "pt": "abre a janela no Windows sem consola"
+     }
+    },
+    {
+     "name": "run.sh  run.bat",
+     "tree_name": "run.sh run.bat",
+     "desc": {
+      "en": "start, shared workflow",
+      "es": "arrancar, flujo compartido",
+      "de": "Start, gemeinsamer Ablauf",
+      "fr": "démarrer, flux partagé",
+      "it": "avvio, flusso condiviso",
+      "ja": "起動（共通フロー）",
+      "zh": "启动（共用流程）",
+      "pt": "arrancar, fluxo partilhado"
+     }
+    },
+    {
+     "name": "build.sh  build.bat",
+     "tree_name": "build.sh build.bat",
+     "desc": {
+      "en": "build and test, shared workflow",
+      "es": "construir y probar, flujo compartido",
+      "de": "Bauen und Testen, gemeinsamer Ablauf",
+      "fr": "construire et tester, flux partagé",
+      "it": "compila e prova, flusso condiviso",
+      "ja": "ビルドとテスト（共通フロー）",
+      "zh": "构建并测试（共用流程）",
+      "pt": "compilar e testar, fluxo partilhado"
+     }
+    },
+    {
+     "name": "build-test.sh  build-test.bat",
+     "tree_name": "build-test.sh build-test.bat",
+     "desc": {
+      "en": "build, test and package",
+      "es": "construir, probar y empaquetar",
+      "de": "Bauen, Testen und Verpacken",
+      "fr": "construire, tester, empaqueter",
+      "it": "compila, prova e impacchetta",
+      "ja": "ビルド、テスト、パッケージ化",
+      "zh": "构建、测试并打包",
+      "pt": "compilar, testar e empacotar"
+     }
+    },
+    {
+     "name": "test.sh  test.bat",
+     "tree_name": "test.sh test.bat",
+     "desc": {
+      "en": "only the tests, never the version",
+      "es": "solo las pruebas, nunca la versión",
+      "de": "nur die Tests, nie die Version",
+      "fr": "seulement les tests, jamais la version",
+      "it": "solo i test, mai la versione",
+      "ja": "テストのみ（版は変えません）",
+      "zh": "只运行测试，不改版本",
+      "pt": "só os testes, nunca a versão"
+     }
+    },
+    {
+     "name": "SECURITY  SUPPORT  CONTRIBUTING  LICENSE",
+     "tree_name": "SECURITY.md SUPPORT.md CONTRIBUTING.md CODE_OF_CONDUCT.md LICENSE",
+     "desc": {
+      "en": "community and licence files",
+      "es": "comunidad y licencia",
+      "de": "Community und Lizenz",
+      "fr": "communauté et licence",
+      "it": "comunità e licenza",
+      "ja": "コミュニティとライセンス",
+      "zh": "社区与许可证",
+      "pt": "comunidade e licença"
+     },
+     "tree_desc": ""
+    }
+   ]
+  }
+ ]
+}
