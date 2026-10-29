@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+- **The pictures of the README come from shared tools:** `tools/make_architecture.py` draws `images/architecture.svg` from `docs/architecture.json` and `tools/make_structure.py` draws the Repository Structure (the text tree and the animated picture) from `docs/structure.json`; both measure every text, and `--check` fails when a picture, its description or the code it points to disagree. They are vendored from ARMOR-COMMON like the shared CI checks.
+
 ## [0.1.5] - The updater and the registry of the family are held together by tests and the releases layout is the default
 
 - **The updater and the registry of the family are held together by tests:** every repository that the registry of ARMOR-COMMON names has to publish a manifest this updater accepts, with the name and the group the registry gives it, and what a manifest requires to be installed first has to be a repository of the family (`tests/test_family_registry.py`).
