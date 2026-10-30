@@ -103,7 +103,9 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
     # deployment_target value whose meaning isn't self-evident from the
     # prose alone - optional, most values need no such note.
     # "requires": the projects that must be installed before this one (see _parse_requires).
-    optional_fields = {"service", "deployment_target_note", "requires"}
+    # "evidence" and "hardware_bound": how far the project has been seen on real hardware and whether it has any
+    # (they cap the lights of the README table; see the shared status lights tool).
+    optional_fields = {"service", "deployment_target_note", "requires", "evidence", "hardware_bound"}
     unknown = sorted(set(data) - expected_fields - optional_fields)
     missing = sorted(expected_fields - set(data))
     if missing:
