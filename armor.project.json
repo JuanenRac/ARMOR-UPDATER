@@ -13,6 +13,7 @@
   ],
   "deployment_target": "Any machine that installs or updates A.R.M.O.R. repositories (a developer PC or the central server)",
   "maturity": "established",
+  "evidence": "host-test",
   "family": "Ecosystem Operations",
   "parent": "ARMOR-COMMON",
   "native_version": "0.1.5",
