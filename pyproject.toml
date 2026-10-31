@@ -20,7 +20,7 @@ keywords = ["armor", "updater", "installer", "fleet-management"]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.5"]
+dev = ["pytest>=8.0", "ruff>=0.5", "mypy==2.4.0"]
 gui = ["PySide6>=6.8,<7"]
 
 [project.urls]
@@ -43,3 +43,12 @@ target-version = "py310"
 # Real mistakes only (unused names, undefined names, syntax errors, bugbear); no style rules.
 select = ["F", "E9", "B"]
 ignore = ["B008", "B904"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# Qt declares a property's type as a string ("QVariantList", "QStringList") and its stubs expect a class; the bridge's own properties read as plain values inside it.
+module = ["armor_updater.qt_gui"]
+disable_error_code = ["arg-type", "operator"]

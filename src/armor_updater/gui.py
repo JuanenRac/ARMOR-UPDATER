@@ -43,6 +43,7 @@ import sys
 import threading
 import webbrowser
 from pathlib import Path
+from typing import Any, Literal, cast
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -51,7 +52,7 @@ from . import __version__, i18n, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
-from .install import backup_summary, clean_previous_copies, install_or_update, restore_previous_copy
+from .install import InstallResult, backup_summary, clean_previous_copies, install_or_update, restore_previous_copy
 from .registry import GITHUB_OWNER
 from .result_text import localized_message
 from .signature import current_policy
@@ -105,6 +106,7 @@ class UpdaterGUI:
         self.workspace_root = workspace_root
         self.locals_: list[LocalStatus] = []
         self.remotes: dict[str, RemoteStatus] = {}
+        self._filter_by_label: dict[str, str] = {}
         self._work_queue: "queue.Queue[tuple[str, object]]" = queue.Queue()
         self._busy = False
         self.lang = i18n.resolve_initial_lang()
@@ -740,7 +742,7 @@ class UpdaterGUI:
         """The previous copies kept of the selected project (how many, how much disk) and whether the restore and clean buttons apply."""
         count, size = backup_summary(self.workspace_root, name) if name else (0, 0)
         self.backups_lbl.config(text=self.t("backups_summary", count=count, size=f"{size / 1024 / 1024:.1f}") if count else "")
-        state = "normal" if count and not self._busy else "disabled"
+        state: Literal["normal", "disabled"] = "normal" if count and not self._busy else "disabled"
         self.restore_btn.config(state=state)
         self.clean_btn.config(state=state)
 
@@ -812,7 +814,7 @@ class UpdaterGUI:
     # -- Background-thread -> main-thread bridge --------------------------
     def _set_busy(self, busy: bool, status: str) -> None:
         self._busy = busy
-        state = "disabled" if busy else "normal"
+        state: Literal["normal", "disabled"] = "disabled" if busy else "normal"
         self.refresh_btn.config(state=state)
         self.install_btn.config(state=state)
         self.update_btn.config(state=state)
@@ -835,7 +837,7 @@ class UpdaterGUI:
                 if kind == "progress":
                     self.status_var.set(str(payload))
                 elif kind == "remotes":
-                    locals_, remotes, errors = payload  # type: ignore[misc]
+                    locals_, remotes, errors = cast(tuple[Any, Any, Any], payload)
                     self.locals_ = locals_
                     self.remotes = remotes
                     if errors:
@@ -846,12 +848,12 @@ class UpdaterGUI:
                     self._set_busy(False, self.t("status_ready"))
                     self._append_log(self.t("log_github_ready", projects=len(self.locals_)))
                 elif kind == "copies_done":
-                    outcome = localized_message(self.lang, payload)   # type: ignore[arg-type]
+                    outcome = localized_message(self.lang, cast(InstallResult, payload))
                     self._set_busy(False, outcome)
                     self._append_log(outcome)
                     self._on_select()
                 elif kind == "install_done":
-                    name, results = payload  # type: ignore[misc]
+                    name, results = cast(tuple[str, list[InstallResult]], payload)
                     ok = all(r.ok for r in results)
                     lines = "\n".join(("OK  " if r.ok else "FAIL ") + localized_message(self.lang, r) for r in results)
                     self._set_busy(False, self.t("status_ready"))

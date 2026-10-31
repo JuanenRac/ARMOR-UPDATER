@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
 from .registry import ProjectEntry
@@ -18,7 +19,7 @@ from .console_flags import NO_WINDOW, headless
 def _run(
     cmd: list[str], cwd: Path, *, capture_output: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    kwargs: dict[str, object] = {"cwd": str(cwd), "check": False}
+    kwargs: dict[str, Any] = {"cwd": str(cwd), "check": False}
     if capture_output:
         kwargs.update({"capture_output": True, "text": True})
     # The GUI is started with pythonw on Windows. Do not let git or a child build script create a surprise console while its output is captured for the in-window checkpoint log.
@@ -32,7 +33,7 @@ def _run(
     else:
         kwargs["stdin"] = subprocess.DEVNULL
     try:
-        return subprocess.run(cmd, **kwargs)  # type: ignore[arg-type]
+        return subprocess.run(cmd, **kwargs)
     except OSError as error:   # git or the shell is not there, the folder is not usable
         return subprocess.CompletedProcess(cmd, 127, stdout="", stderr=f"{type(error).__name__}: {error}")
 

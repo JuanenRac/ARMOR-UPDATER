@@ -24,6 +24,7 @@ import time
 import traceback
 import webbrowser
 from pathlib import Path
+from typing import Any, cast
 
 from PySide6.QtCore import Property, QCoreApplication, QEvent, QObject, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
@@ -33,7 +34,7 @@ from . import __version__, i18n, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
-from .install import backup_summary, clean_previous_copies, install_or_update, install_order, restore_previous_copy
+from .install import InstallResult, backup_summary, clean_previous_copies, install_or_update, install_order, restore_previous_copy
 from .registry import GITHUB_OWNER
 from .result_text import localized_message
 from .signature import current_policy
@@ -485,7 +486,7 @@ class UpdaterBridge(QObject):
         self._append_activity(self._t("log_batch_started", verb=verb, total=len(targets)))
 
         def worker() -> None:
-            outcome: list[object] = []
+            outcome: list[InstallResult] = []
             for index, selected in enumerate(targets, start=1):
                 self._batchProject.emit(index, len(targets), selected.entry.name)
 
@@ -544,10 +545,10 @@ class UpdaterBridge(QObject):
 
     # -- Worker completions ----------------------------------------------
     @Slot(object, object, object)
-    def _on_remote_result(self, locals_: object, remotes: object, errors: object) -> None:
-        self._locals = list(locals_)  # type: ignore[arg-type]
-        self._remotes = dict(remotes)  # type: ignore[arg-type]
-        error_list = tuple(errors)  # type: ignore[arg-type]
+    def _on_remote_result(self, locals_: Any, remotes: Any, errors: Any) -> None:
+        self._locals = list(locals_)
+        self._remotes = dict(remotes)
+        error_list = tuple(errors)
         self.projectsChanged.emit()
         self.summaryChanged.emit()
         self.selectionChanged.emit()
@@ -557,8 +558,8 @@ class UpdaterBridge(QObject):
         self._append_activity(self.text("log_github_ready").format(projects=len(self._locals)))
 
     @Slot(str, object)
-    def _on_action_result(self, name: str, results: object) -> None:
-        outcome = list(results)  # type: ignore[arg-type]
+    def _on_action_result(self, name: str, results: Any) -> None:
+        outcome = list(results)
         ok = all(result.ok for result in outcome)
         self._finish_operation(ok, outcome)
         # a refusal with its own sentence (a missing requirement, the signature policy) and a revision installed without a signature are said in the language of the window
@@ -634,7 +635,7 @@ class UpdaterBridge(QObject):
         self._batch_project = ""
         self.operationChanged.emit()
 
-    def _finish_operation(self, ok: bool, outcome: list[object]) -> None:
+    def _finish_operation(self, ok: bool, outcome: list[InstallResult]) -> None:
         failed_step = next((result for result in outcome if not result.ok), None)
         if ok:
             for step in self._operation_steps:
@@ -685,7 +686,7 @@ def launch_qt_gui(workspace_root: Path) -> int:
     """Launch the QML desktop application and return its Qt event-loop code."""
     log_path = _setup_file_logging()
     _set_windows_app_id()
-    app = QGuiApplication.instance() or QGuiApplication(sys.argv)
+    app = cast(QGuiApplication, QGuiApplication.instance() or QGuiApplication(sys.argv))
     app.setApplicationName("ARMOR-UPDATER")
     app.setApplicationDisplayName("A.R.M.O.R. Updater")
     # Windows receives a native .ico rendered from the official SVG identity

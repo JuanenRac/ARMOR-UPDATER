@@ -11,8 +11,10 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,gui]"
 
 python -m ruff check src tests
+
+python -m mypy
 
 exec "$(cd "$(dirname "${BASH_SOURCE[0]}")/../ARMOR-COMMON/scripts" && pwd)/armor-project.sh" build-test "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -397,9 +397,9 @@ def clone_or_pull(
         if release_mode:
             promoted = _activate_release(entry, workspace_root, path, staging_path, progress)
             if not isinstance(promoted, InstallResult):
-                refused = _check_after_switch(entry, workspace_root, path, staging_path, _rev_parse(staging_path, "HEAD") or "", promoted[0], progress)
-                if refused is not None:
-                    return refused
+                refusal = _check_after_switch(entry, workspace_root, path, staging_path, _rev_parse(staging_path, "HEAD") or "", promoted[0], progress)
+                if refusal is not None:
+                    return refusal
         else:
             promoted = _promote(entry, workspace_root, path, staging_path, "", progress)
         if isinstance(promoted, InstallResult):
