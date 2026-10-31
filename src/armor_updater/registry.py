@@ -86,13 +86,3 @@ def github_raw_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER, branch: st
 def github_repo_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER) -> str:
     """Return the public GitHub repository URL."""
     return f"https://github.com/{owner}/{entry.name}"
-
-
-def github_actions_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER) -> str:
-    """Return the project's GitHub Actions page."""
-    return f"{github_repo_url(entry, owner=owner)}/actions"
-
-
-def github_issues_url(entry: ProjectEntry, *, owner: str = GITHUB_OWNER) -> str:
-    """Return the project's GitHub issues page."""
-    return f"{github_repo_url(entry, owner=owner)}/issues"
