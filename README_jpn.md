@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-288%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-321%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.6-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（288 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
+**正直さのチェック - 今日動いているもの:** マニフェストによる検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバックを備えた段階的なインストールと更新、証跡ログ、8 言語のインターフェース表はテスト済みです（321 件のテスト）。Qt Quick のシェルは Windows で実行されました。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではなく、行うインストールにはマシンに `git` と各リポジトリ自身のビルドツールが必要です。
 
 ---
 
@@ -41,7 +41,7 @@
 | 成熟度 | 確立 |
 | 役割 | 1 つずつ、PC 上のファミリーをインストール・更新するデスクトップツール |
 | 技術 | Python 3.10+、git。任意で PySide6（Qt Quick） |
-| テスト | 288 件（`python -m pytest tests -q`、約 6 分） |
+| テスト | 321 件（`python -m pytest tests -q`、約 6 分） |
 | インターフェース | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`）と 8 言語の Qt Quick ウィンドウ |
 | 動作環境 | Python と git のある PC（ウィンドウは Windows でのみ動作確認） |
 | 実機での確認 | 該当なし：デスクトッププログラムで、Qt Quick シェルは Windows で動かしました |
@@ -58,7 +58,7 @@
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | マニフェストの検出、バージョン比較、段階的なインストールと更新は動作します。ファミリーのすべてのリポジトリに対して端から端まで実行したわけではありません。 |
-| テスト | 🟢 | 288 件のテストが通ります（`python -m pytest tests -q`）：検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバック付きの段階的インストール、証拠ログ、8 言語の表。 |
+| テスト | 🟢 | 321 件のテストが通ります（`python -m pytest tests -q`）：検出、バージョン比較、署名の確認、ロック・ジャーナル・バックアップ・ロールバック付きの段階的インストール、証拠ログ、8 言語の表。 |
 | インターフェース | 🟡 | Qt Quick のシェルは Windows でのみ実行しています。 |
 | セキュリティ | 🟡 | 署名の確認と証拠ログはホストでテスト済みです。独立したレビューはありません。 |
 | アップデート | 🟡 | 実行するインストールには、マシンに `git` と各リポジトリ固有のビルドツールが必要です。 |
@@ -137,7 +137,7 @@ ARMOR-UPDATER は、PC にファミリーのコピーを持つ人のためのデ
 
 ```bash
 pip install -e ".[dev]"                     # または ".[dev,gui]"（任意の Qt Quick ウィンドウ用）
-python -m pytest tests -q                   # 288 件、約 6 分
+python -m pytest tests -q                   # 321 件、約 6 分
 armor-updater --cli status                  # 各リポジトリのローカルと GitHub の状態
 armor-updater --cli install ARMOR-NETWORK   # まだ入っていないリポジトリを 1 つクローン・ビルド・インストール
 armor-updater --cli update ARMOR-NETWORK    # インストール済みを更新（置き換え前にビルドと検証）
@@ -149,7 +149,7 @@ armor-updater --cli rollback ARMOR-NETWORK  # 置き換えたチェックアウ�
 ## 🧪 テスト
 
 ```powershell
-python -m pytest tests -q  # 288 件、約 6 分
+python -m pytest tests -q  # 321 件、約 6 分
 python -I tools/armor_ci_validate.py
 ```
 
@@ -161,7 +161,7 @@ python -I tools/armor_ci_validate.py
 | コマンドライン | `status`、`install`、`update`、`rollback`、`backups` とそのオプション |
 | 言語とウィンドウ | 8 言語（`test_i18n.py`）と各結果の文言 |
 
-`python -m unittest` では 3 件しか見つかりません。テストは pytest 向けに書かれ（`conftest.py` は `tests/` にあります）、約 6 分かかります。GitHub Actions は push と pull request のたびに A.R.M.O.R. の基本検査（マニフェスト、バージョン、変更履歴、README の一致）と、プロジェクト自身のビルドとテストを実行します。
+`python -m unittest` では 3 件しか見つかりません。テストは pytest 向けに書かれ（`conftest.py` は `tests/` にあります）、約 6 分かかります。GitHub Actions は push と pull request のたびに A.R.M.O.R. の基本検査（マニフェスト、バージョン、変更履歴、README の一致）と、プロジェクト自身のビルドとテストを実行します。 テスト用スクリプト（`test.sh`、`test.bat`、`build-test` の 2 つ）は、テストの前にリンターと `python -m mypy`（PySide6 が必要）を実行します。2 つのウィンドウとインストール・git ヘルパーのソースはこれを通り、テストがウィンドウの保持する状態を固定します。
 
 ## 🏗️ ビルドとリリース
 
@@ -199,7 +199,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     8 言語
 │   ├── gui.py qt_gui.py qml/                                  任意の Qt Quick ウィンドウ
 │   └── data/ assets/                                          allowed_signers とアイコン
-├── tests/                                                     25 モジュール 288 件
+├── tests/                                                     28 モジュール 321 件
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共通の CI 検査、ランチャー、generate_app_icon.py
 ├── images/                                                    バナー、アイコン、README の画像

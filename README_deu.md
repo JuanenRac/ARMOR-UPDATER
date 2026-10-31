@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Sprache">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Sprachen">
-  <img src="https://img.shields.io/badge/Tests-288%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-321%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.6-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Reifegrad">
 </p>
 
 ---
 
-**Ehrlichkeitsprüfung - was heute läuft:** Die Manifest-Erkennung, der Versionsvergleich, die Signaturprüfung, die gestufte Installation und Aktualisierung mit Sperre, Journal, Sicherungen und Rückkehr, das Nachweisprotokoll und die Oberflächentabellen in acht Sprachen sind getestet (288 Tests), und die Qt-Quick-Oberfläche lief unter Windows. Sie wurde nicht gegen jedes Repository der Familie von Anfang bis Ende ausgeführt, und die Installationen brauchen `git` und die Build-Werkzeuge jedes Repositorys auf dem Rechner.
+**Ehrlichkeitsprüfung - was heute läuft:** Die Manifest-Erkennung, der Versionsvergleich, die Signaturprüfung, die gestufte Installation und Aktualisierung mit Sperre, Journal, Sicherungen und Rückkehr, das Nachweisprotokoll und die Oberflächentabellen in acht Sprachen sind getestet (321 Tests), und die Qt-Quick-Oberfläche lief unter Windows. Sie wurde nicht gegen jedes Repository der Familie von Anfang bis Ende ausgeführt, und die Installationen brauchen `git` und die Build-Werkzeuge jedes Repositorys auf dem Rechner.
 
 ---
 
@@ -41,7 +41,7 @@
 | Reifegrad | Etabliert |
 | Rolle | Desktop-Werkzeug, das die Familie auf einem PC installiert und aktualisiert, ein Projekt nach dem anderen |
 | Technik | Python 3.10+, git; optional PySide6 (Qt Quick) |
-| Tests | 288 (`python -m pytest tests -q`, etwa sechs Minuten) |
+| Tests | 321 (`python -m pytest tests -q`, etwa sechs Minuten) |
 | Schnittstellen | `armor-updater --cli` mit `status`, `install`, `update`, `rollback` und `backups` sowie ein Qt-Quick-Fenster in acht Sprachen |
 | Läuft auf | Ein PC mit Python und git (das Fenster lief nur unter Windows) |
 | Auf echter Hardware | Nicht zutreffend: es ist ein Desktop-Programm; seine Qt-Quick-Oberfläche wurde unter Windows ausgeführt |
@@ -58,7 +58,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Die Manifest-Erkennung, der Versionsvergleich und die gestufte Installation und Aktualisierung funktionieren; sie wurden nicht durchgängig gegen jedes Repository der Familie ausgeführt. |
-| Tests | 🟢 | 288 Tests bestehen (`python -m pytest tests -q`): die Erkennung, der Versionsvergleich, die Signaturprüfung, die gestufte Installation mit Sperre, Journal, Sicherungen und Rückfall, das Beweisprotokoll und die Tabellen der acht Sprachen. |
+| Tests | 🟢 | 321 Tests bestehen (`python -m pytest tests -q`): die Erkennung, der Versionsvergleich, die Signaturprüfung, die gestufte Installation mit Sperre, Journal, Sicherungen und Rückfall, das Beweisprotokoll und die Tabellen der acht Sprachen. |
 | Oberfläche | 🟡 | Die Qt-Quick-Oberfläche lief nur unter Windows. |
 | Sicherheit | 🟡 | Die Signaturprüfung und das Beweisprotokoll sind auf dem Host getestet; es gab keine unabhängige Prüfung. |
 | Aktualisierungen | 🟡 | Die Installationen, die er vornimmt, brauchen `git` und die eigenen Build-Werkzeuge jedes Repositorys auf dem Rechner. |
@@ -137,7 +137,7 @@ Das Fenster (Qt Quick, `pip install ".[gui]"`, unter Windows von `run-gui.vbs` g
 
 ```bash
 pip install -e ".[dev]"                     # oder ".[dev,gui]" für das optionale Qt-Quick-Fenster
-python -m pytest tests -q                   # 288 Tests, etwa sechs Minuten
+python -m pytest tests -q                   # 321 Tests, etwa sechs Minuten
 armor-updater --cli status                  # lokaler und GitHub-Zustand jedes Repositorys
 armor-updater --cli install ARMOR-NETWORK   # ein noch nicht installiertes Repository klonen, bauen und installieren
 armor-updater --cli update ARMOR-NETWORK    # ein installiertes aktualisieren (vor dem Einsetzen gebaut und geprüft)
@@ -149,7 +149,7 @@ Siehe [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 ## 🧪 Tests
 
 ```powershell
-python -m pytest tests -q  # 288 Tests, etwa sechs Minuten
+python -m pytest tests -q  # 321 Tests, etwa sechs Minuten
 python -I tools/armor_ci_validate.py
 ```
 
@@ -161,7 +161,7 @@ python -I tools/armor_ci_validate.py
 | Kommandozeile | `status`, `install`, `update`, `rollback` und `backups` mit ihren Optionen |
 | Sprachen und Fenster | die acht Sprachen (`test_i18n.py`) und die Texte jedes Ergebnisses |
 
-`python -m unittest` findet nur drei davon: Die Suite ist für pytest geschrieben (`conftest.py` liegt in `tests/`) und braucht fast sechs Minuten. GitHub Actions führt bei jedem Push und Pull Request die A.R.M.O.R.-Basis aus: die Prüfung von Manifest, Version, Änderungsprotokoll und README-Parität, dann den eigenen Build und die eigenen Tests des Projekts.
+`python -m unittest` findet nur drei davon: Die Suite ist für pytest geschrieben (`conftest.py` liegt in `tests/`) und braucht fast sechs Minuten. GitHub Actions führt bei jedem Push und Pull Request die A.R.M.O.R.-Basis aus: die Prüfung von Manifest, Version, Änderungsprotokoll und README-Parität, dann den eigenen Build und die eigenen Tests des Projekts. Die Test-Skripte (`test.sh`, `test.bat` und das Paar `build-test`) führen vor den Tests den Linter und dann `python -m mypy` (mit installiertem PySide6) aus; die Quellen beider Fenster sowie der Installations- und Git-Helfer bestehen die Prüfung, und Tests halten den Zustand fest, den die Fenster behalten.
 
 ## 🏗️ Build und Veröffentlichung
 
@@ -199,7 +199,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     die acht Sprachen
 │   ├── gui.py qt_gui.py qml/                                  das optionale Qt-Quick-Fenster
 │   └── data/ assets/                                          allowed_signers; das Symbol
-├── tests/                                                     288 Tests in 25 Modulen
+├── tests/                                                     321 Tests in 28 Modulen
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     die gemeinsamen CI-Prüfungen, der Starter und generate_app_icon.py
 ├── images/                                                    Banner, Symbol und die Bilder des READMEs
