@@ -27,7 +27,7 @@ PT: dict[str, str] = {
     "note_default": "Selecione um projeto para ver aqui as suas notas.",
     "note_child_of": "filho de {parent}",
     "note_tech": "Tecnologia: {tech}",
-    "note_build": "Build: {build}",
+    "note_build": "Compilação: {build}",
     "notes_empty": "(ainda não há notas registadas para este projeto)",
     "build_empty": "(não há nota de build para este projeto)",
     "install_button": "Instalar selecionado",

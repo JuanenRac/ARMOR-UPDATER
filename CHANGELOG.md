@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Words left in English are translated:** the workspace, build and build test labels now read in Spanish, French, Italian, German and Portuguese (Portugal).
+
 ## [0.1.6] - The lights of Project status follow the evidence of the manifest, the universal README in the eight languages and the pictures from shared tools
 
 - **The lights of Project status follow the evidence of the manifest:** the manifest says how far the repository has been shown to work (`evidence`: `host-test`, `simulator`, `bench` or `field`) and the validator fails when a light is above what that evidence and the maturity allow (`tools/status_lights.py`), so a green that never ran on real hardware cannot come back.
