@@ -47,10 +47,10 @@ def _process_is_alive(pid: int) -> bool:
     if os.name == "nt":
         try:
             import ctypes
-            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)   # type: ignore[attr-defined,unused-ignore]  # PROCESS_QUERY_LIMITED_INFORMATION
             if not handle:
                 return False
-            ctypes.windll.kernel32.CloseHandle(handle)
+            ctypes.windll.kernel32.CloseHandle(handle)   # type: ignore[attr-defined,unused-ignore]
             return True
         except Exception:  # noqa: BLE001 - when in doubt the process is taken to be alive, the age of the file decides
             return True
