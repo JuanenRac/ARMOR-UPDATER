@@ -34,7 +34,7 @@ def entry(name="ARMOR-ONE", **changes) -> ProjectEntry:
     return ProjectEntry(name=name, stack="python", native_version="0.1.0", maturity="functional", role="library", **changes)
 
 
-def local(tmp_path: Path, name="ARMOR-ONE", installed=True, version=Version(0, 1, 0)) -> LocalStatus:
+def local(tmp_path: Path, name="ARMOR-ONE", installed=True, version=Version(0, 1, 0)) -> LocalStatus:  # noqa: B008 - Version is an immutable value
     return LocalStatus(entry=entry(name), path=tmp_path / name, installed=installed, version=version if installed else None)
 
 

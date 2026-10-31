@@ -90,7 +90,7 @@ class WorkspaceLock:
                 if holder is not None:
                     pid, started = holder
                     if _process_is_alive(pid) and self._now() - started < self._stale_after:
-                        raise WorkspaceBusy(f"another updater (process {pid}) is working on this workspace; wait for it to finish")
+                        raise WorkspaceBusy(f"another updater (process {pid}) is working on this workspace; wait for it to finish") from None
                 try:
                     self.path.unlink()   # a leftover of a process that is gone
                 except OSError:

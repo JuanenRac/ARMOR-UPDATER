@@ -52,7 +52,3 @@ files = ["src"]
 # Qt declares a property's type as a string ("QVariantList", "QStringList") and its stubs expect a class; the bridge's own properties read as plain values inside it.
 module = ["armor_updater.qt_gui"]
 disable_error_code = ["arg-type", "operator"]
-
-[tool.armor]
-# ruff still reports a few bugbear findings; the shared lint and type-check step stays off until they are fixed
-ci_lint = false
