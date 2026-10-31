@@ -4,8 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
-- **The sources pass the type checker:** both windows and the install and git helpers are annotated so `mypy==2.4.0` reports nothing (with PySide6 installed), the test scripts run it after the linter, and tests fix the state the windows keep.
+## [0.1.7] - Sources that pass the type checker, translated words left in English and the type check in the documentation
 
+- **The sources pass the type checker:** both windows and the install and git helpers are annotated so `mypy==2.4.0` reports nothing (with PySide6 installed), the test scripts run it after the linter, and tests fix the state the windows keep.
 - **Words left in English are translated:** the workspace, build and build test labels now read in Spanish, French, Italian, German and Portuguese (Portugal).
 - **The documentation covers the type check:** the README (eight languages) says the test scripts run the linter and `python -m mypy` before the tests, and counts 321 tests in 28 modules.
 
