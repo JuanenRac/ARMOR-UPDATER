@@ -32,12 +32,12 @@ def main() -> int:
     if not renderer.isValid():
         raise RuntimeError(f"Invalid SVG icon source: {SOURCE}")
 
-    image = QImage(ICON_SIZE, ICON_SIZE, QImage.Format_ARGB32)
-    image.fill(Qt.transparent)
+    image = QImage(ICON_SIZE, ICON_SIZE, QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.transparent)
     painter = QPainter(image)
     renderer.render(painter)
     painter.end()
-    if not image.save(str(OUTPUT), "ICO"):
+    if not image.save(str(OUTPUT), b"ICO"):
         raise RuntimeError(f"Qt could not write ICO output: {OUTPUT}")
     print(f"APP_ICON=GENERATED source={SOURCE.name} output={OUTPUT.name} size={ICON_SIZE}")
     return 0
