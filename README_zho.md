@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-321%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-327%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分：** 清单发现、版本比较、签名检查、带锁、日志、备份和回退的分阶段安装与更新、证据日志以及八种语言的界面表格都已测试（321 个测试），Qt Quick 界面已在 Windows 上运行过。它没有对家族中的每个仓库从头到尾运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
+**诚实性检查 - 今天真正能运行的部分：** 清单发现、版本比较、签名检查、带锁、日志、备份和回退的分阶段安装与更新、证据日志以及八种语言的界面表格都已测试（327 个测试），Qt Quick 界面已在 Windows 上运行过。它没有对家族中的每个仓库从头到尾运行过，它所做的安装需要机器上有 `git` 和各仓库自己的构建工具。
 
 ---
 
@@ -41,7 +41,7 @@
 | 成熟度 | 成熟 |
 | 角色 | 在 PC 上逐个安装和更新整个家族的桌面工具 |
 | 技术栈 | Python 3.10+、git；可选 PySide6（Qt Quick） |
-| 测试 | 321 项（`python -m pytest tests -q`，约六分钟） |
+| 测试 | 327 项（`python -m pytest tests -q`，约六分钟） |
 | 接口 | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`）以及八种语言的 Qt Quick 窗口 |
 | 运行位置 | 装有 Python 和 git 的 PC（窗口只在 Windows 上运行过） |
 | 真实硬件 | 不适用：这是桌面程序；其 Qt Quick 界面已在 Windows 上运行过 |
@@ -58,7 +58,7 @@
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 清单发现、版本比较以及分阶段安装与更新都能工作；尚未对家族中的每个仓库完整运行过。 |
-| 测试 | 🟢 | 321 项测试通过（`python -m pytest tests -q`）：发现、版本比较、签名检查、带锁、日志、备份和回滚的分阶段安装、证据日志以及八种语言的表。 |
+| 测试 | 🟢 | 327 项测试通过（`python -m pytest tests -q`）：发现、版本比较、签名检查、带锁、日志、备份和回滚的分阶段安装、证据日志以及八种语言的表。 |
 | 界面 | 🟡 | Qt Quick 界面只在 Windows 上运行过。 |
 | 安全 | 🟡 | 签名检查和证据日志已在主机上测试；没有经过独立审查。 |
 | 更新 | 🟡 | 它所做的安装需要机器上有 `git` 以及每个仓库自己的构建工具。 |
@@ -137,7 +137,7 @@ ARMOR-UPDATER 是为在 PC 上保存家族副本的人准备的桌面工具：�
 
 ```bash
 pip install -e ".[dev]"                     # 或 ".[dev,gui]"（可选的 Qt Quick 窗口）
-python -m pytest tests -q                   # 321 项，约六分钟
+python -m pytest tests -q                   # 327 项，约六分钟
 armor-updater --cli status                  # 每个仓库的本地和 GitHub 状态
 armor-updater --cli install ARMOR-NETWORK   # 克隆、构建并安装一个尚未安装的仓库
 armor-updater --cli update ARMOR-NETWORK    # 更新已安装的仓库（先构建并验证再就位）
@@ -149,7 +149,7 @@ armor-updater --cli rollback ARMOR-NETWORK  # 放回被替换副本的最新备�
 ## 🧪 测试
 
 ```powershell
-python -m pytest tests -q  # 321 项，约六分钟
+python -m pytest tests -q  # 327 项，约六分钟
 python -I tools/armor_ci_validate.py
 ```
 
@@ -199,7 +199,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     八种语言
 │   ├── gui.py qt_gui.py qml/                                  可选的 Qt Quick 窗口
 │   └── data/ assets/                                          allowed_signers 与图标
-├── tests/                                                     28 个模块 321 项测试
+├── tests/                                                     29 个模块 327 项测试
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共用的 CI 检查、启动器和 generate_app_icon.py
 ├── images/                                                    横幅图、图标和 README 的图片
