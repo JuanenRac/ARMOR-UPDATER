@@ -92,6 +92,22 @@ ARMOR-UPDATER 是为在 PC 上保存家族副本的人准备的桌面工具：�
   <img src="images/architecture.svg" alt="ARMOR-UPDATER architecture: the person, the workspace and GitHub, the modules of the updater and the live checkout and build it changes" width="100%">
 </p>
 
+## 🖼️ 屏幕截图
+
+在测试台上使用虚构的示例数据截取，背后没有真实的安装。
+
+<p align="center">
+  <img src="images/screenshots/projects.png" alt="项目" width="100%">
+</p>
+
+<p align="center"><em>项目：在工作区中找到的每个 A.R.M.O.R. 项目，显示其版本、成熟度以及是否有待安装的更新。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/project-selected.png" alt="所选项目" width="100%">
+</p>
+
+<p align="center"><em>安全更新：选择一个项目后，窗口提供安装、更新、恢复上一份副本或在 GitHub 上打开，且每一步都需要您确认。</em></p>
+
 ## 🔒 安全与防护
 
 | 威胁 | 防御 |

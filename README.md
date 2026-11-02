@@ -92,6 +92,22 @@ ARMOR-UPDATER is the desktop tool for the person who keeps a copy of the family 
   <img src="images/architecture.svg" alt="ARMOR-UPDATER architecture: the person, the workspace and GitHub, the modules of the updater and the live checkout and build it changes" width="100%">
 </p>
 
+## 🖼️ Screenshots
+
+Captured on a test bench with made-up sample data and no real installation behind them.
+
+<p align="center">
+  <img src="images/screenshots/projects.png" alt="Projects" width="100%">
+</p>
+
+<p align="center"><em>Projects: every A.R.M.O.R. project found in the workspace, with its version, maturity and whether an update is waiting.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/project-selected.png" alt="Selected project" width="100%">
+</p>
+
+<p align="center"><em>Safe update: pick one project and the window offers install, update, restore the previous copy or open it on GitHub, always after your confirmation.</em></p>
+
 ## 🔒 Security & Safety
 
 | Threat | Defence |

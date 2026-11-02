@@ -1,0 +1,50 @@
+{
+  "screens": [
+    {
+      "file": "projects.png",
+      "alt": {
+        "en": "Projects",
+        "es": "Proyectos",
+        "fr": "Projets",
+        "it": "Progetti",
+        "de": "Projekte",
+        "zh": "项目",
+        "ja": "プロジェクト",
+        "pt": "Projetos"
+      },
+      "caption": {
+        "en": "Projects: every A.R.M.O.R. project found in the workspace, with its version, maturity and whether an update is waiting.",
+        "es": "Proyectos: cada proyecto A.R.M.O.R. que hay en el espacio de trabajo, con su versión, su madurez y si hay una actualización esperando.",
+        "fr": "Projets : chaque projet A.R.M.O.R. trouvé dans l'espace de travail, avec sa version, sa maturité et la présence éventuelle d'une mise à jour.",
+        "it": "Progetti: ogni progetto A.R.M.O.R. trovato nell'area di lavoro, con la sua versione, la sua maturità e se c'è un aggiornamento in attesa.",
+        "de": "Projekte: jedes im Arbeitsbereich gefundene A.R.M.O.R.-Projekt mit Version, Reifegrad und der Angabe, ob ein Update wartet.",
+        "zh": "项目：在工作区中找到的每个 A.R.M.O.R. 项目，显示其版本、成熟度以及是否有待安装的更新。",
+        "ja": "プロジェクト：作業フォルダーで見つかった A.R.M.O.R. の各プロジェクトを、バージョン・成熟度・更新の有無とともに表示します。",
+        "pt": "Projetos: cada projeto A.R.M.O.R. encontrado na área de trabalho, com a sua versão, a sua maturidade e se há uma atualização à espera."
+      }
+    },
+    {
+      "file": "project-selected.png",
+      "alt": {
+        "en": "Selected project",
+        "es": "Proyecto seleccionado",
+        "fr": "Projet sélectionné",
+        "it": "Progetto selezionato",
+        "de": "Ausgewähltes Projekt",
+        "zh": "所选项目",
+        "ja": "選択したプロジェクト",
+        "pt": "Projeto selecionado"
+      },
+      "caption": {
+        "en": "Safe update: pick one project and the window offers install, update, restore the previous copy or open it on GitHub, always after your confirmation.",
+        "es": "Actualización segura: eliges un proyecto y la ventana ofrece instalar, actualizar, restaurar la copia anterior o abrirlo en GitHub, siempre tras tu confirmación.",
+        "fr": "Mise à jour sûre : on choisit un projet et la fenêtre propose d'installer, de mettre à jour, de restaurer la copie précédente ou de l'ouvrir sur GitHub, toujours après confirmation.",
+        "it": "Aggiornamento sicuro: si sceglie un progetto e la finestra propone di installare, aggiornare, ripristinare la copia precedente o aprirlo su GitHub, sempre dopo la tua conferma.",
+        "de": "Sicheres Update: Man wählt ein Projekt, und das Fenster bietet Installieren, Aktualisieren, die vorherige Kopie wiederherstellen oder auf GitHub öffnen an, immer erst nach Bestätigung.",
+        "zh": "安全更新：选择一个项目后，窗口提供安装、更新、恢复上一份副本或在 GitHub 上打开，且每一步都需要您确认。",
+        "ja": "安全な更新：プロジェクトを選ぶと、インストール・更新・直前のコピーの復元・GitHub で開く、が表示され、いずれも確認のうえで実行されます。",
+        "pt": "Atualização segura: escolhe-se um projeto e a janela oferece instalar, atualizar, restaurar a cópia anterior ou abri-lo no GitHub, sempre depois da sua confirmação."
+      }
+    }
+  ]
+}

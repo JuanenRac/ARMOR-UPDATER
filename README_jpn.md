@@ -92,6 +92,22 @@ ARMOR-UPDATER は、PC にファミリーのコピーを持つ人のためのデ
   <img src="images/architecture.svg" alt="ARMOR-UPDATER architecture: the person, the workspace and GitHub, the modules of the updater and the live checkout and build it changes" width="100%">
 </p>
 
+## 🖼️ スクリーンショット
+
+テストベンチで架空のサンプルデータを使って撮影したもので、実際の設備は接続されていません。
+
+<p align="center">
+  <img src="images/screenshots/projects.png" alt="プロジェクト" width="100%">
+</p>
+
+<p align="center"><em>プロジェクト：作業フォルダーで見つかった A.R.M.O.R. の各プロジェクトを、バージョン・成熟度・更新の有無とともに表示します。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/project-selected.png" alt="選択したプロジェクト" width="100%">
+</p>
+
+<p align="center"><em>安全な更新：プロジェクトを選ぶと、インストール・更新・直前のコピーの復元・GitHub で開く、が表示され、いずれも確認のうえで実行されます。</em></p>
+
 ## 🔒 セキュリティと安全
 
 | 脅威 | 防御 |

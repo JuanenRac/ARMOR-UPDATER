@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The README shows screenshots of the updater window:** two pictures with a sentence under each (the project registry and the safe update of one project), in the eight languages, drawn off screen over a made-up workspace by `tools/capture_screenshots.py` and listed in `docs/screenshots.json`.
+
 ## [0.1.8] - A check of the build tools a project needs and a notice that updates exist for a scheduled task
 
 - **A check of the build tools a project needs:** the new command `tools PROJECT` says which tools the stack of a project needs (Node.js 22 or newer, a JDK 17 or newer, the Android SDK, ESP-IDF, OpenSCAD, Rust, Docker) and which are missing or too old on this machine; `install` and `update` take `--check-tools` to say it before they start. The rules are data (`data/toolchain_rules.json`), the programs are run with a fixed argument list and a short time limit, never through a shell, and it is advice only: nothing is blocked. The exit code is 1 when one tool is missing.
