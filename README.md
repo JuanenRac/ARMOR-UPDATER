@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Language">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
-  <img src="https://img.shields.io/badge/Tests-327%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-358%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what runs today:** The manifest discovery, the version comparison, the signature check, the staged install and update with its lock, journal, backups and rollback, the evidence log and the eight-language interface tables are tested (327 tests), and the Qt Quick shell has been run on Windows. It has not been run against every repository of the family end to end, and the installs it makes need `git` and each repository's own build tools on the machine.
+**Honesty check - what runs today:** The manifest discovery, the version comparison, the signature check, the staged install and update with its lock, journal, backups and rollback, the evidence log and the eight-language interface tables are tested (358 tests), and the Qt Quick shell has been run on Windows. It has not been run against every repository of the family end to end, and the installs it makes need `git` and each repository's own build tools on the machine.
 
 ---
 
@@ -41,7 +41,7 @@
 | Maturity | Established |
 | Role | Desktop tool that installs and updates the family on a PC, one project at a time |
 | Stack | Python 3.10+, git; optional PySide6 (Qt Quick) |
-| Tests | 327 (`python -m pytest tests -q`, about six minutes) |
+| Tests | 358 (`python -m pytest tests -q`, about six minutes) |
 | Interfaces | `armor-updater --cli` with `status`, `install`, `update`, `rollback` and `backups`, and a Qt Quick window in eight languages |
 | Runs on | A PC with Python and git (the window has only run on Windows) |
 | On real hardware | Not applicable: it is a desktop program; its Qt Quick shell has been run on Windows |
@@ -58,7 +58,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Area | State | What it means here |
 |---|---|---|
 | Software | 🟡 | The manifest discovery, the version comparison and the staged install and update work; they have not been run end to end against every repository of the family. |
-| Tests | 🟢 | 327 tests pass (`python -m pytest tests -q`): the discovery, the version comparison, the signature check, the staged install with its lock, journal, backups and rollback, the evidence log and the eight-language tables. |
+| Tests | 🟢 | 358 tests pass (`python -m pytest tests -q`): the discovery, the version comparison, the signature check, the staged install with its lock, journal, backups and rollback, the evidence log and the eight-language tables. |
 | Interface | 🟡 | The Qt Quick shell has been run on Windows only. |
 | Security | 🟡 | The signature check and the evidence log are tested on the host; there has been no independent review. |
 | Updates | 🟡 | The installs it makes need `git` and each repository's own build tools on the machine. |
@@ -114,6 +114,8 @@ Every attempt, successful or not, appends one line to the local evidence log (pr
 | `armor-updater --cli install <project>` | - | clone, build and install ONE project that is not installed yet; `--no-build` only clones |
 | `armor-updater --cli update <project>` | - | update an installed one, built and verified before it is put in place; `--no-build` only pulls |
 | `armor-updater --cli rollback <project>` | - | put the newest backup of the replaced checkout back |
+| `armor-updater --cli tools <project>` | - | which build tools the stack of a project needs (Node.js, JDK, ESP-IDF, OpenSCAD...) and which are missing here; `install` and `update` take `--check-tools` to say it before they start; advice only, nothing is blocked (exit 1 when one is missing) |
+| `armor-updater --cli notify` | - | for a scheduled task: say which projects are outdated and, with `--ntfy-url`, send the same text to a ntfy topic; installs nothing and prints nothing when all is up to date |
 | `armor-updater --cli backups [<project>]` | - | list the backups of replaced checkouts and the disk they take; `--prune N` keeps the newest N of each |
 | `armor-updater --version` | - | the version of the tool |
 
@@ -137,7 +139,7 @@ The window (Qt Quick, `pip install ".[gui]"`, started on Windows by `run-gui.vbs
 
 ```bash
 pip install -e ".[dev]"                     # or ".[dev,gui]" for the optional Qt Quick window
-python -m pytest tests -q                   # 327 tests, about six minutes
+python -m pytest tests -q                   # 358 tests, about six minutes
 armor-updater --cli status                  # local and GitHub state of every repository
 armor-updater --cli install ARMOR-NETWORK   # clone, build and install one repository that is not installed yet
 armor-updater --cli update ARMOR-NETWORK    # update an installed one (built and verified before it is put in place)
@@ -149,7 +151,7 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 ## 🧪 Testing
 
 ```powershell
-python -m pytest tests -q  # 327 tests, about six minutes
+python -m pytest tests -q  # 358 tests, about six minutes
 python -I tools/armor_ci_validate.py
 ```
 
@@ -199,7 +201,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     the eight languages
 │   ├── gui.py qt_gui.py qml/                                  the optional Qt Quick window
 │   └── data/ assets/                                          allowed_signers; the icon
-├── tests/                                                     327 tests in 29 modules
+├── tests/                                                     358 tests in 29 modules
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     the shared CI checks, the launcher and generate_app_icon.py
 ├── images/                                                    banner, icon and the pictures of the README

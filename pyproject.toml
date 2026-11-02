@@ -33,7 +33,7 @@ armor-updater = "armor_updater.main:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-armor_updater = ["qml/*.qml", "assets/*", "data/allowed_signers"]
+armor_updater = ["qml/*.qml", "assets/*", "data/allowed_signers", "data/toolchain_rules.json"]
 
 [tool.ruff]
 line-length = 200

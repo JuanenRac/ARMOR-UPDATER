@@ -36,7 +36,9 @@ from . import __version__, settings
 from .detect import LocalStatus, discover_workspace
 from .github_client import MissingTokenError, RemoteStatus, discover_remote_projects, fetch_all
 from .install import backup_summary, install_or_update
+from .notify import check_url, send, summarize
 from .signature import current_policy
+from .toolchain import check_tools, format_findings
 
 
 class WorkspaceUnknown(RuntimeError):
@@ -235,6 +237,67 @@ def cmd_update(args: argparse.Namespace) -> int:
     return _install_or_update(args, expect_installed=True)
 
 
+def _find_entry(workspace_root: Path, name: str, *, remote_first: bool):
+    """The entry of a project: from the checkout when it is there, from GitHub otherwise. Returns (entry, error message)."""
+    local_discovery = discover_workspace(workspace_root)
+    entry = {status.entry.name: status.entry for status in local_discovery.projects}.get(name)
+    if entry is None or remote_first:
+        try:
+            remote_discovery = discover_remote_projects()
+        except RuntimeError as exc:
+            return entry, f"Unable to discover GitHub projects: {exc}"
+        entry = {status.entry.name: status.entry for status in remote_discovery.projects}.get(name, entry)
+    return entry, None
+
+
+def cmd_notify(args: argparse.Namespace) -> int:
+    """For a scheduled task: say which projects are outdated and, with --ntfy-url, send the same text to a ntfy topic. Nothing is installed. Silent when nothing is outdated.
+    Exit 0 when it ran (outdated or not), 2 when GitHub could not be asked or the message could not be sent."""
+    import contextlib
+    import io
+
+    if args.ntfy_url:
+        try:
+            check_url(args.ntfy_url)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        code = cmd_status(argparse.Namespace(workspace=args.workspace, offline=False, notes=False, json=True))
+    try:
+        payload = json.loads(captured.getvalue())
+    except ValueError:
+        print("The status of the projects could not be read.", file=sys.stderr)
+        return 2
+    if code != 0 or payload.get("offline"):
+        return 2
+    message = summarize(payload)
+    if message is None:
+        return 0
+    title, body = message
+    print(title)
+    print(body)
+    if args.ntfy_url:
+        status = send(args.ntfy_url, title, body)
+        if not 200 <= status < 300:
+            print(f"The notification was refused: HTTP {status}", file=sys.stderr)
+            return 2
+    return 0
+
+
+def cmd_tools(args: argparse.Namespace) -> int:
+    """Which build tools the stack of a project needs and which are missing here. Reads only; exit 0 when all are there, 1 when one is missing or old, 2 for an unknown project."""
+    entry, problem = _find_entry(_workspace_root(args), args.project, remote_first=False)
+    if entry is None:
+        print(problem or f"Unknown ecosystem project: {args.project!r}", file=sys.stderr)
+        return 2
+    findings = check_tools(entry)
+    for line in format_findings(entry, findings):
+        print(line)
+    return 1 if any(f.status != "ok" for f in findings) else 0
+
+
 def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> int:
     workspace_root = _workspace_root(args)
     local_discovery = discover_workspace(workspace_root)
@@ -268,6 +331,9 @@ def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> i
 
     if entry.note:
         print(f"Note: {entry.note}")
+    if getattr(args, "check_tools", False):
+        for line in format_findings(entry, check_tools(entry)):
+            print(f"Tools: {line}")
     print(f"{'Updating' if expect_installed else 'Installing'} {entry.name} into {workspace_root} ...")
 
     results = install_or_update(entry, workspace_root, build=not args.no_build)
@@ -341,13 +407,25 @@ def build_parser() -> argparse.ArgumentParser:
     install_p.add_argument("project", help="Exact project name (see `status` for the full list).")
     install_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
     install_p.add_argument("--no-build", action="store_true", help="Clone only - skip running the project's own build script.")
+    install_p.add_argument("--check-tools", action="store_true", help="Before cloning, say which build tools the stack needs and which are missing here (advice only; nothing is blocked).")
     install_p.set_defaults(func=cmd_install)
 
     update_p = subparsers.add_parser("update", help="Pull and rebuild ONE project that's already installed.")
     update_p.add_argument("project", help="Exact project name (see `status` for the full list).")
     update_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
     update_p.add_argument("--no-build", action="store_true", help="Pull only - skip running the project's own build script.")
+    update_p.add_argument("--check-tools", action="store_true", help="Before pulling, say which build tools the stack needs and which are missing here (advice only; nothing is blocked).")
     update_p.set_defaults(func=cmd_update)
+
+    notify_p = subparsers.add_parser("notify", help="For a scheduled task: say which projects are outdated (and, with --ntfy-url, send it to a ntfy topic). Installs nothing; silent when all is up to date.")
+    notify_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
+    notify_p.add_argument("--ntfy-url", help="A ntfy topic address (plain http(s), no credentials) to send the message to. Without it the message is only printed.")
+    notify_p.set_defaults(func=cmd_notify)
+
+    tools_p = subparsers.add_parser("tools", help="Say which build tools ONE project needs (Node.js, JDK, ESP-IDF, OpenSCAD...) and which are missing on this machine.")
+    tools_p.add_argument("project", help="Exact project name.")
+    tools_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
+    tools_p.set_defaults(func=cmd_tools)
 
     rollback_p = subparsers.add_parser("rollback", help="Put the newest backup of ONE project back in its place.")
     rollback_p.add_argument("project", help="Exact project name.")
@@ -364,7 +442,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 #: The words that mean the command line even without --cli (a script or a cron job that runs `armor-updater status` must not open a window).
-COMMAND_WORDS = {"status", "install", "update", "rollback", "backups"}
+COMMAND_WORDS = {"status", "install", "update", "rollback", "backups", "tools", "notify"}
 
 
 def main() -> int:

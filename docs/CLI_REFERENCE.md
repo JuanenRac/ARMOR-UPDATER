@@ -12,6 +12,11 @@ Where the projects live: the parent folder of the updater's own checkout, or - w
 a package, where there is no such folder - the folder named by `--workspace`, by the environment variable
 `ARMOR_WORKSPACE` or chosen before in the window; without any of them a command stops with exit code 2 and says so.
 
+## tools and notify
+
+- `armor-updater --cli tools PROJECT [--workspace D]`: which build tools the stack of the project needs and which are missing or too old here. The rules are in `data/toolchain_rules.json`. Exit 0 when all are there, 1 when one is missing or old, 2 for an unknown project. `install` and `update` take `--check-tools` to print the same lines (prefixed `Tools:`) before they start; nothing is blocked.
+- `armor-updater --cli notify [--workspace D] [--ntfy-url URL]`: for a scheduled task. It asks GitHub, prints which projects are outdated (nothing when none is) and, with `--ntfy-url`, sends the same text to that ntfy topic. It installs nothing. Exit 0 when it ran, 2 when GitHub could not be asked or the notice was refused.
+
 ## Usage
 
 ```

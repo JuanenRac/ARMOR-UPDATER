@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A check of the build tools a project needs:** the new command `tools PROJECT` says which tools the stack of a project needs (Node.js 22 or newer, a JDK 17 or newer, the Android SDK, ESP-IDF, OpenSCAD, Rust, Docker) and which are missing or too old on this machine; `install` and `update` take `--check-tools` to say it before they start. The rules are data (`data/toolchain_rules.json`), the programs are run with a fixed argument list and a short time limit, never through a shell, and it is advice only: nothing is blocked. The exit code is 1 when one tool is missing.
+- **A notice that updates exist, for a scheduled task:** the new command `notify` says which projects are outdated and, with `--ntfy-url`, sends the same text to a ntfy topic (a plain http or https address without credentials). It installs nothing, prints nothing when all is up to date and exits with 2 when GitHub could not be asked or the notice was refused.
+- Tests: 358 (before 327).
+
 ## [0.1.7] - Sources that pass the type checker, translated words left in English and the type check in the documentation
 
 - **The sources pass the type checker:** both windows and the install and git helpers are annotated so `mypy==2.4.0` reports nothing (with PySide6 installed), the test scripts run it after the linter, and tests fix the state the windows keep.

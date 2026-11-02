@@ -1,0 +1,11 @@
+{
+  "rules": [
+    {"tool": "Node.js", "words": ["node", "node.js", "npm", "typescript", "vite"], "command": ["node", "--version"], "minimum": "22", "hint": "install Node.js 22 or newer"},
+    {"tool": "Java JDK", "words": ["gradle", "kotlin", "android"], "command": ["java", "-version"], "minimum": "17", "hint": "install a JDK 17 or newer"},
+    {"tool": "Android SDK", "words": ["android"], "environment": ["ANDROID_HOME", "ANDROID_SDK_ROOT"], "hint": "install the Android SDK and set ANDROID_HOME"},
+    {"tool": "ESP-IDF", "words": ["esp-idf", "esp32", "esp32-s3"], "environment": ["IDF_PATH"], "hint": "install ESP-IDF and run its export script (IDF_PATH must be set)"},
+    {"tool": "OpenSCAD", "words": ["openscad"], "command": ["openscad", "--version"], "hint": "install OpenSCAD"},
+    {"tool": "Rust (cargo)", "words": ["rust", "cargo"], "command": ["cargo", "--version"], "hint": "install Rust with rustup"},
+    {"tool": "Docker", "words": ["docker"], "command": ["docker", "--version"], "hint": "install Docker"}
+  ]
+}
