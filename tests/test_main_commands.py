@@ -134,6 +134,33 @@ def test_install_finds_a_project_that_exists_only_on_github(monkeypatch, capsys,
     assert "Note: Needs a camera" in out and "Installing ARMOR-NEW" in out and "OK  done" in out
 
 
+def test_json_gives_one_object_on_stdout_and_the_human_lines_on_stderr(monkeypatch, capsys, tmp_path):
+    import json
+    (tmp_path / "ARMOR-ONE").mkdir()
+    monkeypatch.setattr(main_module, "discover_workspace", lambda root: LocalDiscovery(projects=(local(tmp_path),), errors=()))
+    monkeypatch.setattr(main_module, "install_or_update", Recorder())
+    assert run(["update", "ARMOR-ONE", "--workspace", str(tmp_path), "--json"]) == 0
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert report["project"] == "ARMOR-ONE" and report["action"] == "update" and report["ok"] is True
+    assert report["results"][0]["message"] == "done" and report["results"][0]["code"] == "ok"
+    assert "Updating ARMOR-ONE" in captured.err
+
+
+def test_json_reports_a_failed_result_and_a_refusal(monkeypatch, capsys, tmp_path):
+    import json
+    (tmp_path / "ARMOR-ONE").mkdir()
+    monkeypatch.setattr(main_module, "discover_workspace", lambda root: LocalDiscovery(projects=(local(tmp_path),), errors=()))
+    monkeypatch.setattr(main_module, "install_or_update", Recorder(ok=False))
+    assert run(["update", "ARMOR-ONE", "--workspace", str(tmp_path), "--json"]) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["ok"] is False and report["results"][0]["code"] == "failed"
+    monkeypatch.setattr(main_module, "discover_remote_projects", remote_with(entry("ARMOR-ONE")))
+    assert run(["install", "ARMOR-ONE", "--workspace", str(tmp_path), "--json"]) == 1
+    refusal = json.loads(capsys.readouterr().out)
+    assert refusal["ok"] is False and "already exists" in refusal["error"] and refusal["results"] == []
+
+
 def test_a_name_nobody_knows_is_refused_and_nothing_is_installed(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(main_module, "discover_workspace", lambda root: LocalDiscovery(projects=(), errors=()))
     monkeypatch.setattr(main_module, "discover_remote_projects", remote_with(entry("ARMOR-OTHER")))

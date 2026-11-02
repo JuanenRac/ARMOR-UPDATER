@@ -299,6 +299,27 @@ def cmd_tools(args: argparse.Namespace) -> int:
 
 
 def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> int:
+    """Runs install or update. With --json the human lines go to stderr and stdout carries ONE JSON object (project, action, ok, error, results[]) for a script or the server."""
+    if not getattr(args, "json", False):
+        return _install_or_update_run(args, expect_installed=expect_installed, report=None)
+    import contextlib
+
+    report: dict[str, object] = {"project": args.project, "action": "update" if expect_installed else "install", "ok": False, "error": "", "results": []}
+    with contextlib.redirect_stdout(sys.stderr):
+        code = _install_or_update_run(args, expect_installed=expect_installed, report=report)
+    report["ok"] = code == 0
+    print(json.dumps(report, ensure_ascii=False))
+    return code
+
+
+def _fail(report: dict[str, object] | None, message: str) -> int:
+    print(message, file=sys.stderr)
+    if report is not None:
+        report["error"] = (str(report["error"]) + " " + message).strip()
+    return 1
+
+
+def _install_or_update_run(args: argparse.Namespace, *, expect_installed: bool, report: dict[str, object] | None) -> int:
     workspace_root = _workspace_root(args)
     local_discovery = discover_workspace(workspace_root)
     local_by_name = {status.entry.name: status.entry for status in local_discovery.projects}
@@ -310,24 +331,19 @@ def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> i
         try:
             remote_discovery = discover_remote_projects()
         except RuntimeError as exc:
-            print(f"Unable to discover GitHub projects: {exc}", file=sys.stderr)
-            return 1
+            return _fail(report, f"Unable to discover GitHub projects: {exc}")
         remote_by_name = {status.entry.name: status.entry for status in remote_discovery.projects}
         entry = remote_by_name.get(args.project, entry)
 
     if entry is None:
-        print(f"Unknown ecosystem project: {args.project!r}", file=sys.stderr)
-        print("The project must expose a valid armor.project.json on GitHub.", file=sys.stderr)
-        return 1
+        return _fail(report, f"Unknown ecosystem project: {args.project!r}. The project must expose a valid armor.project.json on GitHub.")
 
     path = workspace_root / entry.name
     already_installed = path.is_dir()
     if expect_installed and not already_installed:
-        print(f"{entry.name} isn't installed yet at {path} - use `install`, not `update`, the first time.", file=sys.stderr)
-        return 1
+        return _fail(report, f"{entry.name} isn't installed yet at {path} - use `install`, not `update`, the first time.")
     if not expect_installed and already_installed:
-        print(f"{entry.name} already exists at {path} - use `update`, not `install`, for an existing checkout.", file=sys.stderr)
-        return 1
+        return _fail(report, f"{entry.name} already exists at {path} - use `update`, not `install`, for an existing checkout.")
 
     if entry.note:
         print(f"Note: {entry.note}")
@@ -340,6 +356,8 @@ def _install_or_update(args: argparse.Namespace, *, expect_installed: bool) -> i
     ok = all(r.ok for r in results)
     for r in results:
         print(("OK  " if r.ok else "FAIL ") + r.message)
+    if report is not None:
+        report["results"] = [{"ok": r.ok, "message": r.message, "code": r.code, "params": dict(r.params), "unsigned": r.unsigned} for r in results]
     return 0 if ok else 1
 
 
@@ -408,6 +426,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
     install_p.add_argument("--no-build", action="store_true", help="Clone only - skip running the project's own build script.")
     install_p.add_argument("--check-tools", action="store_true", help="Before cloning, say which build tools the stack needs and which are missing here (advice only; nothing is blocked).")
+    install_p.add_argument("--json", action="store_true", help="One JSON object on stdout (project, action, ok, error, results) and the human lines on stderr, for a script.")
     install_p.set_defaults(func=cmd_install)
 
     update_p = subparsers.add_parser("update", help="Pull and rebuild ONE project that's already installed.")
@@ -415,6 +434,7 @@ def build_parser() -> argparse.ArgumentParser:
     update_p.add_argument("--workspace", help="Workspace root (default: this tool's own parent directory).")
     update_p.add_argument("--no-build", action="store_true", help="Pull only - skip running the project's own build script.")
     update_p.add_argument("--check-tools", action="store_true", help="Before pulling, say which build tools the stack needs and which are missing here (advice only; nothing is blocked).")
+    update_p.add_argument("--json", action="store_true", help="One JSON object on stdout (project, action, ok, error, results) and the human lines on stderr, for a script.")
     update_p.set_defaults(func=cmd_update)
 
     notify_p = subparsers.add_parser("notify", help="For a scheduled task: say which projects are outdated (and, with --ntfy-url, send it to a ntfy topic). Installs nothing; silent when all is up to date.")

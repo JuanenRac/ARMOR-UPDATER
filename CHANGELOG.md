@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **`install` and `update` can answer in JSON:** with `--json` stdout carries one object (project, action, ok, error and each step with its stable code and values) and the human lines go to stderr, so a script or the server can read the result without parsing text. Without the flag nothing changes. Tests: 360 (before 358).
 - **The README shows screenshots of the updater window:** two pictures with a sentence under each (the project registry and the safe update of one project), in the eight languages, drawn off screen over a made-up workspace by `tools/capture_screenshots.py` and listed in `docs/screenshots.json`.
 
 ## [0.1.8] - A check of the build tools a project needs and a notice that updates exist for a scheduled task
