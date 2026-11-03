@@ -30,7 +30,7 @@ from PySide6.QtCore import Property, QCoreApplication, QEvent, QObject, QUrl, Si
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 
-from . import __version__, i18n, settings
+from . import __version__, i18n, profiles, settings
 from .deploy_category import DEPLOY_CATEGORIES
 from .detect import LocalStatus, discover_workspace
 from .github_client import RemoteStatus, discover_remote_projects, fetch_all
@@ -111,6 +111,11 @@ class UpdaterBridge(QObject):
     _batchProject = Signal(int, int, str)
     _copiesResult = Signal(object)
     backupsChanged = Signal()
+    profileChanged = Signal()
+
+    #: The profile chosen ("" = none), and the components selected in it (None = those the profile lists). Class defaults so a bridge built without __init__ keeps working.
+    _profile_id: str = ""
+    _profile_selection: set[str] | None = None
 
     def __init__(self, workspace_root: Path, log_file_path: Path | None = None):
         super().__init__()
@@ -132,6 +137,11 @@ class UpdaterBridge(QObject):
         self._batch_total = 1
         self._batch_project = ""
         self._lang = i18n.resolve_initial_lang()
+        self._profiles = profiles.load_profiles(workspace_root)
+        saved_id, saved_selection = profiles.saved_profile()
+        if self._profiles.get(saved_id) is not None:
+            self._profile_id = saved_id
+            self._profile_selection = set(saved_selection) if saved_selection is not None else None
         self._remoteResult.connect(self._on_remote_result)
         self._actionResult.connect(self._on_action_result)
         self._operationCheckpoint.connect(self._on_operation_checkpoint)
@@ -247,7 +257,7 @@ class UpdaterBridge(QObject):
 
     @Property(int, notify=summaryChanged)
     def missingCount(self) -> int:
-        return sum(1 for item in self._locals if not item.installed)
+        return sum(1 for item in self._locals if not item.installed and self._in_scope(item))
 
     @Property(bool, notify=summaryChanged)
     def canInstallAll(self) -> bool:
@@ -269,7 +279,7 @@ class UpdaterBridge(QObject):
     def updateCount(self) -> int:
         return sum(
             1 for item in self._locals
-            if _state_key(item, self._remotes.get(item.entry.name)) == "state_outdated"
+            if _state_key(item, self._remotes.get(item.entry.name)) == "state_outdated" and self._in_scope(item)
         )
 
     @Property("QVariantList", notify=deployOptionsChanged)
@@ -315,8 +325,86 @@ class UpdaterBridge(QObject):
                 "stateKey": state_key,
                 "notes": entry.notes or self.text("notes_empty"),
                 "tech": ", ".join(entry.tech),
+                "inProfile": self._in_scope(item) if self._profile_id else False,
             })
         return visible
+
+    # -- Update profiles (machine roles) and the signed-tags switch ----------
+    def _discovered_names(self) -> list[str]:
+        return [item.entry.name for item in self._locals]
+
+    def _selected_components(self) -> set[str] | None:
+        """The projects the profile covers (the profile's own list, adjusted by the person), or None when no profile is chosen."""
+        profile = self._profiles.get(self._profile_id) if self._profile_id else None
+        if profile is None:
+            return None
+        if self._profile_selection is not None:
+            return set(self._profile_selection)
+        present, _missing = profiles.resolve_components(profile, self._discovered_names())
+        return set(present)
+
+    def _in_scope(self, item: LocalStatus) -> bool:
+        chosen = self._selected_components()
+        return chosen is None or item.entry.name in chosen
+
+    @Property("QVariantList", notify=languageChanged)
+    def profileOptions(self) -> list[dict[str, str]]:
+        options = [{"id": "", "label": self.text("profile_none")}]
+        options += [{"id": item.id, "label": item.label(self._lang)} for item in self._profiles.profiles]
+        return options
+
+    @Property(str, notify=profileChanged)
+    def profileId(self) -> str:
+        return self._profile_id
+
+    @Property(str, notify=profileChanged)
+    def profileSummary(self) -> str:
+        """What the chosen profile is for, how many projects it selects, that its composition is a proposal, and the components it lists that were not discovered (a warning, not an error)."""
+        profile = self._profiles.get(self._profile_id) if self._profile_id else None
+        if profile is None:
+            return ""
+        chosen = self._selected_components() or set()
+        lines = [self._t("profile_summary", description=profile.about(self._lang), count=len(chosen))]
+        if self._profiles.proposal:
+            lines.append(self.text("profile_proposal"))
+        _present, missing = profiles.resolve_components(profile, self._discovered_names())
+        if missing and self._locals:
+            lines.append(self._t("profile_missing_warning", names=", ".join(missing)))
+        return " ".join(lines)
+
+    @Slot(str)
+    def setProfile(self, profile_id: str) -> None:
+        if profile_id and self._profiles.get(profile_id) is None:
+            return
+        self._profile_id = profile_id
+        self._profile_selection = None
+        profiles.save_profile(profile_id, None)
+        self._profile_changed()
+
+    @Slot(str)
+    def toggleProfileComponent(self, name: str) -> None:
+        """Adjusts the chosen profile for this machine: the project goes in or out of it, and the adjusted list is remembered."""
+        chosen = self._selected_components()
+        if chosen is None or name not in self._discovered_names():
+            return
+        chosen.symmetric_difference_update({name})
+        self._profile_selection = chosen
+        profiles.save_profile(self._profile_id, sorted(chosen))
+        self._profile_changed()
+
+    def _profile_changed(self) -> None:
+        self.profileChanged.emit()
+        self.projectsChanged.emit()
+        self.summaryChanged.emit()
+
+    @Property(bool, notify=profileChanged)
+    def signedTagsOnly(self) -> bool:
+        return current_policy().signed_tags_only
+
+    @Slot(bool)
+    def setSignedTagsOnly(self, enabled: bool) -> None:
+        settings.save_settings(signed_tags_only=bool(enabled))
+        self.profileChanged.emit()
 
     # -- Localisation / selection ---------------------------------------
     @Slot(str, result=str)
@@ -464,11 +552,11 @@ class UpdaterBridge(QObject):
         if self._busy:
             return
         if action == "install":
-            targets = [item for item in self._locals if not item.installed]
+            targets = [item for item in self._locals if not item.installed and self._in_scope(item)]
         elif action == "update":
             targets = [
                 item for item in self._locals
-                if _state_key(item, self._remotes.get(item.entry.name)) == "state_outdated"
+                if _state_key(item, self._remotes.get(item.entry.name)) == "state_outdated" and self._in_scope(item)
             ]
         else:
             return

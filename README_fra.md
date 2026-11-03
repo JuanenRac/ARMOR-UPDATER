@@ -22,14 +22,14 @@
   <img src="https://img.shields.io/badge/Language-Python%203.10%2B-3776ab.svg" alt="Langage">
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Langues">
-  <img src="https://img.shields.io/badge/Tests-360%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-386%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.8-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturité">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** La découverte par manifeste, la comparaison des versions, la vérification de signature, l'installation et la mise à jour par étapes avec leur verrou, leur journal, leurs sauvegardes et leur retour arrière, le journal de preuves et les tables de l'interface en huit langues sont testés (360 tests), et l'interface Qt Quick a tourné sous Windows. Elle n'a pas été exécutée de bout en bout sur chaque dépôt de la famille, et les installations qu'elle fait exigent `git` et les outils de compilation de chaque dépôt sur la machine.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** La découverte par manifeste, la comparaison des versions, la vérification de signature, l'installation et la mise à jour par étapes avec leur verrou, leur journal, leurs sauvegardes et leur retour arrière, le journal de preuves et les tables de l'interface en huit langues sont testés (386 tests), et l'interface Qt Quick a tourné sous Windows. Elle n'a pas été exécutée de bout en bout sur chaque dépôt de la famille, et les installations qu'elle fait exigent `git` et les outils de compilation de chaque dépôt sur la machine.
 
 ---
 
@@ -41,7 +41,7 @@
 | Maturité | Établi |
 | Rôle | Outil de bureau qui installe et met à jour la famille sur un PC, un projet à la fois |
 | Technologie | Python 3.10+, git ; PySide6 (Qt Quick) facultatif |
-| Tests | 360 (`python -m pytest tests -q`, environ six minutes) |
+| Tests | 386 (`python -m pytest tests -q`, environ six minutes) |
 | Interfaces | `armor-updater --cli` avec `status`, `install`, `update`, `rollback` et `backups`, et une fenêtre Qt Quick en huit langues |
 | Fonctionne sur | Un PC avec Python et git (la fenêtre n'a tourné que sous Windows) |
 | Sur matériel réel | Sans objet : c'est un programme de bureau ; son interface Qt Quick a été exécutée sous Windows |
@@ -58,7 +58,7 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Domaine | État | Ce que cela veut dire ici |
 |---|---|---|
 | Logiciel | 🟡 | La découverte des manifestes, la comparaison des versions et l'installation et mise à jour par étapes fonctionnent ; elles n'ont pas été exécutées de bout en bout contre tous les dépôts de la famille. |
-| Tests | 🟢 | 360 tests réussissent (`python -m pytest tests -q`) : la découverte, la comparaison des versions, la vérification de la signature, l'installation par étapes avec son verrou, son journal, ses sauvegardes et son retour arrière, le journal de preuves et les tables des huit langues. |
+| Tests | 🟢 | 386 tests réussissent (`python -m pytest tests -q`) : la découverte, la comparaison des versions, la vérification de la signature, l'installation par étapes avec son verrou, son journal, ses sauvegardes et son retour arrière, le journal de preuves et les tables des huit langues. |
 | Interface | 🟡 | L'interface Qt Quick n'a été exécutée que sous Windows. |
 | Sécurité | 🟡 | La vérification de la signature et le journal de preuves sont testés sur l'hôte ; il n'y a pas eu de revue indépendante. |
 | Mises à jour | 🟡 | Les installations qu'il fait demandent `git` et les outils de compilation propres à chaque dépôt sur la machine. |
@@ -155,7 +155,7 @@ La fenêtre (Qt Quick, `pip install ".[gui]"`, lancée sous Windows par `run-gui
 
 ```bash
 pip install -e ".[dev]"                     # ou ".[dev,gui]" pour la fenêtre Qt Quick facultative
-python -m pytest tests -q                   # 360 tests, environ six minutes
+python -m pytest tests -q                   # 386 tests, environ six minutes
 armor-updater --cli status                  # état local et GitHub de chaque dépôt
 armor-updater --cli install ARMOR-NETWORK   # clone, construit et installe un dépôt pas encore installé
 armor-updater --cli update ARMOR-NETWORK    # met à jour un projet installé (construit et vérifié avant mise en place)
@@ -167,7 +167,7 @@ Voir [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 ## 🧪 Tests
 
 ```powershell
-python -m pytest tests -q  # 360 tests, environ six minutes
+python -m pytest tests -q  # 386 tests, environ six minutes
 python -I tools/armor_ci_validate.py
 ```
 
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     les huit langues
 │   ├── gui.py qt_gui.py qml/                                  la fenêtre Qt Quick facultative
 │   └── data/ assets/                                          allowed_signers ; l'icône
-├── tests/                                                     360 tests en 29 modules
+├── tests/                                                     386 tests en 31 modules
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     les vérifications CI, le lanceur et generate_app_icon.py
 ├── images/                                                    bannière, icône et images du README

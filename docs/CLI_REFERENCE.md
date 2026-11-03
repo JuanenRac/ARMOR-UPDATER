@@ -200,6 +200,13 @@ The updater ships the public key(s) that sign the commits of the ecosystem in `s
 fail (it never falls back to "trust anything"). A file chosen with `allowed_signers_file` replaces it on purpose. A test fails when the shipped file and the pin drift apart. The
 default policy stays `warn`, so an unsigned revision is still installed with a warning until the commits are signed; `require` makes the ecosystem key mandatory.
 
+### Only signed tags (off by default)
+
+`{"signed_tags_only": true, "allowed_signers_file": "...", "allowed_signers_sha256": "..."}` (or `ARMOR_UPDATER_SIGNED_TAGS_ONLY=1`) makes `install` and `update` accept only a revision that an
+annotated git tag points at, with a signature that `git verify-tag` accepts against the allowed-signers file, which is used only while its SHA-256 equals `allowed_signers_sha256`. Without a tag,
+with a lightweight tag, with a tag signed by another key or with a file that does not match the pin, nothing is installed and the reason is printed. The check runs before the manifest is read.
+See [SIGNED_TAGS.md](SIGNED_TAGS.md) for the file format and how to sign a tag.
+
 ## Releases layout (the default)
 
 A project is laid out as releases unless the person chooses otherwise: `{"deploy_layout": "checkout"}` in `~/.armor_updater_settings.json` (or `ARMOR_UPDATER_LAYOUT=checkout`) keeps

@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "proposal": true,
+  "proposal_note": {
+    "en": "PROPOSAL: the components of each role are a first proposal that the owner has yet to confirm.",
+    "es": "PROPUESTA: los componentes de cada rol son una primera propuesta que el dueño aún debe confirmar.",
+    "de": "VORSCHLAG: Die Komponenten jeder Rolle sind ein erster Vorschlag, den der Eigentümer noch bestätigen muss.",
+    "fr": "PROPOSITION : les composants de chaque rôle sont une première proposition que le propriétaire doit encore confirmer.",
+    "it": "PROPOSTA: i componenti di ogni ruolo sono una prima proposta che il proprietario deve ancora confermare.",
+    "ja": "提案：各役割のコンポーネントは最初の提案であり、オーナーの確認がまだ必要です。",
+    "zh": "提议：各角色的组件只是初步提议，仍需所有者确认。",
+    "pt": "PROPOSTA: os componentes de cada função são uma primeira proposta que o dono ainda tem de confirmar."
+  },
+  "profiles": [
+    {
+      "id": "cm5",
+      "title": {
+        "en": "CM5 (server computer)",
+        "es": "CM5 (ordenador servidor)",
+        "de": "CM5 (Server-Rechner)",
+        "fr": "CM5 (ordinateur serveur)",
+        "it": "CM5 (computer server)",
+        "ja": "CM5（サーバー機）",
+        "zh": "CM5（服务器）",
+        "pt": "CM5 (computador servidor)"
+      },
+      "description": {
+        "en": "The services that run on the CM5: the server, Studio, the network layer, the AI, voice and vision services and the DevOps tools.",
+        "es": "Los servicios que corren en la CM5: el servidor, Studio, la capa de red, los servicios de IA, voz y visión y las herramientas DevOps.",
+        "de": "Die Dienste auf dem CM5: Server, Studio, Netzwerkschicht, KI-, Sprach- und Bilddienste sowie die DevOps-Werkzeuge.",
+        "fr": "Les services qui tournent sur le CM5 : le serveur, Studio, la couche réseau, les services d'IA, de voix et de vision et les outils DevOps.",
+        "it": "I servizi che girano sul CM5: il server, Studio, il livello di rete, i servizi di IA, voce e visione e gli strumenti DevOps.",
+        "ja": "CM5 で動くサービス：サーバー、Studio、ネットワーク層、AI・音声・映像サービス、DevOps ツール。",
+        "zh": "运行在 CM5 上的服务：服务器、Studio、网络层、AI、语音和视觉服务以及 DevOps 工具。",
+        "pt": "Os serviços que correm no CM5: o servidor, o Studio, a camada de rede, os serviços de IA, voz e visão e as ferramentas DevOps."
+      },
+      "components": [
+        "ARMOR-SERVER",
+        "ARMOR-STUDIO",
+        "ARMOR-NETWORK",
+        "ARMOR-SERVER-AI",
+        "ARMOR-VOICE-AI",
+        "ARMOR-VISION",
+        "ARMOR-DEVOPS"
+      ]
+    },
+    {
+      "id": "operator-pc",
+      "title": {
+        "en": "Operator PC",
+        "es": "PC de operario",
+        "de": "Bediener-PC",
+        "fr": "PC d'opérateur",
+        "it": "PC dell'operatore",
+        "ja": "オペレーター PC",
+        "zh": "操作员电脑",
+        "pt": "PC do operador"
+      },
+      "description": {
+        "en": "What a person who runs the plant from a desk needs: Studio and the updater.",
+        "es": "Lo que necesita quien maneja la planta desde una mesa: Studio y el actualizador.",
+        "de": "Was braucht, wer die Anlage vom Schreibtisch aus bedient: Studio und der Updater.",
+        "fr": "Ce qu'il faut à qui conduit l'installation depuis un bureau : Studio et l'outil de mise à jour.",
+        "it": "Ciò che serve a chi gestisce l'impianto da una scrivania: Studio e l'aggiornatore.",
+        "ja": "机から設備を操作する人に必要なもの：Studio とアップデーター。",
+        "zh": "在办公桌前操作设备的人所需要的：Studio 和更新器。",
+        "pt": "O que precisa quem opera a instalação a partir de uma secretária: o Studio e o atualizador."
+      },
+      "components": [
+        "ARMOR-STUDIO",
+        "ARMOR-UPDATER"
+      ]
+    },
+    {
+      "id": "development-pc",
+      "title": {
+        "en": "Development PC",
+        "es": "PC de desarrollo",
+        "de": "Entwicklungs-PC",
+        "fr": "PC de développement",
+        "it": "PC di sviluppo",
+        "ja": "開発用 PC",
+        "zh": "开发电脑",
+        "pt": "PC de desenvolvimento"
+      },
+      "description": {
+        "en": "Every installable component plus the simulator, for people who work on the system.",
+        "es": "Todos los componentes instalables más el simulador, para quien trabaja en el sistema.",
+        "de": "Alle installierbaren Komponenten plus der Simulator, für alle, die am System arbeiten.",
+        "fr": "Tous les composants installables plus le simulateur, pour qui travaille sur le système.",
+        "it": "Tutti i componenti installabili più il simulatore, per chi lavora sul sistema.",
+        "ja": "インストール可能なすべてのコンポーネントとシミュレーター。システムを開発する人向け。",
+        "zh": "所有可安装组件加上模拟器，供开发系统的人使用。",
+        "pt": "Todos os componentes instaláveis mais o simulador, para quem trabalha no sistema."
+      },
+      "all_installable": true,
+      "components": [
+        "ARMOR-SIMULATOR"
+      ]
+    }
+  ]
+}

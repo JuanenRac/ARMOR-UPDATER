@@ -1,0 +1,11 @@
+# Example of an OpenSSH allowed-signers file for the "only signed tags" mode.
+# This file holds NO real key: the line below is a placeholder that does not verify anything.
+#
+# Format, one line per trusted key:
+#   <principal> namespaces="git" <key type> <base64 public key> [comment]
+#
+# The fingerprint of a key is shown by `ssh-keygen -lf key.pub`, for example:
+#   256 SHA256:EXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLE000 release signing (ED25519)
+# The SHA-256 of THIS FILE (sha256sum allowed_signers) is what the updater setting
+# "allowed_signers_sha256" pins; change a line and the pin must change on purpose.
+release-signer@example.invalid namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLE

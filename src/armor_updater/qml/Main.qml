@@ -435,6 +435,24 @@ ApplicationWindow {
                 onActivated: backend.setDeploy(backend.deployOptions[currentIndex].key)
             }
             GameCheck { id: offlineCheck; text: ui("offline_checkbox") }
+            LabelText { text: ui("profile_label"); color: window.textMuted; font.pixelSize: 12 }
+            GameCombo {
+                id: profileCombo
+                Layout.preferredWidth: 230
+                model: backend.profileOptions
+                textRole: "label"
+                Component.onCompleted: {
+                    for (var i = 0; i < model.length; ++i) if (model[i].id === backend.profileId) currentIndex = i
+                }
+                onActivated: backend.setProfile(model[currentIndex].id)
+            }
+            GameCheck {
+                id: signedTagsCheck
+                text: ui("signed_tags_checkbox")
+                checked: backend.signedTagsOnly
+                onToggled: backend.setSignedTagsOnly(checked)
+                ToolTip.visible: hovered; ToolTip.text: ui("signed_tags_hint")
+            }
             Item { Layout.fillWidth: true }
             LabelText { text: ui("lang_label"); color: window.textMuted; font.pixelSize: 12 }
             GameCombo {
@@ -453,6 +471,13 @@ ApplicationWindow {
                 onActivated: backend.setLanguage(model[currentIndex].code)
             }
             GameButton { text: ui("refresh_button"); Layout.preferredWidth: 150; enabled: !backend.busy; accent: window.cyan; onClicked: backend.refresh(offlineCheck.checked) }
+        }
+
+        LabelText {
+            visible: backend.profileSummary !== ""
+            Layout.fillWidth: true
+            Layout.preferredHeight: visible ? implicitHeight : 0
+            text: backend.profileSummary; color: window.textMuted; font.pixelSize: 11; wrapMode: Text.WordWrap
         }
 
         RowLayout {
@@ -510,6 +535,13 @@ ApplicationWindow {
                             Behavior on color { ColorAnimation { duration: 130 } }
                             MouseArea { id: rowArea; anchors.fill: parent; hoverEnabled: true; onClicked: backend.selectProject(project.name) }
                             RowLayout { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
+                                Rectangle {
+                                    visible: backend.profileId !== ""
+                                    Layout.preferredWidth: visible ? 18 : 0; Layout.preferredHeight: 18; radius: 5
+                                    color: project.inProfile ? window.cyan : "#10243a"; border.width: 1; border.color: window.border
+                                    Text { anchors.centerIn: parent; text: project.inProfile ? "✓" : ""; color: "#07111e"; font.pixelSize: 12; font.bold: true }
+                                    MouseArea { anchors.fill: parent; onClicked: backend.toggleProfileComponent(project.name); ToolTip.visible: containsMouse; ToolTip.text: ui("profile_member_tip"); hoverEnabled: true }
+                                }
                                 LabelText { text: (project.isChild ? "↳  " : "◆  ") + project.name; color: project.isChild ? window.textMuted : window.textPrimary; font.pixelSize: 11; Layout.fillWidth: true; Layout.preferredWidth: 210; elide: Text.ElideRight }
                                 LabelText { text: project.maturity; color: window.textMuted; font.pixelSize: 10; Layout.preferredWidth: 83; horizontalAlignment: Text.AlignHCenter }
                                 LabelText { text: project.stack; color: window.textMuted; font.pixelSize: 10; Layout.preferredWidth: 83; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight }

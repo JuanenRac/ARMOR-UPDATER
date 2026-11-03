@@ -96,6 +96,16 @@ The action panel also shows how many previous copies of the selected project the
 A project whose `requires` list names a project that is not installed is refused with a sentence in the language of the window, and an install or update of a revision that carries no valid
 signature goes ahead under the default `warn` policy, with a warning in the activity log and the status line; the policy in force is written to the log at every scan.
 
+## Update profiles and signed tags
+
+The **Profile** selector (beside the offline check) preselects the projects of a machine role: the CM5, an operator PC or a development PC. The roles are listed in
+`ARMOR-DOCS/data/update-profiles.json` (a copy ships in `src/armor_updater/data/update-profiles.json`, used when the workspace has no ARMOR-DOCS checkout). With a profile chosen, a mark at
+the start of each row shows whether the project is in it (click to include or exclude it), the batch buttons and their counts cover only the selected projects, and a line under the toolbar
+says what the profile is for and warns about the projects it lists that are not discovered on this machine (they are skipped, never an error). The profile and the adjustments are remembered in
+the settings file. The composition of the roles is a proposal until it is confirmed.
+
+The **Only signed tags** checkbox switches on the mode described in [SIGNED_TAGS.md](SIGNED_TAGS.md); it is off by default.
+
 ## Real update evidence in the window
 
 The update panel is not a cosmetic progress animation. An approved action

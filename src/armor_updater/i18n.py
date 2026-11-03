@@ -842,6 +842,12 @@ from .i18n_recovery import COPY as _RECOVERY_COPY  # noqa: E402
 for _language, _recovery in _RECOVERY_COPY.items():
     TRANSLATIONS[_language].update(_recovery)
 
+# Update profiles and the signed-tags switch.
+from .i18n_profiles import COPY as _PROFILE_COPY  # noqa: E402
+
+for _language, _profile_copy in _PROFILE_COPY.items():
+    TRANSLATIONS[_language].update(_profile_copy)
+
 
 def t(lang: str, key: str, **kwargs: object) -> str:
     """Real translation lookup with real `{placeholder}` substitution

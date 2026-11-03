@@ -440,14 +440,17 @@ def clone_or_pull(
     # Fetch first and inspect FETCH_HEAD before changing the operator's working tree: a malformed or older remote manifest must not become an installed downgrade merely because
     # Git can fast-forward it.
     _checkpoint(progress, "source", "Fetching the remote candidate without changing the local checkout.")
-    result = _run(["git", "fetch", "--quiet", "origin", "HEAD"], cwd=path, capture_output=progress is not None)
+    policy = current_policy()
+    fetch_cmd = ["git", "fetch", "--quiet", "origin", "HEAD"]
+    if policy.signed_tags_only:   # the signed tag of the candidate has to be here to be verified
+        fetch_cmd.insert(3, "--tags")
+    result = _run(fetch_cmd, cwd=path, capture_output=progress is not None)
     if result.returncode != 0:
         return InstallResult(
             False,
             f"git fetch failed (exit {result.returncode}) - remote unavailable or authentication failed?",
             _command_output(result),
         )
-    policy = current_policy()
     refused = verify_range(path, "HEAD", "FETCH_HEAD", policy)   # every new commit, not only the last one
     if refused:
         return InstallResult(False, f"remote candidate refused by the signature policy: {refused}", code="signature_refused", params={"project": entry.name, "reason": refused})

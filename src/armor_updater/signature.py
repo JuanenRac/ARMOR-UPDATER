@@ -30,6 +30,10 @@ OpenSSH allowed-signers file used for SSH-signed commits. Without it the file
 shipped with the updater (`data/allowed_signers`, the keys of the ecosystem)
 is used, and only while its keys match the fingerprints pinned in this module;
 GPG-signed commits are checked against the user's own GPG keyring.
+
+"Only signed tags" (`"signed_tags_only": true`, or `ARMOR_UPDATER_SIGNED_TAGS_ONLY=1`; off by default) goes further: the candidate revision must be pointed at by an annotated
+git tag whose signature `git verify-tag` accepts against an allowed-signers file pinned by its SHA-256 (`"allowed_signers_sha256"`). No tag, a lightweight tag, or a tag signed by
+another key means nothing is installed, with the reason. The check runs before the manifest is read or anything is built.
 """
 from __future__ import annotations
 
@@ -96,6 +100,10 @@ def ecosystem_signers_problem(path: Path | None = None, pinned: frozenset[str] |
 class SignaturePolicy:
     required: bool = False
     allowed_signers_file: str | None = None
+    #: "Only signed tags" mode (off by default): only a revision that a git tag points at, with a signature `git verify-tag` accepts, is installed.
+    signed_tags_only: bool = False
+    #: The SHA-256 (hex) the allowed-signers file must have; the file is not used while its content differs. Required with a signers file chosen by the person.
+    signers_sha256: str | None = None
 
     @property
     def mode(self) -> str:
@@ -117,13 +125,98 @@ def current_policy() -> SignaturePolicy:
         required = True   # the file that holds the policy cannot be read: it is not taken as "off"
     else:
         required = settings.get("signature_policy") == "require" or settings.get("require_signed_commits") is True
+    env_tags = os.environ.get("ARMOR_UPDATER_SIGNED_TAGS_ONLY", "").strip().lower()
+    if env_tags in {"1", "true", "yes"}:
+        tags_only = True
+    elif env_tags in {"0", "false", "no"}:
+        tags_only = False
+    elif settings_damaged():
+        tags_only = True   # as above: an unreadable settings file never switches a protection off
+    else:
+        tags_only = settings.get("signed_tags_only") is True
     signers = os.environ.get("ARMOR_UPDATER_ALLOWED_SIGNERS") or settings.get("allowed_signers_file")
-    return SignaturePolicy(required, signers if isinstance(signers, str) and signers else None)
+    pin = os.environ.get("ARMOR_UPDATER_ALLOWED_SIGNERS_SHA256") or settings.get("allowed_signers_sha256")
+    return SignaturePolicy(
+        required,
+        signers if isinstance(signers, str) and signers else None,
+        tags_only,
+        pin.strip().lower() if isinstance(pin, str) and pin.strip() else None,
+    )
+
+
+def file_sha256(path: Path) -> str:
+    """The SHA-256 (lowercase hex) of a file's bytes: the fingerprint an allowed-signers file is pinned by."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def signers_file_for_tags(policy: SignaturePolicy) -> tuple[str | None, str | None]:
+    """(path, None) of the allowed-signers file the signed-tags mode may use, or (None, reason). A file chosen by the person is used only when its SHA-256 equals the one pinned in the
+    settings (`allowed_signers_sha256`); without a pin it is refused. The file shipped with the updater is used only while it holds the pinned keys."""
+    if policy.allowed_signers_file:
+        path = Path(policy.allowed_signers_file)
+        if not path.is_file():
+            return None, f"allowed signers file {policy.allowed_signers_file} does not exist"
+        if not policy.signers_sha256:
+            return None, "signed-tags mode needs allowed_signers_sha256 (the SHA-256 of the allowed signers file) in the settings; the file is not used without it"
+        try:
+            actual = file_sha256(path)
+        except OSError as exc:
+            return None, f"allowed signers file cannot be read ({exc})"
+        if actual != policy.signers_sha256:
+            return None, "allowed signers file does not match the SHA-256 pinned in the settings; it is not trusted"
+        return str(path), None
+    problem = ecosystem_signers_problem()
+    if problem:
+        return None, problem
+    if policy.signers_sha256 and file_sha256(ECOSYSTEM_SIGNERS_FILE) != policy.signers_sha256:
+        return None, "the ecosystem allowed signers file does not match the SHA-256 pinned in the settings; it is not trusted"
+    return str(ECOSYSTEM_SIGNERS_FILE), None
+
+
+def _git_text(repo: Path, *args: str) -> tuple[int, str]:
+    try:
+        done = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 127, str(exc)
+    return done.returncode, (done.stdout if done.returncode == 0 else (done.stderr or done.stdout)).strip()
+
+
+def signed_tag_refusal(repo: Path, revision: str, policy: SignaturePolicy) -> str | None:
+    """None when an annotated tag points at `revision` and `git verify-tag` accepts its signature against the pinned allowed-signers file, otherwise the reason. Only git objects are
+    read and ssh-keygen checks the signature: nothing of the downloaded repository is run. With the mode switched off it accepts everything."""
+    if not policy.signed_tags_only:
+        return None
+    signers, problem = signers_file_for_tags(policy)
+    if problem or signers is None:
+        return problem or "signed-tags mode: no usable allowed signers file"
+    code, sha = _git_text(repo, "rev-parse", "--verify", f"{revision}^{{commit}}")
+    if code != 0:
+        return "signed-tags mode could not resolve the candidate revision"
+    code, listing = _git_text(repo, "tag", "--points-at", sha)
+    tags = listing.split() if code == 0 else []
+    if not tags:
+        return "signed-tags mode: no tag points at the candidate revision (an untagged revision is not installed)"
+    last = ""
+    for tag in tags:
+        ref = f"refs/tags/{tag}"
+        code, kind = _git_text(repo, "cat-file", "-t", ref)
+        if code != 0 or kind != "tag":
+            last = f"tag {tag} is lightweight (not annotated and signed)"
+            continue
+        code, detail = _git_text(repo, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", ref)
+        if code == 0:
+            return None
+        last = f"tag {tag} is not signed by a trusted key" + (f" ({detail.splitlines()[-1]})" if detail else "")
+    return f"signed-tags mode: {last}"
 
 
 def verify_range(repo: Path, base: str, tip: str, policy: SignaturePolicy, *, limit: int = 200) -> str | None:
     """None when every commit that `tip` brings over `base` is acceptable under `policy`, otherwise the reason. Verifying only the tip would let an unsigned commit ride in under a
     signed one. A disabled policy accepts everything; a range longer than `limit` commits is refused (a person reads it first)."""
+    if policy.signed_tags_only:   # the signed tag covers the whole history under it, so the tip is what is checked
+        refused = signed_tag_refusal(repo, tip, policy)
+        if refused:
+            return refused
     if not policy.required:
         return None
     try:
@@ -169,6 +262,10 @@ def unsigned_reason(repo: Path, revision: str, policy: SignaturePolicy) -> str |
 def verify_revision(repo: Path, revision: str, policy: SignaturePolicy) -> str | None:
     """None when `revision` is acceptable under `policy`, otherwise the reason it is refused. Only the strict mode refuses; the default mode accepts everything (the caller
     asks `unsigned_reason` to warn)."""
+    if policy.signed_tags_only:
+        refused = signed_tag_refusal(repo, revision, policy)
+        if refused:
+            return refused
     if not policy.required:
         return None
     return unsigned_reason(repo, revision, policy)
