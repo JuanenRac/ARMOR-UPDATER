@@ -17,4 +17,4 @@ python -m ruff check src tests
 
 python -m mypy
 
-exec "$(cd "$(dirname "${BASH_SOURCE[0]}")/../ARMOR-COMMON/scripts" && pwd)/armor-project.sh" test "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$(cd "${ARMOR_COMMON_DIR:-$(dirname "${BASH_SOURCE[0]}")/../ARMOR-COMMON}/scripts" && pwd)/armor-project.sh" test "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

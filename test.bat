@@ -25,5 +25,7 @@ if errorlevel 1 ( echo LINT FAILED. & %KEEP_OPEN% & exit /b 1 )
 python -m mypy
 if errorlevel 1 ( echo TYPE CHECK FAILED. & %KEEP_OPEN% & exit /b 1 )
 
-call "%~dp0..\ARMOR-COMMON\scripts\armor-project.bat" test "%~dp0."
+set "ARMOR_COMMON_ROOT=%~dp0..\ARMOR-COMMON"
+if defined ARMOR_COMMON_DIR set "ARMOR_COMMON_ROOT=%ARMOR_COMMON_DIR%"
+call "%ARMOR_COMMON_ROOT%\scripts\armor-project.bat" test "%~dp0."
 exit /b %ERRORLEVEL%
