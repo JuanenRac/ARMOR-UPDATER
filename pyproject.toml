@@ -20,7 +20,7 @@ keywords = ["armor", "updater", "installer", "fleet-management"]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=9.0", "ruff>=0.5", "mypy==2.4.0"]
+dev = ["pytest>=9.0", "ruff>=0.5", "mypy==2.4.1"]
 gui = ["PySide6>=6.8,<7"]
 
 [project.urls]
