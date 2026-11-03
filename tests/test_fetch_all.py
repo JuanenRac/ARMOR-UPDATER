@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_fetch_all.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The concurrent reading of the repositories' manifests: one that fails never takes the others with it, progress is reported, and the token is the one given or the environment's.
 The single reading of one repository is replaced: nothing here asks GitHub."""

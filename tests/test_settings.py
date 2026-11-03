@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_settings.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Real, file-backed persistence tests for settings.py - the shared
 # ~/.armor_updater_settings.json a real user's remembered workspace

@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_main_commands.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The command line beyond `status --json`: the offline table, install and update guards (GitHub is never asked: discovery is replaced), rollback, the list of backups and what the
 entry point does with its arguments."""

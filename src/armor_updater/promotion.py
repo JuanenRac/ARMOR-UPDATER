@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - What an update must not lose: promotion.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The three things an update needs around the two renames that put a new checkout in place of the old one, with only the standard library:
 

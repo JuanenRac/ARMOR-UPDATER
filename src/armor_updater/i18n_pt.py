@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Portuguese GUI translations: i18n_pt.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # The Portuguese table of the windowed GUI: the same keys as the English
 # one (a test keeps the key sets identical), merged into i18n.TRANSLATIONS.
@@ -81,7 +81,7 @@ PT: dict[str, str] = {
     "about_license_label": "Licença",
     "about_description": "Instala e atualiza os repositórios do ecossistema A.R.M.O.R. a partir de um conjunto real e descoberto de manifestos de projeto - sem catálogo de projetos integrado.",
     "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-    "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+    "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
     "about_runtime": "Python {python} · Tk {tk}",
     "about_close_button": "Fechar",
     "ui_subtitle": "Descubra, verifique e atualize o seu ecossistema local com segurança.",

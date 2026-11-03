@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Local installation detection: detect.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # "Which ecosystem repositories are actually checked out on this machine?"
 # Discovery reads repository-owned manifests; it never contains a fixed

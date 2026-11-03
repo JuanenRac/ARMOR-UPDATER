@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Staging folders: cleanup, local data, environments: staging.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """What the updater does with the folders it builds in: reporting progress, removing a folder it made, carrying the local data of a checkout into the candidate and removing what a build makes that cannot be moved."""
 from __future__ import annotations

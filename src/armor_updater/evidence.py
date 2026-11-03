@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - src/armor_updater/evidence.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """One line of evidence for every install or update attempt: which project,
 what was installed before, what is installed now, at which commit, and

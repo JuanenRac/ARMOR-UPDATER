@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Shared version-string extraction: version_parse.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # One parsing implementation, used identically by detect.py (a local file
 # read) and github_client.py (a raw-content HTTP fetch). The repository

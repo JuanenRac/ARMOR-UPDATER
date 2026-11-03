@@ -2,7 +2,7 @@
 # ARMOR-UPDATER - Clone/pull + delegate to each project's own build
 # script: install.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Deliberately does NOT reimplement per-stack build logic (npm, cargo, gradlew, flutter, pip, ESP-IDF, CMake...). Every project carries the common non-versioning
 # build-test.sh/.bat entry point, which delegates to its own stack-aware check without incrementing a manifest or CHANGELOG, so fleet maintenance cannot manufacture a release merely

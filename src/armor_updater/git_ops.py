@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Running git and reading a revision: git_ops.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Running a child process without ever raising, and reading the manifest or the branch of a checkout through git."""
 from __future__ import annotations

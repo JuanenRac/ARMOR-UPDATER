@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_signed_tags.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The "only signed tags" mode: off by default; with it on, a revision is installed only when an annotated tag on it verifies against an allowed-signers file pinned by its SHA-256.
 The decision is tested with doubles, and with real keys generated in the test where ssh-keygen exists."""

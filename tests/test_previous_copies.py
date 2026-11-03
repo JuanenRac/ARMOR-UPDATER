@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_previous_copies.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Restoring and cleaning the previous copies (what the window's buttons call), their size in `status`, and the window itself."""
 from __future__ import annotations

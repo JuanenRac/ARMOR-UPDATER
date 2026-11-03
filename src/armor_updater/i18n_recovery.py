@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Window texts for requirements, signatures and previous copies: i18n_recovery.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The texts of the window about the projects a project requires, the signature policy and the previous copies kept by the updater, in the eight languages. Merged into
 i18n.TRANSLATIONS (a test keeps the key sets of every language equal)."""

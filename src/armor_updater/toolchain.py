@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Check of the tools a project needs: toolchain.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Tells, before a project is cloned, which build tools its stack needs and which of them are missing.
 

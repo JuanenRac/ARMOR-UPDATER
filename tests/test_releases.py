@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_releases.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The optional releases layout: the project folder is a link to a release folder that was built where it stays; a failed build changes nothing; going back is a link switch; the
 default layout and the updater itself are left alone."""

@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_integration_environment.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """An end-to-end install of a project whose build-test makes a virtual environment, from a local git repository: the environment made in the staging folder cannot be moved, so
 the updater removes it and the project's own build script makes it again in the final place."""

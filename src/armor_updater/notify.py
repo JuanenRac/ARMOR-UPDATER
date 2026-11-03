@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Telling that updates exist, without installing anything: notify.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """For a scheduled task (cron, a systemd timer): turns the result of ``status --json`` into one short message and, only when asked with ``--ntfy-url``, sends it to a ntfy topic.
 

@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_fresh_manifest.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """A manifest is read without the stale cache of raw.githubusercontent.com: through the contents API when there is a token, and at the exact commit of the branch (found with
 `git ls-remote`) when there is not; the branch URL of raw is only the fallback."""

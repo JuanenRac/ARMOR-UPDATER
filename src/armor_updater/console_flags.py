@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Keeping child processes from opening console windows: console_flags.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """On Windows the graphical updater runs under pythonw.exe, which has no console. Every console program it starts (git above all) then opens a console
 window of its own, and a screen that refreshes many projects fills the desktop with them. Every child process of the updater passes NO_WINDOW."""

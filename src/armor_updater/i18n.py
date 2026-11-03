@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - GUI translations: i18n.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Real, complete translations (not machine-generated placeholders) for the
 # windowed GUI's own UI chrome and closed vocabulary (maturity/role/deploy
@@ -157,7 +157,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "License",
         "about_description": "Installs and updates A.R.M.O.R. ecosystem repositories from a real, discovered set of project manifests - no built-in project catalog.",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "Close",
     },
@@ -232,7 +232,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "Licencia",
         "about_description": "Instala y actualiza los repositorios del ecosistema A.R.M.O.R. a partir de un conjunto real y descubierto de manifiestos de proyecto - sin catálogo de proyectos integrado.",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "Cerrar",
     },
@@ -307,7 +307,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "Licence",
         "about_description": "Installe et met à jour les dépôts de l'écosystème A.R.M.O.R. à partir d'un ensemble réel et découvert de manifestes de projet - sans catalogue de projets intégré.",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "Fermer",
     },
@@ -382,7 +382,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "Licenza",
         "about_description": "Installa e aggiorna i repository dell'ecosistema A.R.M.O.R. a partire da un insieme reale e scoperto di manifest di progetto - senza un catalogo di progetti integrato.",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "Chiudi",
     },
@@ -457,7 +457,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "Lizenz",
         "about_description": "Installiert und aktualisiert A.R.M.O.R.-Ökosystem-Repositories aus einer echten, entdeckten Menge von Projekt-Manifesten - ohne integrierten Projektkatalog.",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "Schließen",
     },
@@ -532,7 +532,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "许可证",
         "about_description": "根据真实、动态发现的项目清单集合安装和更新 A.R.M.O.R. 生态系统仓库——没有内置的项目目录。",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "关闭",
     },
@@ -607,7 +607,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "about_license_label": "ライセンス",
         "about_description": "実際に検出されたプロジェクトマニフェストの集合に基づいて A.R.M.O.R. エコシステムのリポジトリをインストール・更新します - 組み込みのプロジェクトカタログはありません。",
         "about_copyright": "© 2026 JuanenRac (Electro Hobby 3D)",
-        "about_license": "GNU General Public License v3.0 (GPL-3.0)",
+        "about_license": "GNU General Public License v3.0 (GPL-3.0-or-later)",
         "about_runtime": "Python {python} · Tk {tk}",
         "about_close_button": "閉じる",
     },

@@ -1,7 +1,7 @@
 // =============================================================================
 // ARMOR-UPDATER - Qt Quick visual desktop shell: Main.qml
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 // =============================================================================
 // A real QML control surface over qt_gui.py's manifest/update bridge.  No
 // project row, metric or operation result is hard-coded here: the Python

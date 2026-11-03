@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - GitHub client tests: malformed catalog + retries
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Real fixture-server tests for the remote catalog discovery path, plus
 direct unit tests for the new transient-network retry/backoff logic.

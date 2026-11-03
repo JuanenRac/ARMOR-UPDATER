@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Windowed GUI: gui.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Tkinter/ttk, stdlib only, so a headless deployment target never needs a
 # second GUI

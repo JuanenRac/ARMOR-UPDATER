@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Results in the language of the window: result_text.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Turns an InstallResult into a sentence in the language of the window.
 

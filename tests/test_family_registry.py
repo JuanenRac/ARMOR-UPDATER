@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_family_registry.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The updater keeps no list of the repositories of the family (each one publishes its own manifest), but the family does keep one, in ARMOR-COMMON/registry/repositories.json.
 

@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Optional "releases + current link" layout: releases.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """How an installed project is laid out. The default is the `releases` layout; `"deploy_layout": "checkout"` in `~/.armor_updater_settings.json` (or `ARMOR_UPDATER_LAYOUT=checkout`) keeps
 the older one.

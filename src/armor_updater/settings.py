@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Persisted user settings: settings.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Real, local persistence for the small set of choices this GUI should
 remember across launches - real user request: the workspace root chosen

@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Deploy-target categorisation: deploy_category.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Buckets A.R.M.O.R.'s own free-text ``deployment_target`` manifest field
 into a small, closed set of real hardware-target categories, for the

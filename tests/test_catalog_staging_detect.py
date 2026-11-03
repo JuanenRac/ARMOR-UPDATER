@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - tests/test_catalog_staging_detect.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """The discovery catalog, the workspace scan, the folders the updater builds in (what it carries over, what it never does) and the way it runs git. Real git, in temporary folders."""
 from __future__ import annotations

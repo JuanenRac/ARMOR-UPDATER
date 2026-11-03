@@ -2,7 +2,7 @@
 # ARMOR-UPDATER - Generate the Windows application icon from the official
 # A.R.M.O.R. SVG identity asset: generate_app_icon.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Render the public A.R.M.O.R. SVG into the icon consumed by Windows.
 

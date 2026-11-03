@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - GitHub version lookup: github_client.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Fetches each project's universal manifest from GitHub (raw content at the current commit, or the contents API).
 #

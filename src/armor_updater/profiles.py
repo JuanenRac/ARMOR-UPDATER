@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Update profiles by machine role: profiles.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 # =============================================================================
 """Update profiles by machine role (the CM5, an operator PC, a development PC).
 

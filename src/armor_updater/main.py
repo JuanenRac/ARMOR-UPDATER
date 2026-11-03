@@ -1,7 +1,7 @@
 # =============================================================================
 # ARMOR-UPDATER - Entry point: main.py
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-# GPL-3.0 - see LICENSE
+# GPL-3.0-or-later - see LICENSE
 #
 # Runs on the real CM5, on the user's own Windows/Linux/macOS dev machine,
 # or anywhere else with the same ecosystem checkout layout - every project
