@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     8 言語
 │   ├── gui.py qt_gui.py qml/                                  任意の Qt Quick ウィンドウ
 │   └── data/ assets/                                          allowed_signers とアイコン
-├── tests/                                                     31 モジュール 386 件
+├── tests/                                                     33 モジュール 386 件
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共通の CI 検査、ランチャー、generate_app_icon.py
 ├── images/                                                    バナー、アイコン、README の画像
