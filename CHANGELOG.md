@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.0] - The manifest may carry the optional mincommon: the oldest version of the shared contracts a project works with is accepted and read (ProjectManifest.mincommon); a value that is not a version is ignored and never refuses the... (and 2 more changes)
+
 - **The manifest may carry the optional `min_common`:** the oldest version of the shared contracts a project works with is accepted and read (`ProjectManifest.min_common`); a value that is not a version is ignored and never refuses the manifest, and nothing is decided by it yet. A misspelled name of the field is still refused. The publication of the field by the projects is described in `docs/UPDATER_CORE.md` as the second phase.
 - **The names of the family come from a profile:** the GitHub client, the settings, the evidence file, the installer, the signature policy and the window take the user agent, the environment variables, the hidden file names, the state folder and the manifest file from the profile of `updater_core.py`, with the values this updater has always used (`docs/UPDATER_CORE.md`). The worker threads of the GitHub client are named after this family.
 - **The profile class is one file shared by the updaters of the families:** `EcosystemProfile` lives in `updater_profile.py`, which is the same file in the HYDRA-UMC, URTC and A.R.M.O.R. updaters; `tests/test_updater_profile_copy.py` pins its digest and compares the copies next to this repository, so a copy edited in one place only fails the tests.
