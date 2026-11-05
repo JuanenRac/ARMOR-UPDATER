@@ -72,6 +72,15 @@ class ProjectManifest:
     service_systemd_unit: str | None = None
     # Optional: names of projects that must be installed (and built) before this one. Empty when the manifest declares none.
     requires: tuple[str, ...] = ()
+    # Optional: the oldest version of the shared contracts repository this project works with. Phase 1: the field is accepted and read when it is a
+    # version; anything else is ignored (None), never an error, because a manifest that says it must not stop an updater that does not understand it.
+    # Nothing is decided by it yet.
+    min_common: str | None = None
+
+
+def _read_min_common(value: object) -> str | None:
+    """The version in ``min_common`` when it is one; None when the field is absent or is not a version (ignored, not refused)."""
+    return value if isinstance(value, str) and VERSION_RE.fullmatch(value) else None
 
 
 def _require_string(data: dict[str, Any], field: str) -> str:
@@ -105,7 +114,7 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
     # "requires": the projects that must be installed before this one (see _parse_requires).
     # "evidence" and "hardware_bound": how far the project has been seen on real hardware and whether it has any
     # (they cap the lights of the README table; see the shared status lights tool).
-    optional_fields = {"service", "deployment_target_note", "requires", "evidence", "hardware_bound"}
+    optional_fields = {"service", "deployment_target_note", "requires", "evidence", "hardware_bound", "min_common"}
     unknown = sorted(set(data) - expected_fields - optional_fields)
     missing = sorted(expected_fields - set(data))
     if missing:
@@ -192,6 +201,7 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
         service_health_path=service_health_path,
         service_systemd_unit=service_systemd_unit,
         requires=requires,
+        min_common=_read_min_common(data.get("min_common")),
     )
 
 

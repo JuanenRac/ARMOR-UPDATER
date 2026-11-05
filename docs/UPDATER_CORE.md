@@ -33,3 +33,9 @@ The modules of the three updaters are not copies of one another any more: the HY
 shared modules of URTC-COMMON and the doctor, and this one has its own promotion, staging and releases layout. The GitHub client, the installer, the manifest parser and the settings differ in
 the behaviour that belongs to each family (the version rule of the fourth number, the signatures, the layouts), so they are not merged; only the names they read are. A module becomes
 shared when the three can run the same text, not before, and then it is added to the files that the digest test pins.
+
+## `min_common` in the manifest (phase 1)
+
+A manifest may carry the optional field `min_common`: the oldest version of the shared contracts repository the project works with (three or four numbers). The updater accepts it and reads it into `ProjectManifest.min_common`; a value that is not a version is ignored (`None`) and never refuses the manifest, so a project that says it cannot stop an updater that does not understand it. Nothing is decided by it yet: no update is held back and nothing is checked against the installed contracts. A misspelled name of the field is still refused as an unknown field.
+
+The second phase is the publication of the field by the projects, in their manifests and in the shared manifest schema, once every updater of the families reads it. It is described here and not done: until then no manifest carries it.
