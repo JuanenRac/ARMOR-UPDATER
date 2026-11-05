@@ -38,6 +38,7 @@ from .install import InstallResult, backup_summary, clean_previous_copies, insta
 from .registry import GITHUB_OWNER
 from .result_text import localized_message
 from .signature import current_policy
+from .updater_core import PROFILE as _PROFILE
 
 
 #: One filter button per real A.R.M.O.R. hardware-target category (plus
@@ -53,7 +54,7 @@ DEPLOY_ORDER = DEPLOY_CATEGORIES
 #: would otherwise only ever print to a console this GUI doesn't have
 #: when launched by double-click) - same real file-logger convention
 #: this project's own file-logger convention.
-LOGS_DIR = Path.home() / ".armor_updater" / "logs"
+LOGS_DIR = Path.home() / _PROFILE.file_prefix / "logs"
 
 
 def _setup_file_logging() -> Path:

@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The names of the family come from a profile:** the GitHub client, the settings, the evidence file, the installer, the signature policy and the window take the user agent, the environment variables, the hidden file names, the state folder and the manifest file from the profile of `updater_core.py`, with the values this updater has always used (`docs/UPDATER_CORE.md`). The worker threads of the GitHub client are named after this family.
+- **The profile class is one file shared by the updaters of the families:** `EcosystemProfile` lives in `updater_profile.py`, which is the same file in the HYDRA-UMC, URTC and A.R.M.O.R. updaters; `tests/test_updater_profile_copy.py` pins its digest and compares the copies next to this repository, so a copy edited in one place only fails the tests.
+
 ## [0.1.9] - The launchers find the shared repository through ARMORCOMMONDIR: build, build-test, test and run (.sh and .bat) use the folder named by that variable when it is set and the sibling ARMOR-COMMON folder otherwise, so a checkout... (and 5 more changes)
 
 - **The launchers find the shared repository through `ARMOR_COMMON_DIR`:** `build`, `build-test`, `test` and `run` (`.sh` and `.bat`) use the folder named by that variable when it is set and the sibling `ARMOR-COMMON` folder otherwise, so a checkout with another layout builds without changing a file.

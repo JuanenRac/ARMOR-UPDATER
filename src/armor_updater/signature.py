@@ -46,6 +46,7 @@ from pathlib import Path
 
 from .settings import load_settings, settings_damaged
 from .console_flags import NO_WINDOW
+from .updater_core import PROFILE as _PROFILE
 
 
 #: The allowed-signers file of the ecosystem, shipped inside the package, and the fingerprints of the keys it may hold. The file is only trusted while the keys in it are exactly
@@ -116,7 +117,7 @@ def current_policy() -> SignaturePolicy:
     settings, so a CI job or a one-off run can require signatures without
     touching the user's settings file."""
     settings = load_settings()
-    env_required = os.environ.get("ARMOR_UPDATER_REQUIRE_SIGNED", "").strip().lower()
+    env_required = _PROFILE.env_text("REQUIRE_SIGNED").strip().lower()
     if env_required in {"1", "true", "yes"}:
         required = True
     elif env_required in {"0", "false", "no"}:
@@ -125,7 +126,7 @@ def current_policy() -> SignaturePolicy:
         required = True   # the file that holds the policy cannot be read: it is not taken as "off"
     else:
         required = settings.get("signature_policy") == "require" or settings.get("require_signed_commits") is True
-    env_tags = os.environ.get("ARMOR_UPDATER_SIGNED_TAGS_ONLY", "").strip().lower()
+    env_tags = _PROFILE.env_text("SIGNED_TAGS_ONLY").strip().lower()
     if env_tags in {"1", "true", "yes"}:
         tags_only = True
     elif env_tags in {"0", "false", "no"}:
@@ -134,8 +135,8 @@ def current_policy() -> SignaturePolicy:
         tags_only = True   # as above: an unreadable settings file never switches a protection off
     else:
         tags_only = settings.get("signed_tags_only") is True
-    signers = os.environ.get("ARMOR_UPDATER_ALLOWED_SIGNERS") or settings.get("allowed_signers_file")
-    pin = os.environ.get("ARMOR_UPDATER_ALLOWED_SIGNERS_SHA256") or settings.get("allowed_signers_sha256")
+    signers = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS")) or settings.get("allowed_signers_file")
+    pin = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS_SHA256")) or settings.get("allowed_signers_sha256")
     return SignaturePolicy(
         required,
         signers if isinstance(signers, str) and signers else None,

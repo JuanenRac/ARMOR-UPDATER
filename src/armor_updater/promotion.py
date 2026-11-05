@@ -12,6 +12,7 @@
   the newest few kept and the rest deleted, and a way to put the newest one back (`rollback`).
 """
 from __future__ import annotations
+from .updater_core import PROFILE as _PROFILE
 
 import json
 import os
@@ -21,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-STATE_DIRECTORY = ".armor-updater"
+STATE_DIRECTORY = _PROFILE.state_directory
 LOCK_FILE = "lock"
 JOURNAL_FILE = "promotion.json"
 BACKUPS_DIRECTORY = "backups"

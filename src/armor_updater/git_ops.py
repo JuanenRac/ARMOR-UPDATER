@@ -14,6 +14,7 @@ from typing import Any
 from .project_manifest import ManifestValidationError, ProjectManifest, parse_manifest
 from .registry import ProjectEntry
 from .console_flags import NO_WINDOW, headless
+from .updater_core import PROFILE as _PROFILE
 
 
 def _run(
@@ -55,7 +56,7 @@ def _validated_manifest_text(text: str, entry: ProjectEntry) -> ProjectManifest:
 def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> ProjectManifest:
     """Read a manifest from Git without modifying the working tree."""
     result = subprocess.run(
-        ["git", "show", f"{revision}:armor.project.json"],
+        ["git", "show", f"{revision}:{_PROFILE.manifest_file}"],
         cwd=str(path),
         check=False,
         capture_output=True,
@@ -63,7 +64,7 @@ def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> P
         creationflags=NO_WINDOW,
     )
     if result.returncode != 0:
-        raise ManifestValidationError("candidate revision has no readable armor.project.json")
+        raise ManifestValidationError(f"candidate revision has no readable {_PROFILE.manifest_file}")
     return _validated_manifest_text(result.stdout, entry)
 
 

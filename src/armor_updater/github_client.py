@@ -66,6 +66,7 @@ from .registry import (
 )
 from .version_parse import Version
 from .console_flags import NO_WINDOW
+from .updater_core import PROFILE as _PROFILE
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ REQUEST_TIMEOUT_S = 10
 # high-concurrency crawler.
 MAX_CONCURRENT_REQUESTS = 8
 
-USER_AGENT = "ARMOR-UPDATER"
+USER_AGENT = _PROFILE.user_agent
 
 # Real hosts by default; module-level so tests can point them at a local
 # HTTP server instead of mocking urllib itself - real request/response
@@ -418,7 +419,7 @@ def discover_remote_projects(
 
     discovered: list[RemoteStatus] = []
     errors: list[str] = []
-    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS, thread_name_prefix="armor-discovery") as pool:
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS, thread_name_prefix=_PROFILE.thread_prefix("discovery")) as pool:
         futures = {pool.submit(_fetch_discovered_manifest, owner, name, branch, resolved_token): name for name, branch in candidates}
         for future in as_completed(futures):
             try:
@@ -598,7 +599,7 @@ def fetch_all(
 
     with ThreadPoolExecutor(
         max_workers=MAX_CONCURRENT_REQUESTS,
-        thread_name_prefix="armor-github",
+        thread_name_prefix=_PROFILE.thread_prefix("github"),
     ) as pool:
 
         futures = {

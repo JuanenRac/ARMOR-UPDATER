@@ -34,6 +34,7 @@ from .console_flags import NO_WINDOW
 from .promotion import Promotion, state_directory
 from .settings import load_settings
 from .staging import _rmtree_best_effort
+from .updater_core import PROFILE as _PROFILE
 
 LAYOUT_CHECKOUT = "checkout"
 LAYOUT_RELEASES = "releases"
@@ -46,7 +47,7 @@ BACKUPS_OF_LAYOUT = "layout-backups"
 
 def chosen_layout() -> str | None:
     """What the person asked for (`checkout` or `releases`), or None when they said nothing valid. The environment wins over the saved settings."""
-    chosen = os.environ.get("ARMOR_UPDATER_LAYOUT", "").strip().lower() or str(load_settings().get("deploy_layout", "")).strip().lower()
+    chosen = _PROFILE.env_text("LAYOUT").strip().lower() or str(load_settings().get("deploy_layout", "")).strip().lower()
     return chosen if chosen in (LAYOUT_CHECKOUT, LAYOUT_RELEASES) else None
 
 
@@ -262,7 +263,7 @@ def verify_in_service(workspace_root: Path, project: str, release: Path, expecte
             return "the project's path leads to another release than the new one"
     except OSError as exc:
         return f"the new release cannot be reached ({exc})"
-    manifest = link / "armor.project.json"
+    manifest = link / _PROFILE.manifest_file
     try:
         document = json.loads(manifest.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
