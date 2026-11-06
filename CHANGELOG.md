@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A release publishes the allowed-signers file with its SHA-256 and its fingerprints:** `tools/publish_allowed_signers.py` makes `allowed_signers`, `allowed_signers.sha256` and `allowed_signers.fingerprints` from the shipped file and refuses while that file does not hold exactly the pinned keys; `--check` verifies a published set; the workflow `release-signers.yml` runs both when a release is published and uploads the three files next to the other assets, so the file can be pinned by its hash (`allowed_signers_sha256`). Five tests in `tests/test_publish_allowed_signers.py`.
+
 ## [0.2.0] - The manifest may carry the optional mincommon: the oldest version of the shared contracts a project works with is accepted and read (ProjectManifest.mincommon); a value that is not a version is ignored and never refuses the... (and 2 more changes)
 
 - **The manifest may carry the optional `min_common`:** the oldest version of the shared contracts a project works with is accepted and read (`ProjectManifest.min_common`); a value that is not a version is ignored and never refuses the manifest, and nothing is decided by it yet. A misspelled name of the field is still refused. The publication of the field by the projects is described in `docs/UPDATER_CORE.md` as the second phase.

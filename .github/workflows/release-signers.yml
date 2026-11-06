@@ -1,0 +1,49 @@
+# =============================================================================
+# ARMOR-UPDATER - publishes the allowed-signers file of a release by fingerprint
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D)
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# When a release is published (or this workflow is run by hand for a tag), the allowed-signers file shipped with the updater is checked against the pinned fingerprints and
+# uploaded next to the other assets with its SHA-256 and the list of fingerprints, so that a person (or the maintenance agent) can fix the file by hash. Nothing is signed here
+# and no secret is used: only the token of the run, to upload three files to the release.
+name: Publish allowed signers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the release to upload to
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  signers:
+    name: Check and upload the allowed-signers set
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Make the set (refuses when the file is not the pinned one)
+        run: python tools/publish_allowed_signers.py "$RUNNER_TEMP/signers"
+
+      - name: Check the set
+        run: python tools/publish_allowed_signers.py --check "$RUNNER_TEMP/signers"
+
+      - name: Upload it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: gh release upload "$TAG" "$RUNNER_TEMP/signers/allowed_signers" "$RUNNER_TEMP/signers/allowed_signers.sha256" "$RUNNER_TEMP/signers/allowed_signers.fingerprints" --clobber --repo "$GITHUB_REPOSITORY"
