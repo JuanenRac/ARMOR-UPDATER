@@ -32,8 +32,9 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__, settings
+from . import __version__, common_gate, settings
 from .detect import LocalStatus, discover_workspace
+from .updater_core import COMMON_REPO
 from .github_client import MissingTokenError, RemoteStatus, discover_remote_projects, fetch_all
 from .install import backup_summary, install_or_update
 from .notify import check_url, send, summarize
@@ -99,6 +100,12 @@ def _workspace_root(args: argparse.Namespace) -> Path:
     return Path(args.workspace).resolve() if args.workspace else default_workspace_root()
 
 
+def _common_notices(locals_: list[LocalStatus]) -> list[common_gate.CommonNotice]:
+    """The projects that ask for a newer shared contracts repository than the installed one (a notice only, never a hold)."""
+    installed = next((str(ls.version) for ls in locals_ if ls.installed and ls.version and ls.entry.name == COMMON_REPO), None)
+    return common_gate.notices_for(((ls.entry.name, ls.entry.min_common) for ls in locals_), installed, settings.min_common_mode())
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     workspace_root = _workspace_root(args)
     # Real bug fixed here, found while adding --json: this line (and the
@@ -149,6 +156,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         for name, entry in sorted(entries.items(), key=lambda item: item[0].casefold())
     ]
 
+    common_notices = _common_notices(locals_)
+    for notice in common_notices:
+        print(f"WARNING: {common_gate.describe(notice, COMMON_REPO)}", file=sys.stderr)
+
     if args.json:
         # Real, scripting-friendly shape - every field the human-readable
         # table below also shows, plus the real local checkout path (not
@@ -177,6 +188,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         payload["installed_count"] = installed_count
         payload["outdated_count"] = outdated_count
         payload["total"] = len(locals_)
+        payload["common_notices"] = [notice.as_dict() for notice in common_notices]
         copies, copies_bytes = backup_summary(workspace_root)
         payload["backups"] = {"count": copies, "bytes": copies_bytes}
         payload["signature_policy"] = current_policy().mode

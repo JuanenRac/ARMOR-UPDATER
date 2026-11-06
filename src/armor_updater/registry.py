@@ -46,6 +46,8 @@ class ProjectEntry:
     default_branch: str = ""
     # Projects that must be installed (and built) before this one; see the manifest field of the same name.
     requires: tuple[str, ...] = ()
+    #: The oldest version of the shared contracts the project says it works with (`min_common` of the manifest); None when it says nothing.
+    min_common: str | None = None
 
     @property
     def deploy_category(self) -> str:
@@ -74,6 +76,7 @@ def entry_from_manifest(manifest: ProjectManifest) -> ProjectEntry:
         service_health_path=manifest.service_health_path,
         service_systemd_unit=manifest.service_systemd_unit,
         requires=manifest.requires,
+        min_common=manifest.min_common,
     )
 
 

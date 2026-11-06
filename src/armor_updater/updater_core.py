@@ -13,7 +13,7 @@ from __future__ import annotations
 from .project_manifest import ECOSYSTEM_ID, MANIFEST_FILE
 from .updater_profile import EcosystemProfile, profile_in
 
-__all__ = ["EcosystemProfile", "PROFILE", "PROFILES", "profile_for", "CORE_MODULES"]
+__all__ = ["COMMON_REPO", "EcosystemProfile", "PROFILE", "PROFILES", "profile_for", "CORE_MODULES"]
 
 PROFILE = EcosystemProfile(
     ecosystem_id=ECOSYSTEM_ID,
@@ -27,6 +27,9 @@ PROFILE = EcosystemProfile(
     batch_first=("ARMOR-COMMON",),
     batch_last=("ARMOR-UPDATER",),
 )
+
+#: The shared contracts repository of the family: the one a manifest's `min_common` is compared with.
+COMMON_REPO = "ARMOR-COMMON"
 
 #: the profiles this updater knows
 PROFILES: dict[str, EcosystemProfile] = {PROFILE.ecosystem_id: PROFILE}
