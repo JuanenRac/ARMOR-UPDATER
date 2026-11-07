@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from .console_flags import NO_WINDOW
+
 OWNER = "JuanenRac"
 DEFAULT_PROJECT = "ARMOR-ANDROID-CONTROL"
 MAX_APK_BYTES = 200 * 1024 * 1024
@@ -194,6 +196,6 @@ def install_apk(
 
 def _run(command: list[str]) -> "subprocess.CompletedProcess[str]":
     try:
-        return subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
+        return subprocess.run(command, capture_output=True, text=True, timeout=300, check=False, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as error:
         return subprocess.CompletedProcess(command, 127, "", str(error))
