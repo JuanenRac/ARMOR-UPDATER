@@ -42,7 +42,7 @@
 | 角色 | 在 PC 上逐个安装和更新整个家族的桌面工具 |
 | 技术栈 | Python 3.10+、git；可选 PySide6（Qt Quick） |
 | 测试 | 386 项（`python -m pytest tests -q`，约六分钟） |
-| 接口 | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`）以及八种语言的 Qt Quick 窗口 |
+| 接口 | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`、`android`）以及八种语言的 Qt Quick 窗口 |
 | 运行位置 | 装有 Python 和 git 的 PC（窗口只在 Windows 上运行过） |
 | 真实硬件 | 不适用：这是桌面程序；其 Qt Quick 界面已在 Windows 上运行过 |
 | 许可证 | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | 发现与版本 | 清单、注册表、本地与远程检测、版本解析和 GitHub 客户端 |
 | 安装与更新 | 暂存、锁、日志、备份与回滚、前置要求和证据日志 |
 | 签名 | 固定密钥、失败时关闭以及两种策略 |
-| 命令行 | `status`、`install`、`update`、`rollback`、`backups` 及其选项 |
+| 命令行 | `status`、`install`、`update`、`rollback`、`backups`、`android` 及其选项 |
 | 语言与窗口 | 八种语言（`test_i18n.py`）与每个结果的文本 |
 
 `python -m unittest` 只能找到其中三项：测试套件是为 pytest 写的（`conftest.py` 在 `tests/` 中），耗时接近六分钟。GitHub Actions 在每次推送和拉取请求时运行 A.R.M.O.R. 基线：清单、版本、更新日志和 README 一致性的校验，然后是项目自身的构建和测试。 测试脚本（`test.sh`、`test.bat` 和一对 `build-test`）在测试前先运行代码检查器,再运行 `python -m mypy`（需安装 PySide6）；两个窗口以及安装和 git 辅助模块的源代码都能通过,测试则固定窗口所保持的状态。

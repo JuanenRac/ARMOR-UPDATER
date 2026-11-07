@@ -42,7 +42,7 @@
 | Role | Desktop tool that installs and updates the family on a PC, one project at a time |
 | Stack | Python 3.10+, git; optional PySide6 (Qt Quick) |
 | Tests | 386 (`python -m pytest tests -q`, about six minutes) |
-| Interfaces | `armor-updater --cli` with `status`, `install`, `update`, `rollback` and `backups`, and a Qt Quick window in eight languages |
+| Interfaces | `armor-updater --cli` with `status`, `install`, `update`, `rollback`, `backups` and `android`, and a Qt Quick window in eight languages |
 | Runs on | A PC with Python and git (the window has only run on Windows) |
 | On real hardware | Not applicable: it is a desktop program; its Qt Quick shell has been run on Windows |
 | License | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Discovery and versions | the manifest, the registry, local and remote detection, version parsing and the GitHub client |
 | Install and update | staging, the lock, the journal, the backups and the rollback, requirements and the evidence log |
 | Signatures | the pinned keys, the closed failure and the two policies |
-| Command line | `status`, `install`, `update`, `rollback` and `backups` with their options |
+| Command line | `status`, `install`, `update`, `rollback`, `backups` and `android` with their options |
 | Languages and window | the eight languages (`test_i18n.py`) and the texts of every result |
 
 `python -m unittest` finds only three of them: the suite is written for pytest (`conftest.py` is in `tests/`) and takes close to six minutes. GitHub Actions runs the A.R.M.O.R. baseline on every push and pull request: the validation of the manifest, version, changelog and README parity, then the project's own build and tests. The test scripts (`test.sh`, `test.bat` and the `build-test` pair) run the linter and then `python -m mypy` (with PySide6 installed) before the tests; the sources of both windows and the install and git helpers pass it, and tests fix the state the windows keep.

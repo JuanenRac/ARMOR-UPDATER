@@ -42,7 +42,7 @@
 | Ruolo | Strumento desktop che installa e aggiorna la famiglia su un PC, un progetto alla volta |
 | Tecnologia | Python 3.10+, git; PySide6 (Qt Quick) facoltativo |
 | Test | 386 (`python -m pytest tests -q`, circa sei minuti) |
-| Interfacce | `armor-updater --cli` con `status`, `install`, `update`, `rollback` e `backups`, e una finestra Qt Quick in otto lingue |
+| Interfacce | `armor-updater --cli` con `status`, `install`, `update`, `rollback`, `backups` e `android`, e una finestra Qt Quick in otto lingue |
 | Gira su | Un PC con Python e git (la finestra ha girato solo su Windows) |
 | Su hardware reale | Non applicabile: è un programma da scrivania; la sua interfaccia Qt Quick è stata eseguita su Windows |
 | Licenza | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Scoperta e versioni | il manifesto, il registro, il rilevamento locale e remoto, l'analisi delle versioni e il client GitHub |
 | Installazione e aggiornamento | la preparazione, il blocco, il diario, le copie e il ripristino, i requisiti e il registro delle prove |
 | Firme | le chiavi fissate, il fallimento chiuso e le due politiche |
-| Riga di comando | `status`, `install`, `update`, `rollback` e `backups` con le loro opzioni |
+| Riga di comando | `status`, `install`, `update`, `rollback`, `backups` e `android` con le loro opzioni |
 | Lingue e finestra | le otto lingue (`test_i18n.py`) e i testi di ogni risultato |
 
 `python -m unittest` ne trova che tre test: la suite è scritta per pytest (`conftest.py` è in `tests/`) e dura quasi sei minuti. GitHub Actions esegue la base A.R.M.O.R. a ogni push e pull request: la validazione di manifesto, versione, registro delle modifiche e parità dei README, poi la compilazione e i test del progetto. Gli script di test (`test.sh`, `test.bat` e la coppia `build-test`) eseguono il linter e poi `python -m mypy` (con PySide6 installato) prima dei test; i sorgenti delle due finestre e degli helper di installazione e git lo superano, e i test fissano lo stato che le finestre conservano.

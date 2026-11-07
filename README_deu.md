@@ -42,7 +42,7 @@
 | Rolle | Desktop-Werkzeug, das die Familie auf einem PC installiert und aktualisiert, ein Projekt nach dem anderen |
 | Technik | Python 3.10+, git; optional PySide6 (Qt Quick) |
 | Tests | 386 (`python -m pytest tests -q`, etwa sechs Minuten) |
-| Schnittstellen | `armor-updater --cli` mit `status`, `install`, `update`, `rollback` und `backups` sowie ein Qt-Quick-Fenster in acht Sprachen |
+| Schnittstellen | `armor-updater --cli` mit `status`, `install`, `update`, `rollback`, `backups` und `android` sowie ein Qt-Quick-Fenster in acht Sprachen |
 | Läuft auf | Ein PC mit Python und git (das Fenster lief nur unter Windows) |
 | Auf echter Hardware | Nicht zutreffend: es ist ein Desktop-Programm; seine Qt-Quick-Oberfläche wurde unter Windows ausgeführt |
 | Lizenz | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Entdeckung und Versionen | das Manifest, das Register, lokale und entfernte Erkennung, Versionsauswertung und der GitHub-Client |
 | Installation und Aktualisierung | Staging, Sperre, Journal, Sicherungen und Rückgängigmachen, Voraussetzungen und das Nachweisprotokoll |
 | Signaturen | die fixierten Schlüssel, das geschlossene Scheitern und die beiden Richtlinien |
-| Kommandozeile | `status`, `install`, `update`, `rollback` und `backups` mit ihren Optionen |
+| Kommandozeile | `status`, `install`, `update`, `rollback`, `backups` und `android` mit ihren Optionen |
 | Sprachen und Fenster | die acht Sprachen (`test_i18n.py`) und die Texte jedes Ergebnisses |
 
 `python -m unittest` findet nur drei davon: Die Suite ist für pytest geschrieben (`conftest.py` liegt in `tests/`) und braucht fast sechs Minuten. GitHub Actions führt bei jedem Push und Pull Request die A.R.M.O.R.-Basis aus: die Prüfung von Manifest, Version, Änderungsprotokoll und README-Parität, dann den eigenen Build und die eigenen Tests des Projekts. Die Test-Skripte (`test.sh`, `test.bat` und das Paar `build-test`) führen vor den Tests den Linter und dann `python -m mypy` (mit installiertem PySide6) aus; die Quellen beider Fenster sowie der Installations- und Git-Helfer bestehen die Prüfung, und Tests halten den Zustand fest, den die Fenster behalten.

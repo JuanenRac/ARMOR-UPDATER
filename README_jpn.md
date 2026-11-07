@@ -42,7 +42,7 @@
 | 役割 | 1 つずつ、PC 上のファミリーをインストール・更新するデスクトップツール |
 | 技術 | Python 3.10+、git。任意で PySide6（Qt Quick） |
 | テスト | 386 件（`python -m pytest tests -q`、約 6 分） |
-| インターフェース | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`）と 8 言語の Qt Quick ウィンドウ |
+| インターフェース | `armor-updater --cli`（`status`、`install`、`update`、`rollback`、`backups`、`android`）と 8 言語の Qt Quick ウィンドウ |
 | 動作環境 | Python と git のある PC（ウィンドウは Windows でのみ動作確認） |
 | 実機での確認 | 該当なし：デスクトッププログラムで、Qt Quick シェルは Windows で動かしました |
 | ライセンス | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | 検出とバージョン | マニフェスト、レジストリ、ローカルとリモートの検出、バージョン解析、GitHub クライアント |
 | インストールと更新 | ステージング、ロック、ジャーナル、バックアップ、ロールバック、要件、証跡ログ |
 | 署名 | 固定された鍵、閉じる側の失敗、2 つのポリシー |
-| コマンドライン | `status`、`install`、`update`、`rollback`、`backups` とそのオプション |
+| コマンドライン | `status`、`install`、`update`、`rollback`、`backups`、`android` とそのオプション |
 | 言語とウィンドウ | 8 言語（`test_i18n.py`）と各結果の文言 |
 
 `python -m unittest` では 3 件しか見つかりません。テストは pytest 向けに書かれ（`conftest.py` は `tests/` にあります）、約 6 分かかります。GitHub Actions は push と pull request のたびに A.R.M.O.R. の基本検査（マニフェスト、バージョン、変更履歴、README の一致）と、プロジェクト自身のビルドとテストを実行します。 テスト用スクリプト（`test.sh`、`test.bat`、`build-test` の 2 つ）は、テストの前にリンターと `python -m mypy`（PySide6 が必要）を実行します。2 つのウィンドウとインストール・git ヘルパーのソースはこれを通り、テストがウィンドウの保持する状態を固定します。

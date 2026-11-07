@@ -42,7 +42,7 @@
 | Função | Ferramenta de secretária que instala e atualiza a família num PC, um projeto de cada vez |
 | Tecnologia | Python 3.10+, git; PySide6 (Qt Quick) opcional |
 | Testes | 386 (`python -m pytest tests -q`, cerca de seis minutos) |
-| Interfaces | `armor-updater --cli` com `status`, `install`, `update`, `rollback` e `backups`, e uma janela Qt Quick em oito idiomas |
+| Interfaces | `armor-updater --cli` com `status`, `install`, `update`, `rollback`, `backups` e `android`, e uma janela Qt Quick em oito idiomas |
 | Funciona em | Um PC com Python e git (a janela só correu no Windows) |
 | Em hardware real | Não se aplica: é um programa de ambiente de trabalho; a sua interface Qt Quick foi executada no Windows |
 | Licença | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Descoberta e versões | o manifesto, o registo, a deteção local e remota, a análise de versões e o cliente do GitHub |
 | Instalação e atualização | a preparação, o bloqueio, o diário, as cópias e a reversão, os requisitos e o registo de provas |
 | Assinaturas | as chaves fixadas, a falha fechada e as duas políticas |
-| Linha de comandos | `status`, `install`, `update`, `rollback` e `backups` com as suas opções |
+| Linha de comandos | `status`, `install`, `update`, `rollback`, `backups` e `android` com as suas opções |
 | Idiomas e janela | os oito idiomas (`test_i18n.py`) e os textos de cada resultado |
 
 `python -m unittest` só encontra três: a bateria está escrita para pytest (`conftest.py` está em `tests/`) e demora quase seis minutos. O GitHub Actions executa a base do A.R.M.O.R. em cada push e pull request: a validação do manifesto, da versão, do registo de alterações e da paridade dos README, e depois a compilação e os testes do próprio projeto. Os scripts de teste (`test.sh`, `test.bat` e o par `build-test`) executam o linter e depois `python -m mypy` (com o PySide6 instalado) antes dos testes; as fontes de ambas as janelas e dos auxiliares de instalação e git passam-no, e os testes fixam o estado que as janelas guardam.

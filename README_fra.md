@@ -42,7 +42,7 @@
 | Rôle | Outil de bureau qui installe et met à jour la famille sur un PC, un projet à la fois |
 | Technologie | Python 3.10+, git ; PySide6 (Qt Quick) facultatif |
 | Tests | 386 (`python -m pytest tests -q`, environ six minutes) |
-| Interfaces | `armor-updater --cli` avec `status`, `install`, `update`, `rollback` et `backups`, et une fenêtre Qt Quick en huit langues |
+| Interfaces | `armor-updater --cli` avec `status`, `install`, `update`, `rollback`, `backups` et `android`, et une fenêtre Qt Quick en huit langues |
 | Fonctionne sur | Un PC avec Python et git (la fenêtre n'a tourné que sous Windows) |
 | Sur matériel réel | Sans objet : c'est un programme de bureau ; son interface Qt Quick a été exécutée sous Windows |
 | Licence | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Découverte et versions | le manifeste, le registre, la détection locale et distante, l'analyse des versions et le client GitHub |
 | Installation et mise à jour | la préparation, le verrou, le journal, les copies et le retour arrière, les prérequis et le journal de preuves |
 | Signatures | les clés épinglées, l'échec fermé et les deux politiques |
-| Ligne de commande | `status`, `install`, `update`, `rollback` et `backups` avec leurs options |
+| Ligne de commande | `status`, `install`, `update`, `rollback`, `backups` et `android` avec leurs options |
 | Langues et fenêtre | les huit langues (`test_i18n.py`) et les textes de chaque résultat |
 
 `python -m unittest` n'en trouve que trois : la suite est écrite pour pytest (`conftest.py` est dans `tests/`) et dure près de six minutes. GitHub Actions exécute la base A.R.M.O.R. à chaque push et pull request : la validation du manifeste, de la version, du journal des modifications et de la parité des README, puis le build et les tests propres au projet. Les scripts de test (`test.sh`, `test.bat` et la paire `build-test`) lancent le linter puis `python -m mypy` (avec PySide6 installé) avant les tests ; les sources des deux fenêtres et des aides d'installation et de git le passent, et des tests fixent l'état que gardent les fenêtres.

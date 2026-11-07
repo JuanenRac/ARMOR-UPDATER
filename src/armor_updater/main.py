@@ -391,6 +391,40 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_android(args: argparse.Namespace) -> int:
+    """Checks the APK of the phone app against the hash its release publishes and (with --apply) installs it over the previous version on one phone connected with adb."""
+    import tempfile
+    from . import android_apk
+    with tempfile.TemporaryDirectory(prefix="armor-apk-") as scratch:
+        try:
+            if args.apk:
+                apk, published = Path(args.apk), args.sha256 or ""
+                if not published and args.sha256_file:
+                    published = android_apk.expected_hash(Path(args.sha256_file).read_text(encoding="utf-8", errors="replace")) or ""
+            else:
+                tag, assets = android_apk.release_assets(args.project)
+                chosen = android_apk.choose_assets(assets)
+                if chosen is None:
+                    print(f"the newest release of {args.project} has no single .apk with its .sha256 next to it: nothing to install", file=sys.stderr)
+                    return 1
+                apk = Path(scratch) / chosen[0]
+                apk.write_bytes(android_apk._fetch(assets[chosen[0]]))
+                published = android_apk.expected_hash(android_apk._fetch(assets[chosen[1]]).decode("utf-8", errors="replace")) or ""
+                print(f"release {tag}: {chosen[0]}")
+        except (OSError, ValueError) as error:
+            print(f"the APK could not be fetched: {error}", file=sys.stderr)
+            return 1
+        outcome = android_apk.install_apk(apk, published, apply=args.apply, serial=args.serial or "", cert_sha256=args.cert_sha256 or "", adb=args.adb, apksigner=args.apksigner or "")
+    for step in outcome.steps:
+        print(step)
+    for warning in outcome.warnings:
+        print(f"warning: {warning}")
+    if not outcome.ok:
+        print(outcome.refusal, file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_backups(args: argparse.Namespace) -> int:
     """Lists the backups of the replaced checkouts (with the disk each takes) and, with --prune N, keeps only the newest N of every project."""
     from .promotion import BACKUPS_DIRECTORY, WorkspaceBusy, WorkspaceLock, disk_used, list_backups, prune_backups, state_directory
@@ -470,11 +504,23 @@ def build_parser() -> argparse.ArgumentParser:
     backups_p.add_argument("--prune", type=int, metavar="N", help="Delete all but the newest N backups of each project.")
     backups_p.set_defaults(func=cmd_backups)
 
+    android_p = subparsers.add_parser("android", help="Check the APK of the phone app against the hash its release publishes and, with --apply, install it over the previous version on a phone connected with adb. Without --apply it only says what it would do.")
+    android_p.add_argument("--project", default="ARMOR-ANDROID-CONTROL", help="The project whose newest release holds the APK (default: ARMOR-ANDROID-CONTROL).")
+    android_p.add_argument("--apk", help="An APK on disk instead of the newest release (then --sha256 or --sha256-file is required).")
+    android_p.add_argument("--sha256", help="The hash the release publishes for that APK.")
+    android_p.add_argument("--sha256-file", help="The published hash file of that APK.")
+    android_p.add_argument("--cert-sha256", help="Pin the certificate the APK must be signed with (needs apksigner of the Android build-tools).")
+    android_p.add_argument("--serial", help="The phone to install on (needed when more than one is connected).")
+    android_p.add_argument("--adb", default="adb", help="The adb program (default: the one on the path).")
+    android_p.add_argument("--apksigner", help="The apksigner program (default: the one on the path).")
+    android_p.add_argument("--apply", action="store_true", help="Really install; without it nothing is changed.")
+    android_p.set_defaults(func=cmd_android)
+
     return parser
 
 
 #: The words that mean the command line even without --cli (a script or a cron job that runs `armor-updater status` must not open a window).
-COMMAND_WORDS = {"status", "install", "update", "rollback", "backups", "tools", "notify"}
+COMMAND_WORDS = {"status", "install", "update", "rollback", "backups", "tools", "notify", "android"}
 
 
 def main() -> int:

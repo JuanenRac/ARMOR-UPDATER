@@ -42,7 +42,7 @@
 | Función | Herramienta de escritorio que instala y actualiza la familia en un PC, un proyecto cada vez |
 | Tecnología | Python 3.10+, git; PySide6 (Qt Quick) opcional |
 | Pruebas | 386 (`python -m pytest tests -q`, unos seis minutos) |
-| Interfaces | `armor-updater --cli` con `status`, `install`, `update`, `rollback` y `backups`, y una ventana Qt Quick en ocho idiomas |
+| Interfaces | `armor-updater --cli` con `status`, `install`, `update`, `rollback`, `backups` y `android`, y una ventana Qt Quick en ocho idiomas |
 | Funciona en | Un PC con Python y git (la ventana solo ha corrido en Windows) |
 | En hardware real | No aplica: es un programa de escritorio; su interfaz Qt Quick se ha ejecutado en Windows |
 | Licencia | GPL-3.0-or-later |
@@ -176,7 +176,7 @@ python -I tools/armor_ci_validate.py
 | Descubrimiento y versiones | el manifiesto, el registro, la detección local y remota, el análisis de versiones y el cliente de GitHub |
 | Instalación y actualización | la preparación, el bloqueo, el diario, las copias y la vuelta atrás, los requisitos y el registro de evidencias |
 | Firmas | las claves fijadas, el fallo cerrado y las dos políticas |
-| Línea de órdenes | `status`, `install`, `update`, `rollback` y `backups` con sus opciones |
+| Línea de órdenes | `status`, `install`, `update`, `rollback`, `backups` y `android` con sus opciones |
 | Idiomas y ventana | los ocho idiomas (`test_i18n.py`) y los textos de cada resultado |
 
 `python -m unittest` solo encuentra tres: la batería está escrita para pytest (`conftest.py` está en `tests/`) y tarda casi seis minutos. GitHub Actions ejecuta la base de A.R.M.O.R. en cada push y pull request: la validación del manifiesto, la versión, el registro de cambios y la paridad de los README, y luego la compilación y las pruebas del propio proyecto. Los scripts de prueba (`test.sh`, `test.bat` y el par `build-test`) ejecutan el linter y luego `python -m mypy` (con PySide6 instalado) antes de las pruebas; los fuentes de ambas ventanas y de los ayudantes de instalación y git lo pasan, y las pruebas fijan el estado que guardan las ventanas.

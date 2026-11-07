@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **`armor-updater android` installs the phone app from its release:** it takes the APK of the newest release of ARMOR-ANDROID-CONTROL (or one given with `--apk`), refuses it unless its SHA-256 is the one the release publishes next to it (an APK without a published hash is never installed), optionally refuses it unless it is signed with the certificate pinned with `--cert-sha256` (read with `apksigner`; a pin without `apksigner` is a refusal, not a skip), and with `--apply` runs `adb install -r` on the one authorised phone (`--serial` when several are connected; a phone that is unauthorised or offline is never guessed past). Without `--apply` it only says what it would do. Tests cover the hash, the pin, the choice of the phone and the failures of `adb`, with `adb`, `apksigner` and the network replaced.
+
 - **Three more update profiles for the CM5, in the shared profiles file:** "CM5, minimal" (the server, Studio and the shared contracts), "CM5, standard" (plus the updater, the DevOps tools, vision and the network layer) and "CM5, complete" (everything that can be deployed there, with the AI and voice services). Their texts are in the eight languages and their components are data in the profiles file, not code; the existing profiles are unchanged.
 
 ## [0.2.1] - A release publishes the allowed-signers file with its SHA-256 and its fingerprints: tools/publishallowedsigners.py makes allowedsigners, allowedsigners.sha256 and allowedsigners.fingerprints from the shipped file and refuses... (and 2 more changes)
