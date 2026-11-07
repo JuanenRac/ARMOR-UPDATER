@@ -30,11 +30,15 @@ def _settings_file(monkeypatch, tmp_path: Path):
 def test_the_bundled_profiles_are_valid_marked_as_a_proposal_and_in_eight_languages():
     loaded = load_profiles(None)
     assert loaded.proposal is True
-    assert [item.id for item in loaded.profiles] == ["cm5", "operator-pc", "development-pc"]
+    assert [item.id for item in loaded.profiles] == ["cm5", "cm5-minimal", "cm5-standard", "cm5-complete", "operator-pc", "development-pc"]
     for item in loaded.profiles:
         assert set(item.title) == set(profiles.LANGUAGE_CODES) and set(item.description) == set(profiles.LANGUAGE_CODES)
     cm5 = loaded.get("cm5")
     assert cm5 and cm5.components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-NETWORK", "ARMOR-SERVER-AI", "ARMOR-VOICE-AI", "ARMOR-VISION", "ARMOR-DEVOPS")
+    assert loaded.get("cm5-minimal").components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-COMMON")  # type: ignore[union-attr]
+    assert loaded.get("cm5-standard").components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-COMMON", "ARMOR-UPDATER", "ARMOR-DEVOPS", "ARMOR-VISION", "ARMOR-NETWORK")  # type: ignore[union-attr]
+    complete = loaded.get("cm5-complete")
+    assert complete and set(complete.components) >= set(loaded.get("cm5-standard").components) | set(cm5.components)  # type: ignore[union-attr]
     assert loaded.get("operator-pc").components == ("ARMOR-STUDIO", "ARMOR-UPDATER")  # type: ignore[union-attr]
     development = loaded.get("development-pc")
     assert development and development.all_installable and "ARMOR-SIMULATOR" in development.components
@@ -61,7 +65,7 @@ def test_the_workspace_file_wins_and_a_damaged_one_falls_back_to_the_copy(tmp_pa
     target.write_text(json.dumps(data), encoding="utf-8")
     assert [item.id for item in load_profiles(tmp_path).profiles] == ["cm5"]
     target.write_text("{broken", encoding="utf-8")
-    assert len(load_profiles(tmp_path).profiles) == 3
+    assert len(load_profiles(tmp_path).profiles) == 6
 
 
 def test_components_that_are_not_discovered_are_reported_not_fatal():

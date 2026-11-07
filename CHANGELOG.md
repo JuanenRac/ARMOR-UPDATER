@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Three more update profiles for the CM5, in the shared profiles file:** "CM5, minimal" (the server, Studio and the shared contracts), "CM5, standard" (plus the updater, the DevOps tools, vision and the network layer) and "CM5, complete" (everything that can be deployed there, with the AI and voice services). Their texts are in the eight languages and their components are data in the profiles file, not code; the existing profiles are unchanged.
+
 ## [0.2.1] - A release publishes the allowed-signers file with its SHA-256 and its fingerprints: tools/publishallowedsigners.py makes allowedsigners, allowedsigners.sha256 and allowedsigners.fingerprints from the shipped file and refuses... (and 2 more changes)
 
 - **A release publishes the allowed-signers file with its SHA-256 and its fingerprints:** `tools/publish_allowed_signers.py` makes `allowed_signers`, `allowed_signers.sha256` and `allowed_signers.fingerprints` from the shipped file and refuses while that file does not hold exactly the pinned keys; `--check` verifies a published set; the workflow `release-signers.yml` runs both when a release is published and uploads the three files next to the other assets, so the file can be pinned by its hash (`allowed_signers_sha256`). Five tests in `tests/test_publish_allowed_signers.py`.
