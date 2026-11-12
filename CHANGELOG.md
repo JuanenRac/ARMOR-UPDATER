@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A floor for the test coverage:** the workflow `coverage-floor.yml` runs the Python tests under coverage and fails when the lines or the branches fall below `docs/coverage_threshold.json`. Floor of src/armor_updater: lines 66.8, branches 70.5 (measured 67.20 and 70.98; the Qt window and the Tk window are not run by the tests). Raising it is a change of that file, made with a figure measured by the workflow.
+
 - **Tests for the promotion that goes wrong and for the environment that is made again:** a checkout that cannot be moved aside stays as it was, a candidate that cannot be put in place leaves the old one back and the candidate for inspection, a restore that also fails names the folder that holds the previous installation, and the build script that makes the environment again is run in the right folder with its output kept only when a window shows progress.
 
 - **`armor-updater android` installs the phone app from its release:** it takes the APK of the newest release of ARMOR-ANDROID-CONTROL (or one given with `--apk`), refuses it unless its SHA-256 is the one the release publishes next to it (an APK without a published hash is never installed), optionally refuses it unless it is signed with the certificate pinned with `--cert-sha256` (read with `apksigner`; a pin without `apksigner` is a refusal, not a skip), and with `--apply` runs `adb install -r` on the one authorised phone (`--serial` when several are connected; a phone that is unauthorised or offline is never guessed past). Without `--apply` it only says what it would do. Tests cover the hash, the pin, the choice of the phone and the failures of `adb`, with `adb`, `apksigner` and the network replaced.
