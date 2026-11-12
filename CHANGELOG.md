@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - Tests for the model of the desktop window: `tests/test_qt_bridge.py` tries the model the window reads (its properties, the list of projects with the state of each, the filters, the update profiles, the language, the selection, the refresh
+
 - **Tests for the model of the desktop window:** `tests/test_qt_bridge.py` tries the model the window reads (its properties, the list of projects with the state of each, the filters, the update profiles, the language, the selection, the refresh, install, update, the batch, restore and clean, and the steps of an operation) with the network and the installer replaced by stand-ins and nothing read from or written to the home folder. The workflow `coverage-floor.yml` now installs Qt and a virtual display, so the windows count: lines 88.2, branches 82.2 (measured 88.74 and 82.75; before: 67.2 and 71.0).
 
 - **A floor for the test coverage:** the workflow `coverage-floor.yml` runs the Python tests under coverage and fails when the lines or the branches fall below `docs/coverage_threshold.json`. Floor of src/armor_updater: lines 66.8, branches 70.5 (measured 67.20 and 70.98; the Qt window and the Tk window are not run by the tests). Raising it is a change of that file, made with a figure measured by the workflow.
