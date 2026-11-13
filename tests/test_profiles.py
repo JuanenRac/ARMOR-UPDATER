@@ -35,10 +35,15 @@ def test_the_bundled_profiles_are_valid_marked_as_a_proposal_and_in_eight_langua
         assert set(item.title) == set(profiles.LANGUAGE_CODES) and set(item.description) == set(profiles.LANGUAGE_CODES)
     cm5 = loaded.get("cm5")
     assert cm5 and cm5.components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-NETWORK", "ARMOR-SERVER-AI", "ARMOR-VOICE-AI", "ARMOR-VISION", "ARMOR-DEVOPS")
-    assert loaded.get("cm5-minimal").components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-COMMON")  # type: ignore[union-attr]
-    assert loaded.get("cm5-standard").components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-COMMON", "ARMOR-UPDATER", "ARMOR-DEVOPS", "ARMOR-VISION", "ARMOR-NETWORK")  # type: ignore[union-attr]
-    complete = loaded.get("cm5-complete")
-    assert complete and set(complete.components) >= set(loaded.get("cm5-standard").components) | set(cm5.components)  # type: ignore[union-attr]
+    minimal, standard, complete = loaded.get("cm5-minimal"), loaded.get("cm5-standard"), loaded.get("cm5-complete")
+    assert minimal and standard and complete
+    # the three tiers the owner confirmed: Minimal = server + contracts + Studio; Standard adds the nodes, the two apps and the vision service; Complete adds voice, AI, simulator, hardware, network and DevOps
+    assert minimal.components == ("ARMOR-SERVER", "ARMOR-COMMON", "ARMOR-STUDIO")
+    assert set(standard.components) == set(minimal.components) | {"ARMOR-NODE-RADAR", "ARMOR-NODE-ALARM", "ARMOR-NODE-ELECTRICAL", "ARMOR-NODE-SOLAR", "ARMOR-NODE-HMI", "ARMOR-ANDROID-CONTROL", "ARMOR-IOS-CONTROL", "ARMOR-VISION"}
+    assert set(complete.components) == set(standard.components) | {"ARMOR-VOICE-AI", "ARMOR-SERVER-AI", "ARMOR-SIMULATOR", "ARMOR-HARDWARE", "ARMOR-NETWORK", "ARMOR-DEVOPS"}
+    assert set(minimal.components) < set(standard.components) < set(complete.components), "each tier contains the one before"
+    assert len(set(complete.components)) == len(complete.components), "no component twice"
+    assert [item.title["en"] for item in (minimal, standard, complete)] == ["Minimal", "Standard", "Complete"]
     assert loaded.get("operator-pc").components == ("ARMOR-STUDIO", "ARMOR-UPDATER")  # type: ignore[union-attr]
     development = loaded.get("development-pc")
     assert development and development.all_installable and "ARMOR-SIMULATOR" in development.components
