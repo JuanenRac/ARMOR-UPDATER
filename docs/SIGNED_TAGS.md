@@ -36,3 +36,11 @@ These steps are for the person who publishes a release; the updater never runs t
 5. Check it before announcing it: `git -c gpg.ssh.allowedSignersFile=allowed_signers verify-tag v1.2.3`.
 
 A tag must be created after the commit it names is final: moving a signed tag to another commit is a new release and needs a new signature.
+
+## The update channel (the default)
+
+Since this version the updater installs by default the **newest signed release**, not the tip of the branch: the candidate is the newest tag `vX.Y.Z` (or `vX.Y.Z.W`) that is an annotated tag and whose signature `git verify-tag` accepts against the allowed-signers file of the ecosystem. That file is versioned inside the updater (`data/allowed_signers`), and the updater only trusts it while the keys in it are exactly the fingerprints pinned in `signature.py`: changing the list of trusted signers means changing that pin, and so a signed release of the updater. A newer tag that is lightweight or signed by another key is skipped, and when no tag qualifies nothing is installed and the reason is shown.
+
+`"update_channel": "development"` in the settings (or `ARMOR_UPDATER_CHANNEL=development` for one run) follows the tip of the default branch, as the updater always did: an option for people who test, never the default. Any other value, or a damaged settings file, is the release channel.
+
+A fresh install on the release channel checks out the newest signed release as well. The anti-rollback rule and the signature policy (`warn`/`require`) apply to the chosen release as to any candidate.
