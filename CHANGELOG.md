@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The three tiers of the update profiles are the ones the owner confirmed:** Minimal (the server, the shared contracts and Studio), Standard (Minimal plus the five field nodes, the Android and iPhone apps and the vision service) and Complete (Standard plus voice, AI, the simulator, the hardware models, the network watcher and the DevOps tools). The titles and descriptions are in the eight languages, the profiles can still be adjusted and the adjustment is remembered, and the note about a proposal now covers only the CM5, operator PC and development PC roles. The copy in the documentation repository is the same file.
 - **The corners of the releases layout are tried in a throwaway folder:** who is asked to use the layout (the checkout layout, an unknown choice, a workspace that cannot hold links, a person who chose releases), where a release lives, the list of releases newest first with a stray file ignored, what is pruned (the newest kept, the one in service never deleted and counted as kept, nothing when there are few), and the ways the backup of a history fails or succeeds. Sixteen tests.
 ## [0.2.2] - Tests for the model of the desktop window: `tests/test_qt_bridge.py` tries the model the window reads (its properties, the list of projects with the state of each, the filters, the update profiles, the language, the selection, the refresh
 

@@ -2,14 +2,14 @@
   "schema_version": "1.0",
   "proposal": true,
   "proposal_note": {
-    "en": "PROPOSAL: the components of each role are a first proposal that the owner has yet to confirm.",
-    "es": "PROPUESTA: los componentes de cada rol son una primera propuesta que el dueño aún debe confirmar.",
-    "de": "VORSCHLAG: Die Komponenten jeder Rolle sind ein erster Vorschlag, den der Eigentümer noch bestätigen muss.",
-    "fr": "PROPOSITION : les composants de chaque rôle sont une première proposition que le propriétaire doit encore confirmer.",
-    "it": "PROPOSTA: i componenti di ogni ruolo sono una prima proposta che il proprietario deve ancora confermare.",
-    "ja": "提案：各役割のコンポーネントは最初の提案であり、オーナーの確認がまだ必要です。",
-    "zh": "提议：各角色的组件只是初步提议，仍需所有者确认。",
-    "pt": "PROPOSTA: os componentes de cada função são uma primeira proposta que o dono ainda tem de confirmar."
+    "en": "PROPOSAL: the components of the CM5, operator PC and development PC roles are a first proposal that the owner has yet to confirm. Minimal, Standard and Complete are confirmed.",
+    "es": "PROPUESTA: los componentes de los roles CM5, PC de operador y PC de desarrollo son una primera propuesta que el dueño aún debe confirmar. Mínimo, Estándar y Completo están confirmados.",
+    "de": "VORSCHLAG: Die Komponenten der Rollen CM5, Bediener-PC und Entwicklungs-PC sind ein erster Vorschlag, den der Eigentümer noch bestätigen muss. Minimal, Standard und Vollständig sind bestätigt.",
+    "fr": "PROPOSITION : les composants des rôles CM5, PC opérateur et PC de développement sont une première proposition que le propriétaire doit encore confirmer. Minimal, Standard et Complet sont confirmés.",
+    "it": "PROPOSTA: i componenti dei ruoli CM5, PC operatore e PC di sviluppo sono una prima proposta che il proprietario deve ancora confermare. Minimo, Standard e Completo sono confermati.",
+    "ja": "提案：CM5、オペレーターPC、開発PC の役割のコンポーネントは最初の提案であり、オーナーの確認がまだ必要です。最小・標準・完全は確認済みです。",
+    "zh": "提议：CM5、操作员电脑和开发电脑角色的组件只是初步提议，仍需所有者确认。最小、标准和完整已确认。",
+    "pt": "PROPOSTA: os componentes das funções CM5, PC do operador e PC de desenvolvimento são uma primeira proposta que o dono ainda tem de confirmar. Mínimo, Padrão e Completo estão confirmados."
   },
   "profiles": [
     {
@@ -47,95 +47,107 @@
     {
       "id": "cm5-minimal",
       "title": {
-        "en": "CM5, minimal",
-        "es": "CM5, mínimo",
-        "de": "CM5, minimal",
-        "fr": "CM5, minimal",
-        "it": "CM5, minimo",
-        "ja": "CM5（最小）",
-        "zh": "CM5（最小）",
-        "pt": "CM5, mínimo"
+        "en": "Minimal",
+        "es": "Mínimo",
+        "de": "Minimal",
+        "fr": "Minimal",
+        "it": "Minimo",
+        "ja": "最小",
+        "zh": "最小",
+        "pt": "Mínimo"
       },
       "description": {
-        "en": "The core only: the server, Studio and the shared contracts.",
-        "es": "Solo el núcleo: el servidor, Studio y los contratos compartidos.",
-        "de": "Nur der Kern: Server, Studio und die gemeinsamen Verträge.",
-        "fr": "Le noyau seulement : le serveur, Studio et les contrats partagés.",
-        "it": "Solo il nucleo: il server, Studio e i contratti condivisi.",
-        "ja": "中核のみ：サーバー、Studio、共通の契約。",
-        "zh": "仅核心：服务器、Studio 和共享契约。",
-        "pt": "Apenas o núcleo: o servidor, o Studio e os contratos partilhados."
+        "en": "The core only: the server, the shared contracts and Studio.",
+        "es": "Solo el núcleo: el servidor, los contratos compartidos y Studio.",
+        "de": "Nur der Kern: der Server, die gemeinsamen Verträge und Studio.",
+        "fr": "Le noyau seulement : le serveur, les contrats partagés et Studio.",
+        "it": "Solo il nucleo: il server, i contratti condivisi e Studio.",
+        "ja": "中核のみ：サーバー、共有契約、Studio。",
+        "zh": "仅核心：服务器、共享契约和 Studio。",
+        "pt": "Só o núcleo: o servidor, os contratos partilhados e o Studio."
       },
       "components": [
         "ARMOR-SERVER",
-        "ARMOR-STUDIO",
-        "ARMOR-COMMON"
+        "ARMOR-COMMON",
+        "ARMOR-STUDIO"
       ]
     },
     {
       "id": "cm5-standard",
       "title": {
-        "en": "CM5, standard",
-        "es": "CM5, estándar",
-        "de": "CM5, Standard",
-        "fr": "CM5, standard",
-        "it": "CM5, standard",
-        "ja": "CM5（標準）",
-        "zh": "CM5（标准）",
-        "pt": "CM5, padrão"
+        "en": "Standard",
+        "es": "Estándar",
+        "de": "Standard",
+        "fr": "Standard",
+        "it": "Standard",
+        "ja": "標準",
+        "zh": "标准",
+        "pt": "Padrão"
       },
       "description": {
-        "en": "The core plus the updater, the DevOps tools, vision and the network layer.",
-        "es": "El núcleo más el actualizador, las herramientas DevOps, la visión y la capa de red.",
-        "de": "Der Kern plus Updater, DevOps-Werkzeuge, Bildverarbeitung und Netzwerkschicht.",
-        "fr": "Le noyau plus l'outil de mise à jour, les outils DevOps, la vision et la couche réseau.",
-        "it": "Il nucleo più l'aggiornatore, gli strumenti DevOps, la visione e il livello di rete.",
-        "ja": "中核に、アップデーター、DevOps ツール、映像、ネットワーク層を加えたもの。",
-        "zh": "核心加上更新器、DevOps 工具、视觉和网络层。",
-        "pt": "O núcleo mais o atualizador, as ferramentas DevOps, a visão e a camada de rede."
+        "en": "The minimal profile plus the field nodes, the Android and iPhone apps and the vision service.",
+        "es": "El perfil mínimo más los nodos de campo, las apps de Android e iPhone y el servicio de visión.",
+        "de": "Das minimale Profil plus die Feldknoten, die Android- und iPhone-Apps und der Bilddienst.",
+        "fr": "Le profil minimal plus les nœuds de terrain, les applications Android et iPhone et le service de vision.",
+        "it": "Il profilo minimo più i nodi di campo, le app Android e iPhone e il servizio di visione.",
+        "ja": "最小プロファイルに、現場ノード、Android・iPhone アプリ、映像サービスを加えたもの。",
+        "zh": "最小配置加上现场节点、Android 和 iPhone 应用以及视觉服务。",
+        "pt": "O perfil mínimo mais os nós de campo, as aplicações Android e iPhone e o serviço de visão."
       },
       "components": [
         "ARMOR-SERVER",
-        "ARMOR-STUDIO",
         "ARMOR-COMMON",
-        "ARMOR-UPDATER",
-        "ARMOR-DEVOPS",
-        "ARMOR-VISION",
-        "ARMOR-NETWORK"
+        "ARMOR-STUDIO",
+        "ARMOR-NODE-RADAR",
+        "ARMOR-NODE-ALARM",
+        "ARMOR-NODE-ELECTRICAL",
+        "ARMOR-NODE-SOLAR",
+        "ARMOR-NODE-HMI",
+        "ARMOR-ANDROID-CONTROL",
+        "ARMOR-IOS-CONTROL",
+        "ARMOR-VISION"
       ]
     },
     {
       "id": "cm5-complete",
       "title": {
-        "en": "CM5, complete",
-        "es": "CM5, completo",
-        "de": "CM5, vollständig",
-        "fr": "CM5, complet",
-        "it": "CM5, completo",
-        "ja": "CM5（完全）",
-        "zh": "CM5（完整）",
-        "pt": "CM5, completo"
+        "en": "Complete",
+        "es": "Completo",
+        "de": "Vollständig",
+        "fr": "Complet",
+        "it": "Completo",
+        "ja": "完全",
+        "zh": "完整",
+        "pt": "Completo"
       },
       "description": {
-        "en": "Everything that can be deployed on the CM5, including the AI and voice services.",
-        "es": "Todo lo que se puede desplegar en la CM5, con los servicios de IA y de voz.",
-        "de": "Alles, was auf dem CM5 bereitgestellt werden kann, einschließlich der KI- und Sprachdienste.",
-        "fr": "Tout ce qui peut être déployé sur le CM5, y compris les services d'IA et de voix.",
-        "it": "Tutto ciò che si può distribuire sul CM5, compresi i servizi di IA e voce.",
-        "ja": "CM5 に展開できるものすべて（AI と音声サービスを含む）。",
-        "zh": "可部署到 CM5 的全部内容，包括 AI 和语音服务。",
-        "pt": "Tudo o que se pode implantar no CM5, incluindo os serviços de IA e de voz."
+        "en": "The standard profile plus the voice and AI services, the simulator, the hardware models, the network watcher and the DevOps tools.",
+        "es": "El perfil estándar más los servicios de voz e IA, el simulador, los modelos de hardware, el vigilante de red y las herramientas DevOps.",
+        "de": "Das Standardprofil plus die Sprach- und KI-Dienste, der Simulator, die Hardware-Modelle, der Netzwerkwächter und die DevOps-Werkzeuge.",
+        "fr": "Le profil standard plus les services de voix et d'IA, le simulateur, les modèles matériels, le surveillant de réseau et les outils DevOps.",
+        "it": "Il profilo standard più i servizi di voce e IA, il simulatore, i modelli hardware, il sorvegliante di rete e gli strumenti DevOps.",
+        "ja": "標準プロファイルに、音声・AI サービス、シミュレーター、ハードウェアモデル、ネットワーク監視、DevOps ツールを加えたもの。",
+        "zh": "标准配置加上语音和 AI 服务、模拟器、硬件模型、网络监视器和 DevOps 工具。",
+        "pt": "O perfil padrão mais os serviços de voz e IA, o simulador, os modelos de hardware, o vigilante de rede e as ferramentas DevOps."
       },
       "components": [
         "ARMOR-SERVER",
-        "ARMOR-STUDIO",
         "ARMOR-COMMON",
-        "ARMOR-UPDATER",
-        "ARMOR-DEVOPS",
+        "ARMOR-STUDIO",
+        "ARMOR-NODE-RADAR",
+        "ARMOR-NODE-ALARM",
+        "ARMOR-NODE-ELECTRICAL",
+        "ARMOR-NODE-SOLAR",
+        "ARMOR-NODE-HMI",
+        "ARMOR-ANDROID-CONTROL",
+        "ARMOR-IOS-CONTROL",
         "ARMOR-VISION",
-        "ARMOR-NETWORK",
+        "ARMOR-VOICE-AI",
         "ARMOR-SERVER-AI",
-        "ARMOR-VOICE-AI"
+        "ARMOR-SIMULATOR",
+        "ARMOR-HARDWARE",
+        "ARMOR-NETWORK",
+        "ARMOR-DEVOPS"
       ]
     },
     {
