@@ -40,6 +40,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,6 +55,9 @@ from .updater_core import PROFILE as _PROFILE
 ECOSYSTEM_SIGNERS_FILE = Path(__file__).with_name("data") / "allowed_signers"
 PINNED_SIGNER_FINGERPRINTS = frozenset({"SHA256:LQHmQZS0+NAsDvpTOX81NgvP4J+ROX4j319Bby/D+NE"})
 _KEY_TYPES = ("ssh-", "ecdsa-", "sk-")
+CHANNEL_RELEASE = "release"
+CHANNEL_DEVELOPMENT = "development"
+_RELEASE_TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?")
 
 
 def key_fingerprint(base64_blob: str) -> str:
@@ -105,6 +109,9 @@ class SignaturePolicy:
     signed_tags_only: bool = False
     #: The SHA-256 (hex) the allowed-signers file must have; the file is not used while its content differs. Required with a signers file chosen by the person.
     signers_sha256: str | None = None
+    #: Where updates come from: "release" (the default) installs the newest tag vX.Y.Z whose signature verifies against the pinned keys of the ecosystem; "development" follows the tip of
+    #: the default branch, as the updater always did (an option for people who test, never the default).
+    channel: str = CHANNEL_RELEASE
 
     @property
     def mode(self) -> str:
@@ -135,6 +142,8 @@ def current_policy() -> SignaturePolicy:
         tags_only = True   # as above: an unreadable settings file never switches a protection off
     else:
         tags_only = settings.get("signed_tags_only") is True
+    channel_text = _PROFILE.env_text("CHANNEL").strip().lower() or str(settings.get("update_channel", "")).strip().lower()
+    channel = CHANNEL_DEVELOPMENT if channel_text == CHANNEL_DEVELOPMENT else CHANNEL_RELEASE   # anything else, a damaged file included, is the safe channel
     signers = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS")) or settings.get("allowed_signers_file")
     pin = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS_SHA256")) or settings.get("allowed_signers_sha256")
     return SignaturePolicy(
@@ -142,6 +151,7 @@ def current_policy() -> SignaturePolicy:
         signers if isinstance(signers, str) and signers else None,
         tags_only,
         pin.strip().lower() if isinstance(pin, str) and pin.strip() else None,
+        channel,
     )
 
 
@@ -209,6 +219,44 @@ def signed_tag_refusal(repo: Path, revision: str, policy: SignaturePolicy) -> st
             return None
         last = f"tag {tag} is not signed by a trusted key" + (f" ({detail.splitlines()[-1]})" if detail else "")
     return f"signed-tags mode: {last}"
+
+
+def release_tags(repo: Path) -> list[tuple[tuple[int, ...], str]]:
+    """The tags vX.Y.Z (or vX.Y.Z.W) of the repository, newest first. Any other tag name is not a release."""
+    code, listing = _git_text(repo, "tag", "--list", "v[0-9]*")
+    found = []
+    for name in (listing.split() if code == 0 else []):
+        match = _RELEASE_TAG.fullmatch(name)
+        if match:
+            found.append((tuple(int(part or 0) for part in match.groups()), name))
+    return sorted(found, reverse=True)
+
+
+def latest_signed_release(repo: Path, policy: SignaturePolicy) -> tuple[str | None, str]:
+    """(commit, tag) of the newest release tag whose annotated tag `git verify-tag` accepts against the pinned allowed-signers file of the ecosystem, or (None, reason). A newer tag that is
+    lightweight or signed by another key is skipped (and named in the reason when nothing older is acceptable): only a signed release is ever installed on this channel. Only git objects
+    are read and ssh-keygen checks the signature: nothing of the repository is run."""
+    signers, problem = signers_file_for_tags(policy)
+    if problem or signers is None:
+        return None, problem or "no usable allowed signers file"
+    tags = release_tags(repo)
+    if not tags:
+        return None, "the repository has no release tag vX.Y.Z; set update_channel to development to follow its main branch"
+    skipped = ""
+    for _, tag in tags:
+        ref = f"refs/tags/{tag}"
+        code, kind = _git_text(repo, "cat-file", "-t", ref)
+        if code != 0 or kind != "tag":
+            skipped = skipped or f"{tag} is lightweight (not an annotated, signed tag)"
+            continue
+        code, detail = _git_text(repo, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", ref)
+        if code != 0:
+            skipped = skipped or f"{tag} is not signed by a trusted key" + (f" ({detail.splitlines()[-1]})" if detail else "")
+            continue
+        code, sha = _git_text(repo, "rev-parse", "--verify", f"{ref}^{{commit}}")
+        if code == 0 and sha:
+            return sha, tag
+    return None, "no release tag is signed by a trusted key" + (f" ({skipped})" if skipped else "") + "; set update_channel to development to follow the main branch"
 
 
 def verify_range(repo: Path, base: str, tip: str, policy: SignaturePolicy, *, limit: int = 200) -> str | None:

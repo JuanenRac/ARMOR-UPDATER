@@ -58,7 +58,7 @@ def test_disabled_policy_accepts_anything(tmp_path: Path):
 def test_policy_comes_from_the_environment_first(monkeypatch):
     monkeypatch.setenv("ARMOR_UPDATER_REQUIRE_SIGNED", "1")
     monkeypatch.setenv("ARMOR_UPDATER_ALLOWED_SIGNERS", "/x/allowed")
-    assert current_policy() == SignaturePolicy(True, "/x/allowed")
+    assert current_policy() == SignaturePolicy(True, "/x/allowed", channel="development")   # the tests run on the development channel (conftest)
     monkeypatch.setenv("ARMOR_UPDATER_REQUIRE_SIGNED", "0")
     assert current_policy().required is False
 

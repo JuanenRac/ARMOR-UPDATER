@@ -65,7 +65,7 @@ from .staging import (
     remove_generated_environments,
 )
 from .releases import chosen_layout, activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, revert_to, verify_in_service, wants_releases, DEFAULT_KEEP_RELEASES
-from .signature import current_policy, unsigned_reason, verify_range, verify_revision
+from .signature import CHANNEL_RELEASE, current_policy, latest_signed_release, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
 COMMON_PROJECT = "ARMOR-COMMON"
@@ -353,6 +353,15 @@ def clone_or_pull(
             _rmtree_best_effort(staging_path)
             return InstallResult(False, f"git clone failed (exit {result.returncode})", _command_output(result))
         policy = current_policy()
+        if policy.channel == CHANNEL_RELEASE:   # the default channel installs the newest signed release, not the tip of the branch
+            release_sha, release_tag = latest_signed_release(staging_path, policy)
+            if release_sha is None:
+                _rmtree_best_effort(staging_path)
+                return InstallResult(False, f"no signed release to install: {release_tag}", code="signature_refused", params={"project": entry.name, "reason": release_tag})
+            checked_out = _run(["git", "reset", "--hard", "--quiet", release_sha], cwd=staging_path, capture_output=progress is not None)
+            if checked_out.returncode != 0:
+                _rmtree_best_effort(staging_path)
+                return InstallResult(False, f"could not check out the signed release {release_tag} (exit {checked_out.returncode})", _command_output(checked_out))
         refused = verify_revision(staging_path, "HEAD", policy)
         if refused:
             _rmtree_best_effort(staging_path)
@@ -442,7 +451,7 @@ def clone_or_pull(
     _checkpoint(progress, "source", "Fetching the remote candidate without changing the local checkout.")
     policy = current_policy()
     fetch_cmd = ["git", "fetch", "--quiet", "origin", "HEAD"]
-    if policy.signed_tags_only:   # the signed tag of the candidate has to be here to be verified
+    if policy.signed_tags_only or policy.channel == CHANNEL_RELEASE:   # the signed tag of the candidate has to be here to be verified
         fetch_cmd.insert(3, "--tags")
     result = _run(fetch_cmd, cwd=path, capture_output=progress is not None)
     if result.returncode != 0:
@@ -451,12 +460,18 @@ def clone_or_pull(
             f"git fetch failed (exit {result.returncode}) - remote unavailable or authentication failed?",
             _command_output(result),
         )
-    refused = verify_range(path, "HEAD", "FETCH_HEAD", policy)   # every new commit, not only the last one
+    candidate_ref = "FETCH_HEAD"
+    if policy.channel == CHANNEL_RELEASE:   # the default channel: the newest signed release, never the tip of the branch
+        release_sha, release_tag = latest_signed_release(path, policy)
+        if release_sha is None:
+            return InstallResult(False, f"no signed release to update to: {release_tag}", code="signature_refused", params={"project": entry.name, "reason": release_tag})
+        candidate_ref = release_sha
+    refused = verify_range(path, "HEAD", candidate_ref, policy)   # every new commit, not only the last one
     if refused:
         return InstallResult(False, f"remote candidate refused by the signature policy: {refused}", code="signature_refused", params={"project": entry.name, "reason": refused})
     try:
         _checkpoint(progress, "validation", "Checking the candidate manifest and anti-rollback rule.")
-        candidate = _manifest_from_revision(path, "FETCH_HEAD", entry)
+        candidate = _manifest_from_revision(path, candidate_ref, entry)
     except ManifestValidationError as exc:
         return InstallResult(False, f"remote candidate failed manifest validation: {exc}")
     unmet = requirements_refusal(entry.name, workspace_root, candidate.requires)
@@ -468,7 +483,7 @@ def clone_or_pull(
             f"remote candidate v{candidate.version} is older than installed v{installed.version}; anti-rollback refused update",
         )
     # Resolved as a real SHA: `FETCH_HEAD` means something different in every repo, and the staging clone copies this repository's whole object database, so the commit is present there.
-    candidate_sha = _rev_parse(path, "FETCH_HEAD")
+    candidate_sha = _rev_parse(path, candidate_ref)
     if not candidate_sha:
         return InstallResult(False, f"could not resolve the fetched candidate to a real commit; {path} was not modified")
     if candidate_sha == _rev_parse(path, "HEAD"):
@@ -477,7 +492,7 @@ def clone_or_pull(
     unsigned = _unsigned_commit(path, candidate_sha, policy)
     if not verify_build:
         _checkpoint(progress, "validation", "Applying the accepted candidate with a fast-forward-only merge.")
-        result = _run(["git", "merge", "--ff-only", "FETCH_HEAD"], cwd=path, capture_output=progress is not None)
+        result = _run(["git", "merge", "--ff-only", candidate_sha], cwd=path, capture_output=progress is not None)
         if result.returncode != 0:
             return InstallResult(
                 False,
