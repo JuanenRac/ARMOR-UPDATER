@@ -1,5 +1,5 @@
 {
   "about": "The floor of the test coverage of src/armor_updater (the tests run with Qt and a virtual display, so the windows are tried too), measured by the workflow coverage-floor.yml: a figure a little under what the tests reach. Raise it only with a measured figure.",
-  "lines": 88.2,
-  "branches": 82.2
+  "lines": 88.7,
+  "branches": 82.7
 }
