@@ -65,6 +65,7 @@ from .staging import (
     remove_generated_environments,
 )
 from .releases import chosen_layout, activate as activate_release, go_back, heal_link, in_service, prune_releases, release_path, revert_to, verify_in_service, wants_releases, DEFAULT_KEEP_RELEASES
+from .release_registry import registry_refusal
 from .signature import CHANNEL_RELEASE, current_policy, latest_signed_release, unsigned_reason, verify_range, verify_revision
 
 #: Every project's build-test.sh runs ../ARMOR-COMMON/scripts/armor-project.sh: without that checkout next to it nothing builds.
@@ -235,6 +236,15 @@ def _promote(entry: ProjectEntry, workspace_root: Path, path: Path, staging_path
 
 
 
+def _registry_refusal(policy, project: str, tag: str, commit: str) -> str | None:   # noqa: ANN001 - SignaturePolicy
+    """None unless the signed registry of releases is required and does not list this release: the mode is off by default and fails closed when it is on."""
+    if not policy.registry_required:
+        return None
+    if not policy.registry_file:
+        return "the release registry is required but no registry file is set (release_registry_file)"
+    return registry_refusal(Path(policy.registry_file), project, tag[1:] if tag.startswith("v") else tag, commit, policy)
+
+
 def _unsigned_commit(repo: Path, revision: str, policy) -> str:   # noqa: ANN001 - SignaturePolicy
     """The short commit of `revision` when it carries no valid signature and the policy only warns (a strict policy has already refused it), else an empty string."""
     if policy.required or unsigned_reason(repo, revision, policy) is None:
@@ -358,6 +368,10 @@ def clone_or_pull(
             if release_sha is None:
                 _rmtree_best_effort(staging_path)
                 return InstallResult(False, f"no signed release to install: {release_tag}", code="signature_refused", params={"project": entry.name, "reason": release_tag})
+            listed = _registry_refusal(policy, entry.name, release_tag, release_sha)
+            if listed:
+                _rmtree_best_effort(staging_path)
+                return InstallResult(False, f"no signed release to install: {listed}", code="signature_refused", params={"project": entry.name, "reason": listed})
             checked_out = _run(["git", "reset", "--hard", "--quiet", release_sha], cwd=staging_path, capture_output=progress is not None)
             if checked_out.returncode != 0:
                 _rmtree_best_effort(staging_path)
@@ -466,6 +480,9 @@ def clone_or_pull(
         if release_sha is None:
             return InstallResult(False, f"no signed release to update to: {release_tag}", code="signature_refused", params={"project": entry.name, "reason": release_tag})
         candidate_ref = release_sha
+        listed = _registry_refusal(policy, entry.name, release_tag, release_sha)
+        if listed:
+            return InstallResult(False, f"no signed release to update to: {listed}", code="signature_refused", params={"project": entry.name, "reason": listed})
     refused = verify_range(path, "HEAD", candidate_ref, policy)   # every new commit, not only the last one
     if refused:
         return InstallResult(False, f"remote candidate refused by the signature policy: {refused}", code="signature_refused", params={"project": entry.name, "reason": refused})

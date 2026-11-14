@@ -44,3 +44,9 @@ Since this version the updater installs by default the **newest signed release**
 `"update_channel": "development"` in the settings (or `ARMOR_UPDATER_CHANNEL=development` for one run) follows the tip of the default branch, as the updater always did: an option for people who test, never the default. Any other value, or a damaged settings file, is the release channel.
 
 A fresh install on the release channel checks out the newest signed release as well. The anti-rollback rule and the signature policy (`warn`/`require`) apply to the chosen release as to any candidate.
+
+## Signed registry of releases (off by default)
+
+A tag in one repository is a statement made by that repository. The registry is a second statement, made outside it with the same ecosystem key: `releases.json` lists, for each project, the version and the 40-digit commit of a release (and, for a firmware image, the board and the SHA-256 of the file), and `releases.json.sig` is its detached SSH signature in the namespace `armor-releases` (`ssh-keygen -Y sign -n armor-releases releases.json`, run by the holder of the key).
+
+With `"release_registry_required": true` and `"release_registry_file": "<path of releases.json>"` in the settings (or `ARMOR_UPDATER_RELEASE_REGISTRY=1` and `ARMOR_UPDATER_RELEASE_REGISTRY_FILE=<path>` for one run), the release channel installs the newest signed tag only when the registry has a valid signature by a pinned key of the ecosystem and lists that commit for that project and version. A missing, unsigned, tampered or unreadable registry refuses the release, and a damaged settings file never switches the mode off. The pinned keys are the ones of the signed-tags mode: the registry is not a second chain of trust.
