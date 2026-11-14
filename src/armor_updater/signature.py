@@ -112,6 +112,9 @@ class SignaturePolicy:
     #: Where updates come from: "release" (the default) installs the newest tag vX.Y.Z whose signature verifies against the pinned keys of the ecosystem; "development" follows the tip of
     #: the default branch, as the updater always did (an option for people who test, never the default).
     channel: str = CHANNEL_RELEASE
+    #: The signed registry of releases (off by default): with `registry_required` a release tag is installed only when the registry in `registry_file` lists its commit.
+    registry_file: str | None = None
+    registry_required: bool = False
 
     @property
     def mode(self) -> str:
@@ -146,12 +149,24 @@ def current_policy() -> SignaturePolicy:
     channel = CHANNEL_DEVELOPMENT if channel_text == CHANNEL_DEVELOPMENT else CHANNEL_RELEASE   # anything else, a damaged file included, is the safe channel
     signers = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS")) or settings.get("allowed_signers_file")
     pin = os.environ.get(_PROFILE.env_name("ALLOWED_SIGNERS_SHA256")) or settings.get("allowed_signers_sha256")
+    env_registry = _PROFILE.env_text("RELEASE_REGISTRY").strip().lower()
+    if env_registry in {"1", "true", "yes"}:
+        registry_required = True
+    elif env_registry in {"0", "false", "no"}:
+        registry_required = False
+    elif settings_damaged():
+        registry_required = True   # an unreadable settings file never switches a protection off
+    else:
+        registry_required = settings.get("release_registry_required") is True
+    registry_file = os.environ.get(_PROFILE.env_name("RELEASE_REGISTRY_FILE")) or settings.get("release_registry_file")
     return SignaturePolicy(
         required,
         signers if isinstance(signers, str) and signers else None,
         tags_only,
         pin.strip().lower() if isinstance(pin, str) and pin.strip() else None,
         channel,
+        registry_file if isinstance(registry_file, str) and registry_file else None,
+        registry_required,
     )
 
 
