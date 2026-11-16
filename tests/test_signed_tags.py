@@ -68,6 +68,8 @@ def test_the_decision_with_doubles(monkeypatch, tmp_path: Path):
 
     def fake(_repo, *args):
         key = args[0] if args[0] != "-c" else "verify-tag"
+        if key == "cat-file" and args[1] == "tag":
+            return 0, f"object abc\ntype commit\ntag {answers.get(('name',), 'v1')}\n\nrelease"
         return answers.get((key,), (1, "unexpected"))
 
     monkeypatch.setattr(signature, "_git_text", fake)
@@ -82,6 +84,9 @@ def test_the_decision_with_doubles(monkeypatch, tmp_path: Path):
     assert "not signed by a trusted key" in (signed_tag_refusal(tmp_path, "HEAD", policy) or "")
     answers[("verify-tag",)] = (0, "Good signature")
     assert signed_tag_refusal(tmp_path, "HEAD", policy) is None
+    answers[("name",)] = "v0.1"   # the signed object carries another name than the reference
+    assert "carries the signed name v0.1" in (signed_tag_refusal(tmp_path, "HEAD", policy) or "")
+    del answers[("name",)]
     assert verify_revision(tmp_path, "HEAD", policy) is None and verify_range(tmp_path, "a", "b", policy) is None
 
 

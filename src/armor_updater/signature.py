@@ -207,6 +207,20 @@ def _git_text(repo: Path, *args: str) -> tuple[int, str]:
     return done.returncode, (done.stdout if done.returncode == 0 else (done.stderr or done.stdout)).strip()
 
 
+def tag_name_refusal(repo: Path, tag: str) -> str | None:
+    """None when the name written inside the annotated tag object (the part the signature covers) is the name of the reference, otherwise the reason. Without this check a
+    reference `v9.9.9` pointing at the signed object of an older release would pass `git verify-tag` as the newest release."""
+    code, body = _git_text(repo, "cat-file", "tag", f"refs/tags/{tag}")
+    if code != 0:
+        return f"tag {tag} could not be read"
+    for line in body.splitlines():
+        if not line.strip():
+            break
+        if line.startswith("tag "):
+            return None if line[4:].strip() == tag else f"tag {tag} carries the signed name {line[4:].strip()}"
+    return f"tag {tag} has no name inside its signed object"
+
+
 def signed_tag_refusal(repo: Path, revision: str, policy: SignaturePolicy) -> str | None:
     """None when an annotated tag points at `revision` and `git verify-tag` accepts its signature against the pinned allowed-signers file, otherwise the reason. Only git objects are
     read and ssh-keygen checks the signature: nothing of the downloaded repository is run. With the mode switched off it accepts everything."""
@@ -231,7 +245,11 @@ def signed_tag_refusal(repo: Path, revision: str, policy: SignaturePolicy) -> st
             continue
         code, detail = _git_text(repo, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", ref)
         if code == 0:
-            return None
+            named = tag_name_refusal(repo, tag)
+            if named is None:
+                return None
+            last = named
+            continue
         last = f"tag {tag} is not signed by a trusted key" + (f" ({detail.splitlines()[-1]})" if detail else "")
     return f"signed-tags mode: {last}"
 
@@ -267,6 +285,10 @@ def latest_signed_release(repo: Path, policy: SignaturePolicy) -> tuple[str | No
         code, detail = _git_text(repo, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", ref)
         if code != 0:
             skipped = skipped or f"{tag} is not signed by a trusted key" + (f" ({detail.splitlines()[-1]})" if detail else "")
+            continue
+        named = tag_name_refusal(repo, tag)
+        if named:
+            skipped = skipped or named
             continue
         code, sha = _git_text(repo, "rev-parse", "--verify", f"{ref}^{{commit}}")
         if code == 0 and sha:

@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A release tag must carry its own name:** the name written inside the signed tag object has to match the name of the reference, both when the newest signed release is chosen and in the signed-tags check; a reference such as `v9.9.9` pointing at the signed object of an older release is skipped with the reason shown, so a fresh install can no longer be steered to an old release. Tests with scripted answers.
+
 ## [0.2.3] - A signed registry of releases, the newest signed release by default, the confirmed profile tiers and the layout corners tested
 
 - **A tool to make, sign and check the signed registry of releases:** `python -m armor_updater.registry_tool` has `build` (the commit under the tag of each repository, leaving out and naming the versions that have no tag), `sign` (the key is the PATH in `ARMOR_RELEASE_SIGNING_KEY` or `--key`; the tool never reads, prints or copies it, refuses a key that is not one of the pinned ones and checks the signature it made), `verify` (for anyone: `REGISTRY=PASS` with what the registry lists) and `keys`. `docs/RELEASE_REGISTRY.md` says what is signed, where it is published and the commands to choose the key; the tests use a key made for each test.
