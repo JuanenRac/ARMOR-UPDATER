@@ -77,12 +77,16 @@ class TestTheNewestSignedRelease:
         file.write_text("a@example.invalid ssh-ed25519 AAAA\n", encoding="utf-8")
         return SignaturePolicy(False, str(file), False, file_sha256(file))
 
-    def scripted(self, monkeypatch, tags: str, kinds: dict[str, str], signed: set[str]):
+    def scripted(self, monkeypatch, tags: str, kinds: dict[str, str], signed: set[str], renamed: dict[str, str] | None = None):
+        renamed = renamed or {}
         def fake(_repo, *args):
             if args[0] == "tag":
                 return 0, tags
             if args[0] == "cat-file":
-                return (0, kinds[args[-1].removeprefix("refs/tags/")])
+                name = args[-1].removeprefix("refs/tags/")
+                if args[1] == "tag":
+                    return 0, f"object abc\ntype commit\ntag {renamed.get(name, name)}\ntagger T <t@example.invalid> 1 +0000\n\nrelease"
+                return (0, kinds[name])
             if args[0] == "-c":
                 tag = args[-1].removeprefix("refs/tags/")
                 return (0, "Good signature") if tag in signed else (1, "Good\nerror: no principal matched")
@@ -99,6 +103,16 @@ class TestTheNewestSignedRelease:
         self.scripted(monkeypatch, "v1.0.0", {"v1.0.0": "tag"}, set())
         sha, reason = latest_signed_release(tmp_path, self.signers(tmp_path))
         assert sha is None and "no release tag is signed by a trusted key" in reason and "v1.0.0" in reason and "development" in reason
+
+    def test_a_reference_that_points_at_an_older_signed_object_is_not_the_newest_release(self, monkeypatch, tmp_path):
+        # refs/tags/v9.9.9 holds the signed object whose own name is v1.0.0: the signature is valid, the name is not
+        self.scripted(monkeypatch, "v1.0.0 v9.9.9", {"v1.0.0": "tag", "v9.9.9": "tag"}, {"v1.0.0", "v9.9.9"}, renamed={"v9.9.9": "v1.0.0"})
+        assert latest_signed_release(tmp_path, self.signers(tmp_path)) == ("sha-of-v1.0.0", "v1.0.0")
+
+    def test_when_only_a_renamed_tag_exists_nothing_is_installed_and_the_reason_says_so(self, monkeypatch, tmp_path):
+        self.scripted(monkeypatch, "v9.9.9", {"v9.9.9": "tag"}, {"v9.9.9"}, renamed={"v9.9.9": "v1.0.0"})
+        sha, reason = latest_signed_release(tmp_path, self.signers(tmp_path))
+        assert sha is None and "carries the signed name v1.0.0" in reason
 
     def test_lightweight_tags_do_not_count(self, monkeypatch, tmp_path):
         self.scripted(monkeypatch, "v1.0.0", {"v1.0.0": "commit"}, {"v1.0.0"})
