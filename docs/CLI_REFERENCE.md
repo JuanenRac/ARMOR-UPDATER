@@ -202,6 +202,10 @@ The updater ships the public key(s) that sign the commits of the ecosystem in `s
 fail (it never falls back to "trust anything"). A file chosen with `allowed_signers_file` replaces it on purpose. A test fails when the shipped file and the pin drift apart. The
 default policy stays `warn`, so an unsigned revision is still installed with a warning until the commits are signed; `require` makes the ecosystem key mandatory.
 
+### Only SSH signatures on commits (off by default)
+
+`{"signature_formats": "ssh"}` (or `ARMOR_UPDATER_SIGNATURE_FORMATS=ssh`) makes the strict mode (`signature_policy: require`) refuse a commit whose signature is not an SSH one before it asks git to verify it: a GPG signature is accepted by git with any key of the local keyring, while an SSH one is checked against the allowed signers. The default, `any`, leaves the check as it was.
+
 ### Only signed tags (off by default)
 
 `{"signed_tags_only": true, "allowed_signers_file": "...", "allowed_signers_sha256": "..."}` (or `ARMOR_UPDATER_SIGNED_TAGS_ONLY=1`) makes `install` and `update` accept only a revision that an

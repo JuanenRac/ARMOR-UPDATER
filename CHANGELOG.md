@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The strict mode can accept only SSH signatures on commits:** `signature_formats` in the settings (or `ARMOR_UPDATER_SIGNATURE_FORMATS`) set to `ssh` refuses a commit that carries a GPG signature, which git would otherwise accept with any key of the local keyring; the SSH ones are still checked against the allowed signers. The default, `any`, changes nothing. Tests with a commit that carries a GPG header, one without a signature and, where `ssh-keygen` exists, a really signed one.
+
 - **The signers file used to check the registry limits every key type to the registry namespace:** the option is now put before the key whatever its type (`ssh-`, `ecdsa-`, `sk-`), not only before an `ssh-` one, and a line with no key makes the check fail with a reason instead of being passed on untouched. The file shipped today holds an `ssh-` key, so its result does not change. Tests for each type of key, with and without an option already on the line.
 
 - **A release tag must carry its own name:** the name written inside the signed tag object has to match the name of the reference, both when the newest signed release is chosen and in the signed-tags check; a reference such as `v9.9.9` pointing at the signed object of an older release is skipped with the reason shown, so a fresh install can no longer be steered to an old release. Tests with scripted answers.
