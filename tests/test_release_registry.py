@@ -137,3 +137,28 @@ def test_the_install_check_strips_the_v_of_the_tag(monkeypatch, tmp_path: Path):
     policy = SignaturePolicy(registry_file=str(registry), registry_required=True)
     assert install._registry_refusal(policy, "ARMOR-SERVER", "v0.8.1.7", COMMIT) is None
     assert install._registry_refusal(policy, "ARMOR-SERVER", "v0.8.1.7", OTHER)
+
+
+@pytest.mark.parametrize("key", ["ssh-ed25519 AAAAC3Nza", "ecdsa-sha2-nistp256 AAAAE2Vj", "sk-ssh-ed25519@openssh.com AAAAGnNr"])
+@pytest.mark.parametrize("option", ["", 'namespaces="git" ', 'cert-authority namespaces="git" '])
+def test_every_type_of_key_is_limited_to_the_registry_namespace(tmp_path: Path, key: str, option: str):
+    source = tmp_path / "in"
+    source.write_text(f"# a comment\n\nsigner@example {option}{key} someone\n", encoding="utf-8")
+    written = rr._namespaced_signers(source, tmp_path).read_text(encoding="utf-8").splitlines()
+    assert len(written) == 1
+    assert written[0].count("namespaces=") == 1 and f'namespaces="{rr.NAMESPACE}"' in written[0]
+    assert written[0].endswith(f"{key} someone")
+    assert written[0].index("namespaces=") < written[0].index(key)
+
+
+def test_a_principal_named_like_a_key_type_is_not_taken_for_the_key():
+    assert rr._namespaced_line("sk-user ssh-ed25519 AAAA") == f'sk-user namespaces="{rr.NAMESPACE}" ssh-ed25519 AAAA'
+
+
+def test_a_line_without_a_key_makes_the_check_fail_with_a_reason(tmp_path: Path):
+    registry = _registry(tmp_path, [rr.Release("A", "1.0.0", commit=COMMIT)])
+    registry.with_name(registry.name + ".sig").write_text("not a signature", encoding="utf-8")
+    signers = tmp_path / "allowed_signers"
+    signers.write_text("signer@example namespaces=\"git\"\n", encoding="utf-8")
+    problem = rr.signature_problem(registry, signers)
+    assert problem is not None and "could not be verified" in problem
