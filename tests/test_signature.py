@@ -114,3 +114,63 @@ def test_unsigned_update_is_refused_and_the_installed_checkout_is_untouched(tmp_
     result = clone_or_pull(entry(), tmp_path)
     assert not result.ok and "signature policy" in result.message
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=local, text=True).strip() == installed_head
+
+
+def _commit_with_header(tmp_path: Path, header: str) -> tuple[Path, str]:
+    """A repository whose HEAD~0 is a plain commit and whose second value is a commit that carries the given gpgsig header text: no key is needed to read what kind of signature it claims."""
+    repo = tmp_path / "forged"
+    git("init", str(repo), cwd=tmp_path)
+    git("config", "user.email", "contract@example.invalid", cwd=repo)
+    git("config", "user.name", "Contract", cwd=repo)
+    (repo / "a.txt").write_text("a", encoding="utf-8")
+    git("add", "-A", cwd=repo)
+    git("commit", "-m", "plain", cwd=repo)
+    plain = subprocess.run(["git", "cat-file", "commit", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout
+    head, message = plain.split("\n\n", 1)
+    forged = head + "\ngpgsig " + header + "\n \n AAAA\n " + header.replace("BEGIN", "END") + "\n\n" + message
+    made = subprocess.run(["git", "hash-object", "-t", "commit", "-w", "--stdin"], cwd=repo, input=forged.encode(), capture_output=True, check=True).stdout.decode().strip()
+    return repo, made
+
+
+def test_the_kind_of_signature_is_read_from_the_header(tmp_path: Path):
+    from armor_updater.signature import signature_kind
+    (tmp_path / "one").mkdir()
+    (tmp_path / "two").mkdir()
+    repo, ssh_commit = _commit_with_header(tmp_path / "one", "-----BEGIN SSH SIGNATURE-----")
+    assert signature_kind(repo, ssh_commit) == "ssh"
+    assert signature_kind(repo, "HEAD") == "none"
+    repo2, pgp_commit = _commit_with_header(tmp_path / "two", "-----BEGIN PGP SIGNATURE-----")
+    assert signature_kind(repo2, pgp_commit) == "pgp"
+    assert signature_kind(repo2, "no-such-revision") == "none"
+
+
+def test_only_ssh_signatures_are_accepted_when_the_setting_says_so(tmp_path: Path):
+    allowed = tmp_path / "allowed"
+    allowed.write_text("contract@example.invalid ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n", encoding="utf-8")
+    (tmp_path / "pgp").mkdir()
+    repo, pgp_commit = _commit_with_header(tmp_path / "pgp", "-----BEGIN PGP SIGNATURE-----")
+    strict = SignaturePolicy(True, str(allowed), signature_formats="ssh")
+    reason = verify_revision(repo, pgp_commit, strict)
+    assert reason and "no SSH signature" in reason and "PGP" in reason
+    unsigned = verify_revision(repo, "HEAD", strict)   # the plain commit below the forged one
+    assert unsigned and "no SSH signature" in unsigned
+    # the default does not look at the kind: the refusal there is git's own, about the key
+    default = verify_revision(repo, pgp_commit, SignaturePolicy(True, str(allowed)))
+    assert default and "no SSH signature" not in default
+
+
+def test_the_format_comes_from_the_environment_or_the_settings(monkeypatch):
+    assert current_policy().signature_formats == "any"
+    monkeypatch.setenv("ARMOR_UPDATER_SIGNATURE_FORMATS", "SSH")
+    assert current_policy().signature_formats == "ssh"
+    monkeypatch.setenv("ARMOR_UPDATER_SIGNATURE_FORMATS", "gpg")
+    assert current_policy().signature_formats == "any"      # anything else is the default
+
+
+@needs_ssh_keygen
+def test_a_really_signed_commit_passes_when_only_ssh_signatures_are_accepted(tmp_path: Path):
+    key, allowed = _signing_key(tmp_path)
+    remote = _remote_with_one_commit(tmp_path, signing_key=key)
+    clone = tmp_path / "clone"
+    git("clone", str(remote), str(clone), cwd=tmp_path)
+    assert verify_revision(clone, "HEAD", SignaturePolicy(True, str(allowed), signature_formats="ssh")) is None

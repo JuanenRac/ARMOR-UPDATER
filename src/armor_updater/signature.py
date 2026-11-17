@@ -115,6 +115,9 @@ class SignaturePolicy:
     #: The signed registry of releases (off by default): with `registry_required` a release tag is installed only when the registry in `registry_file` lists its commit.
     registry_file: str | None = None
     registry_required: bool = False
+    #: Which kind of signature a commit may carry in the strict mode: "any" (the default, what git accepts) or "ssh" (only an SSH signature, checked against the allowed signers;
+    #: a GPG signature is refused, since it would be accepted with any key of the local keyring).
+    signature_formats: str = "any"
 
     @property
     def mode(self) -> str:
@@ -159,6 +162,8 @@ def current_policy() -> SignaturePolicy:
     else:
         registry_required = settings.get("release_registry_required") is True
     registry_file = os.environ.get(_PROFILE.env_name("RELEASE_REGISTRY_FILE")) or settings.get("release_registry_file")
+    formats_text = _PROFILE.env_text("SIGNATURE_FORMATS").lower() or str(settings.get("signature_formats", "")).strip().lower()
+    formats = "ssh" if formats_text == "ssh" else "any"
     return SignaturePolicy(
         required,
         signers if isinstance(signers, str) and signers else None,
@@ -167,6 +172,7 @@ def current_policy() -> SignaturePolicy:
         channel,
         registry_file if isinstance(registry_file, str) and registry_file else None,
         registry_required,
+        formats,
     )
 
 
@@ -205,6 +211,22 @@ def _git_text(repo: Path, *args: str) -> tuple[int, str]:
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)
     return done.returncode, (done.stdout if done.returncode == 0 else (done.stderr or done.stdout)).strip()
+
+
+def signature_kind(repo: Path, revision: str) -> str:
+    """The kind of signature the commit object carries, read from its `gpgsig` header: "ssh", "pgp", "other" or "none". Only the header is read; nothing is verified here."""
+    code, body = _git_text(repo, "cat-file", "commit", revision)
+    if code != 0:
+        return "none"
+    for line in body.splitlines():
+        if not line:
+            break                                   # the message starts: the headers are over
+        if line.startswith("gpgsig"):
+            first = line.split(" ", 1)[1] if " " in line else ""
+            if "BEGIN SSH SIGNATURE" in first:
+                return "ssh"
+            return "pgp" if "BEGIN PGP SIGNATURE" in first else "other"
+    return "none"
 
 
 def tag_name_refusal(repo: Path, tag: str) -> str | None:
@@ -334,6 +356,10 @@ def unsigned_reason(repo: Path, revision: str, policy: SignaturePolicy) -> str |
         if problem:
             return problem
         cmd += ["-c", f"gpg.ssh.allowedSignersFile={ECOSYSTEM_SIGNERS_FILE}"]
+    if policy.signature_formats == "ssh":
+        kind = signature_kind(repo, revision)
+        if kind != "ssh":
+            return "candidate commit has no SSH signature" + (f" (it carries a {kind.upper()} signature, which the setting signature_formats = ssh does not accept)" if kind != "none" else "")
     cmd += ["verify-commit", revision]
     try:
         result = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
