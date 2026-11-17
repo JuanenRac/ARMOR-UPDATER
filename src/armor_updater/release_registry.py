@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .console_flags import NO_WINDOW
-from .signature import SignaturePolicy, signers_file_for_tags
+from .signature import _KEY_TYPES, SignaturePolicy, signers_file_for_tags
 
 NAMESPACE = "armor-releases"
 IDENTITY = "armor-ecosystem@electrohobby3d.invalid"
@@ -100,6 +100,16 @@ def render_registry(releases: list[Release]) -> str:
     return text
 
 
+def _namespaced_line(line: str) -> str:
+    """One allowed-signers line with its keys valid for the registry namespace only, whatever the type of the key (ssh-, ecdsa-, sk-...). A line with no key raises ValueError."""
+    for index, token in enumerate(re.finditer(r'(?:[^\s"]|"[^"]*")+', line)):
+        if index >= 1 and token.group().startswith(_KEY_TYPES):      # the first word is the principal, whatever it is called
+            if "namespaces=" in line:
+                return re.sub(r'namespaces="[^"]*"', f'namespaces="{NAMESPACE}"', line)
+            return f'{line[:token.start()]}namespaces="{NAMESPACE}" {line[token.start():]}'
+    raise ValueError("line without a public key in the allowed-signers file")
+
+
 def _namespaced_signers(source: Path, folder: Path) -> Path:
     """A copy of the allowed-signers file whose keys are valid for the registry namespace only (the shipped file allows its keys for git signatures only)."""
     lines = []
@@ -107,7 +117,7 @@ def _namespaced_signers(source: Path, folder: Path) -> Path:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        lines.append(re.sub(r'namespaces="[^"]*"', f'namespaces="{NAMESPACE}"', line) if "namespaces=" in line else line.replace(" ssh-", f' namespaces="{NAMESPACE}" ssh-', 1))
+        lines.append(_namespaced_line(line))
     target = folder / "allowed_signers"
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return target
@@ -126,7 +136,7 @@ def signature_problem(registry: Path, signers: Path, *, runner: Runner = subproc
             with registry.open("rb") as data:
                 done = runner(["ssh-keygen", "-Y", "verify", "-f", str(namespaced), "-I", IDENTITY, "-n", NAMESPACE, "-s", str(signature)],
                               stdin=data, capture_output=True, timeout=60, creationflags=NO_WINDOW)
-        except (OSError, subprocess.TimeoutExpired) as exc:
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             return f"the release registry could not be verified ({exc})"
     if done.returncode != 0:
         return "the release registry is not signed by a trusted key"
