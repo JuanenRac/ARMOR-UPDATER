@@ -198,7 +198,7 @@ Es ist reines Python: Es gibt nichts zu kompilieren (`pip install -e .`). Die Ve
 ## 📂 Struktur des Repositorys
 
 <p align="center">
-  <img src="images/repository-structure.svg" alt="Repository structure of ARMOR-UPDATER" width="100%">
+  <img src="images/repository-structure.svg" alt="Repository-Struktur von ARMOR-UPDATER" width="100%">
 </p>
 
 <details>

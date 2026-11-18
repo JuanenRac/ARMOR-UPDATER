@@ -198,7 +198,7 @@ python -I tools/armor_ci_validate.py
 ## 📂 リポジトリの構成
 
 <p align="center">
-  <img src="images/repository-structure.svg" alt="Repository structure of ARMOR-UPDATER" width="100%">
+  <img src="images/repository-structure.svg" alt="ARMOR-UPDATER のリポジトリ構造" width="100%">
 </p>
 
 <details>
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     8 言語
 │   ├── gui.py qt_gui.py qml/                                  任意の Qt Quick ウィンドウ
 │   └── data/ assets/                                          allowed_signers とアイコン
-├── tests/                                                     33 モジュール 454 件
+├── tests/                                                     39 モジュール 454 件
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共通の CI 検査、ランチャー、generate_app_icon.py
 ├── images/                                                    バナー、アイコン、README の画像

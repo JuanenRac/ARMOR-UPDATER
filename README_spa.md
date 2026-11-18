@@ -198,7 +198,7 @@ Es Python puro: no hay nada que compilar (`pip install -e .`). La versión vive 
 ## 📂 Estructura del repositorio
 
 <p align="center">
-  <img src="images/repository-structure.svg" alt="Repository structure of ARMOR-UPDATER" width="100%">
+  <img src="images/repository-structure.svg" alt="Estructura del repositorio de ARMOR-UPDATER" width="100%">
 </p>
 
 <details>

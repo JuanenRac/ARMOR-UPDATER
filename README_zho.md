@@ -198,7 +198,7 @@ python -I tools/armor_ci_validate.py
 ## 📂 仓库结构
 
 <p align="center">
-  <img src="images/repository-structure.svg" alt="Repository structure of ARMOR-UPDATER" width="100%">
+  <img src="images/repository-structure.svg" alt="ARMOR-UPDATER 的仓库结构" width="100%">
 </p>
 
 <details>
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     八种语言
 │   ├── gui.py qt_gui.py qml/                                  可选的 Qt Quick 窗口
 │   └── data/ assets/                                          allowed_signers 与图标
-├── tests/                                                     33 个模块 454 项测试
+├── tests/                                                     39 个模块 454 项测试
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共用的 CI 检查、启动器和 generate_app_icon.py
 ├── images/                                                    横幅图、图标和 README 的图片

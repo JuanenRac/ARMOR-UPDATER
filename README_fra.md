@@ -198,7 +198,7 @@ C'est du Python pur : rien à compiler (`pip install -e .`). La version se trouv
 ## 📂 Structure du dépôt
 
 <p align="center">
-  <img src="images/repository-structure.svg" alt="Repository structure of ARMOR-UPDATER" width="100%">
+  <img src="images/repository-structure.svg" alt="Structure du dépôt de ARMOR-UPDATER" width="100%">
 </p>
 
 <details>
