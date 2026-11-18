@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared tools of the manifest and the status lights gain an opt-in strict check of the evidence:** `sync_manifests.py` and `status_lights.py` take `--strict-evidence` (off by default; `ARMOR_STRICT_EVIDENCE=1` switches it on for `armor_ci_validate.py`).
 - **The strict mode can accept only SSH signatures on commits:** `signature_formats` in the settings (or `ARMOR_UPDATER_SIGNATURE_FORMATS`) set to `ssh` refuses a commit that carries a GPG signature, which git would otherwise accept with any key of the local keyring; the SSH ones are still checked against the allowed signers. The default, `any`, changes nothing. Tests with a commit that carries a GPG header, one without a signature and, where `ssh-keygen` exists, a really signed one.
 
 - **The signers file used to check the registry limits every key type to the registry namespace:** the option is now put before the key whatever its type (`ssh-`, `ecdsa-`, `sk-`), not only before an `ssh-` one, and a line with no key makes the check fail with a reason instead of being passed on untouched. The file shipped today holds an `ssh-` key, so its result does not change. Tests for each type of key, with and without an option already on the line.
