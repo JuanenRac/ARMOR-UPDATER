@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The Architecture picture rounds its coordinates to two decimals:** the legend positions no longer carry floating-point noise such as 399.9999999999999, so `make_architecture.py --check` gives the same answer on every machine; the shared tool is the one of ARMOR-COMMON.
 - **The shared tools of the manifest and the status lights gain an opt-in strict check of the evidence:** `sync_manifests.py` and `status_lights.py` take `--strict-evidence` (off by default; `ARMOR_STRICT_EVIDENCE=1` switches it on for `armor_ci_validate.py`).
 - **The strict mode can accept only SSH signatures on commits:** `signature_formats` in the settings (or `ARMOR_UPDATER_SIGNATURE_FORMATS`) set to `ssh` refuses a commit that carries a GPG signature, which git would otherwise accept with any key of the local keyring; the SSH ones are still checked against the allowed signers. The default, `any`, changes nothing. Tests with a commit that carries a GPG header, one without a signature and, where `ssh-keygen` exists, a really signed one.
 
