@@ -4,17 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.4] - SSH-only commit signatures, stricter signer and tag checks and generated file trees
+
 - **The structure generator can write a figure read from the code:** `tools/make_structure.py` resolves `{{fact:NAME|LAST}}` in the descriptions of `docs/structure.json` where the documentation tools are next to the repository, and writes LAST (the figure it had when last written) everywhere else, so a repository still builds on its own.
 - **The test counts of the repository structure are read from the code:** the tests, test modules, JSON Schemas and conformance payloads that `docs/structure.json` states are `{{fact:...}}` markers now, so the tree and the picture follow the tests instead of a number typed by hand.
 - **The Security and Updates lights of the Project status table follow the evidence ceiling:** they cannot be above what the Hardware row may show for the evidence of the manifest, and Security is never green; the rows that were higher are now orange in the eight READMEs, and `tools/status_lights.py` is the new shared copy.
-
 - **The file tree of the README is drawn from the structure source:** the text tree in the eight READMEs is generated from `docs/structure.json`, the file that also draws the picture, so the two cannot disagree; it states the current count of 454 tests in 39 modules.
 - **The Architecture picture rounds its coordinates to two decimals:** the legend positions no longer carry floating-point noise such as 399.9999999999999, so `make_architecture.py --check` gives the same answer on every machine; the shared tool is the one of ARMOR-COMMON.
 - **The shared tools of the manifest and the status lights gain an opt-in strict check of the evidence:** `sync_manifests.py` and `status_lights.py` take `--strict-evidence` (off by default; `ARMOR_STRICT_EVIDENCE=1` switches it on for `armor_ci_validate.py`).
 - **The strict mode can accept only SSH signatures on commits:** `signature_formats` in the settings (or `ARMOR_UPDATER_SIGNATURE_FORMATS`) set to `ssh` refuses a commit that carries a GPG signature, which git would otherwise accept with any key of the local keyring; the SSH ones are still checked against the allowed signers. The default, `any`, changes nothing. Tests with a commit that carries a GPG header, one without a signature and, where `ssh-keygen` exists, a really signed one.
-
 - **The signers file used to check the registry limits every key type to the registry namespace:** the option is now put before the key whatever its type (`ssh-`, `ecdsa-`, `sk-`), not only before an `ssh-` one, and a line with no key makes the check fail with a reason instead of being passed on untouched. The file shipped today holds an `ssh-` key, so its result does not change. Tests for each type of key, with and without an option already on the line.
-
 - **A release tag must carry its own name:** the name written inside the signed tag object has to match the name of the reference, both when the newest signed release is chosen and in the signed-tags check; a reference such as `v9.9.9` pointing at the signed object of an older release is skipped with the reason shown, so a fresh install can no longer be steered to an old release. Tests with scripted answers.
 
 ## [0.2.3] - A signed registry of releases, the newest signed release by default, the confirmed profile tiers and the layout corners tested
