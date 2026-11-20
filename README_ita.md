@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     le otto lingue
 │   ├── gui.py qt_gui.py qml/                                  la finestra Qt Quick opzionale
 │   └── data/ assets/                                          allowed_signers; l'icona
-├── tests/                                                     484 test in 45 moduli
+├── tests/                                                     486 test in 45 moduli
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     i controlli CI, l'avviatore e generate_app_icon.py
 ├── images/                                                    banner, icona e immagini del README
