@@ -114,13 +114,16 @@ def parse_manifest(text: str, *, expected_name: str | None = None) -> ProjectMan
     # "requires": the projects that must be installed before this one (see _parse_requires).
     # "evidence" and "hardware_bound": how far the project has been seen on real hardware and whether it has any
     # (they cap the lights of the README table; see the shared status lights tool).
-    optional_fields = {"service", "deployment_target_note", "requires", "evidence", "hardware_bound", "min_common"}
+    # "evidence_record": the free text in which the maintainer records what was tried on real hardware when "evidence" is bench or field.
+    optional_fields = {"service", "deployment_target_note", "requires", "evidence", "evidence_record", "hardware_bound", "min_common"}
     unknown = sorted(set(data) - expected_fields - optional_fields)
     missing = sorted(expected_fields - set(data))
     if missing:
         raise ManifestValidationError("missing field(s): " + ", ".join(missing))
     if unknown:
         raise ManifestValidationError("unknown field(s): " + ", ".join(unknown))
+    if "evidence_record" in data and (not isinstance(data["evidence_record"], str) or not data["evidence_record"].strip()):
+        raise ManifestValidationError("evidence_record must be a non-empty string")
 
     schema_version = _require_string(data, "schema_version")
     if schema_version != SCHEMA_VERSION:

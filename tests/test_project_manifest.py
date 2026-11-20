@@ -92,6 +92,21 @@ def test_rejects_unknown_fields_to_prevent_silent_dashboard_drift():
         parse_manifest(json.dumps(data))
 
 
+def test_accepts_the_evidence_record_of_a_bench_or_field_project():
+    data = valid_manifest()
+    data["evidence"] = "field"
+    data["evidence_record"] = "Used by the maintainer on a real installation."
+    manifest = parse_manifest(json.dumps(data))
+    assert manifest.name == "ARMOR-EXAMPLE"
+
+
+def test_rejects_an_empty_evidence_record():
+    data = valid_manifest()
+    data["evidence_record"] = "   "
+    with pytest.raises(ManifestValidationError, match="evidence_record"):
+        parse_manifest(json.dumps(data))
+
+
 def test_native_version_must_equal_version():
     # armor_project_tool.py's own bump() always keeps them equal; a manifest
     # where they disagree is corrupt, not a legitimate drift to tolerate.
