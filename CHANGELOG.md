@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The machine roles are confirmed:** the profiles shipped with the updater (CM5, operator PC, development PC) no longer say that their composition is a proposal, so the window stops showing that note. The components are the same; a profiles file with `"proposal": true` still shows it.
 - **The copy of the shared validator is current:** `tools/armor_ci_validate.py` now also checks with `node --check` that the scripts served to a browser parse, in a repository that has them under `panel/` or `public/`.
 ## [0.2.4] - SSH-only commit signatures, stricter signer and tag checks and generated file trees
 

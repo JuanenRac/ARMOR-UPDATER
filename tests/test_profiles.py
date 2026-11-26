@@ -27,9 +27,9 @@ def _settings_file(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(settings, "SETTINGS_PATH", tmp_path / "settings.json")
 
 
-def test_the_bundled_profiles_are_valid_marked_as_a_proposal_and_in_eight_languages():
+def test_the_bundled_profiles_are_valid_confirmed_and_in_eight_languages():
     loaded = load_profiles(None)
-    assert loaded.proposal is True
+    assert loaded.proposal is False
     assert [item.id for item in loaded.profiles] == ["cm5", "cm5-minimal", "cm5-standard", "cm5-complete", "operator-pc", "development-pc"]
     for item in loaded.profiles:
         assert set(item.title) == set(profiles.LANGUAGE_CODES) and set(item.description) == set(profiles.LANGUAGE_CODES)
@@ -136,8 +136,10 @@ def test_the_selector_preselects_the_roles_components_and_warns_about_the_missin
     in_profile = {row["name"] for row in bridge.projects if row["inProfile"]}
     assert in_profile == {"ARMOR-SERVER", "ARMOR-STUDIO"}
     summary = bridge.profileSummary
-    assert "Selected: 2" in summary and "proposal" in summary and "ARMOR-NETWORK" in summary and "Not found on this machine" in summary
+    assert "Selected: 2" in summary and "proposal" not in summary and "ARMOR-NETWORK" in summary and "Not found on this machine" in summary
     assert profiles.saved_profile() == ("cm5", None)
+    bridge._profiles = profiles.ProfileSet(True, bridge._profiles.profiles)   # a file that still calls itself a proposal is said so
+    assert "proposal" in bridge.profileSummary
 
 
 def test_the_selection_can_be_adjusted_and_is_remembered():
