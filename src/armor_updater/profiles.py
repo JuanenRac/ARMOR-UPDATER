@@ -8,7 +8,7 @@
 A profile is a named list of components. The updater has no catalogue of its own (it discovers the projects by their manifests), so a profile only names projects: the ones that
 are not discovered on this machine are reported as a warning, never as a failure. The profiles are data, in `ARMOR-DOCS/data/update-profiles.json` (schema `1.0`); a copy ships
 inside the package (`data/update-profiles.json`) and is used when the workspace has no ARMOR-DOCS checkout. The chosen profile and the adjustments made to it are remembered in
-the settings file. The composition of the roles is a proposal until the owner confirms it (the file says so).
+the settings file. The composition of the roles is confirmed; a file with `"proposal": true` makes the window say that it is only a proposal.
 """
 from __future__ import annotations
 

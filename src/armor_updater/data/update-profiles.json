@@ -1,16 +1,6 @@
 {
   "schema_version": "1.0",
-  "proposal": true,
-  "proposal_note": {
-    "en": "PROPOSAL: the components of the CM5, operator PC and development PC roles are a first proposal that the owner has yet to confirm. Minimal, Standard and Complete are confirmed.",
-    "es": "PROPUESTA: los componentes de los roles CM5, PC de operador y PC de desarrollo son una primera propuesta que el dueño aún debe confirmar. Mínimo, Estándar y Completo están confirmados.",
-    "de": "VORSCHLAG: Die Komponenten der Rollen CM5, Bediener-PC und Entwicklungs-PC sind ein erster Vorschlag, den der Eigentümer noch bestätigen muss. Minimal, Standard und Vollständig sind bestätigt.",
-    "fr": "PROPOSITION : les composants des rôles CM5, PC opérateur et PC de développement sont une première proposition que le propriétaire doit encore confirmer. Minimal, Standard et Complet sont confirmés.",
-    "it": "PROPOSTA: i componenti dei ruoli CM5, PC operatore e PC di sviluppo sono una prima proposta che il proprietario deve ancora confermare. Minimo, Standard e Completo sono confermati.",
-    "ja": "提案：CM5、オペレーターPC、開発PC の役割のコンポーネントは最初の提案であり、オーナーの確認がまだ必要です。最小・標準・完全は確認済みです。",
-    "zh": "提议：CM5、操作员电脑和开发电脑角色的组件只是初步提议，仍需所有者确认。最小、标准和完整已确认。",
-    "pt": "PROPOSTA: os componentes das funções CM5, PC do operador e PC de desenvolvimento são uma primeira proposta que o dono ainda tem de confirmar. Mínimo, Padrão e Completo estão confirmados."
-  },
+  "proposal": false,
   "profiles": [
     {
       "id": "cm5",

@@ -102,7 +102,7 @@ The **Profile** selector (beside the offline check) preselects the projects of a
 `ARMOR-DOCS/data/update-profiles.json` (a copy ships in `src/armor_updater/data/update-profiles.json`, used when the workspace has no ARMOR-DOCS checkout). With a profile chosen, a mark at
 the start of each row shows whether the project is in it (click to include or exclude it), the batch buttons and their counts cover only the selected projects, and a line under the toolbar
 says what the profile is for and warns about the projects it lists that are not discovered on this machine (they are skipped, never an error). The profile and the adjustments are remembered in
-the settings file. The composition of the roles is a proposal until it is confirmed.
+the settings file. The composition of the three roles is confirmed; a profiles file that carries `"proposal": true` makes that line say so.
 
 The **Only signed tags** checkbox switches on the mode described in [SIGNED_TAGS.md](SIGNED_TAGS.md); it is off by default.
 
