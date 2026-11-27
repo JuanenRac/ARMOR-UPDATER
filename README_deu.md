@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Sprachen">
   <img src="https://img.shields.io/badge/Tests-454%20passing-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.2.5-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Reifegrad">
 </p>
 
@@ -37,7 +37,7 @@
 
 | | |
 |---|---|
-| Version | `0.2.4` |
+| Version | `0.2.5` |
 | Reifegrad | Etabliert |
 | Rolle | Desktop-Werkzeug, das die Familie auf einem PC installiert und aktualisiert, ein Projekt nach dem anderen |
 | Technik | Python 3.10+, git; optional PySide6 (Qt Quick) |
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     die acht Sprachen
 │   ├── gui.py qt_gui.py qml/                                  das optionale Qt-Quick-Fenster
 │   └── data/ assets/                                          allowed_signers; das Symbol
-├── tests/                                                     489 Tests in 46 Modulen
+├── tests/                                                     503 Tests in 47 Modulen
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     die gemeinsamen CI-Prüfungen, der Starter und generate_app_icon.py
 ├── images/                                                    Banner, Symbol und die Bilder des READMEs

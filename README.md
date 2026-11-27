@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
   <img src="https://img.shields.io/badge/Tests-454%20passing-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.2.5-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -37,7 +37,7 @@
 
 | | |
 |---|---|
-| Version | `0.2.4` |
+| Version | `0.2.5` |
 | Maturity | Established |
 | Role | Desktop tool that installs and updates the family on a PC, one project at a time |
 | Stack | Python 3.10+, git; optional PySide6 (Qt Quick) |
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     the eight languages
 │   ├── gui.py qt_gui.py qml/                                  the optional Qt Quick window
 │   └── data/ assets/                                          allowed_signers; the icon
-├── tests/                                                     489 tests in 46 modules
+├── tests/                                                     503 tests in 47 modules
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     the shared CI checks, the launcher and generate_app_icon.py
 ├── images/                                                    banner, icon and the pictures of the README

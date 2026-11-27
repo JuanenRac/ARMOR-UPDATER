@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Lingue">
   <img src="https://img.shields.io/badge/Tests-454%20passing-2ea44f.svg" alt="Test">
-  <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Versione">
+  <img src="https://img.shields.io/badge/Version-0.2.5-0f6cbd.svg" alt="Versione">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturità">
 </p>
 
@@ -37,7 +37,7 @@
 
 | | |
 |---|---|
-| Versione | `0.2.4` |
+| Versione | `0.2.5` |
 | Maturità | Consolidato |
 | Ruolo | Strumento desktop che installa e aggiorna la famiglia su un PC, un progetto alla volta |
 | Tecnologia | Python 3.10+, git; PySide6 (Qt Quick) facoltativo |
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     le otto lingue
 │   ├── gui.py qt_gui.py qml/                                  la finestra Qt Quick opzionale
 │   └── data/ assets/                                          allowed_signers; l'icona
-├── tests/                                                     489 test in 46 moduli
+├── tests/                                                     503 test in 47 moduli
 ├── docs/                                                      CLI_REFERENCE.md, QML_DESKTOP_GUI.md
 ├── tools/                                                     i controlli CI, l'avviatore e generate_app_icon.py
 ├── images/                                                    banner, icona e immagini del README

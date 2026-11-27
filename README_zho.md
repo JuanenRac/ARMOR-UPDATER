@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/Dependencies-none-2ea44f.svg" alt="Dependencies">
   <img src="https://img.shields.io/badge/Languages-8-00E5FF.svg" alt="Languages">
   <img src="https://img.shields.io/badge/Tests-454%20passing-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.2.5-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -37,7 +37,7 @@
 
 | | |
 |---|---|
-| 版本 | `0.2.4` |
+| 版本 | `0.2.5` |
 | 成熟度 | 成熟 |
 | 角色 | 在 PC 上逐个安装和更新整个家族的桌面工具 |
 | 技术栈 | Python 3.10+、git；可选 PySide6（Qt Quick） |
@@ -217,7 +217,7 @@ ARMOR-UPDATER/
 │   ├── i18n.py i18n_pt.py i18n_recovery.py result_text.py     八种语言
 │   ├── gui.py qt_gui.py qml/                                  可选的 Qt Quick 窗口
 │   └── data/ assets/                                          allowed_signers 与图标
-├── tests/                                                     46 个模块 489 项测试
+├── tests/                                                     47 个模块 503 项测试
 ├── docs/                                                      CLI_REFERENCE.md、QML_DESKTOP_GUI.md
 ├── tools/                                                     共用的 CI 检查、启动器和 generate_app_icon.py
 ├── images/                                                    横幅图、图标和 README 的图片
