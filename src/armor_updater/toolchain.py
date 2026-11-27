@@ -74,7 +74,7 @@ def parse_version(output: str) -> tuple[int, int] | None:
 
 
 def _run(command: list[str]) -> str:
-    done = subprocess.run(command, capture_output=True, text=True, timeout=RUN_TIMEOUT_S, shell=False, check=False, creationflags=NO_WINDOW)
+    done = subprocess.run(command, capture_output=True, text=True, errors="replace", timeout=RUN_TIMEOUT_S, shell=False, check=False, creationflags=NO_WINDOW)
     return (done.stdout or "") + (done.stderr or "")
 
 

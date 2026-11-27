@@ -43,7 +43,7 @@ class RegistryToolError(Exception):
 
 
 def _run(command: list[str], runner: Runner) -> "subprocess.CompletedProcess[str]":
-    return runner(command, capture_output=True, text=True, timeout=120, creationflags=NO_WINDOW)
+    return runner(command, capture_output=True, encoding="utf-8", errors="replace", timeout=120, creationflags=NO_WINDOW)
 
 
 def build(root: Path, *, runner: Runner = subprocess.run) -> tuple[list[rr.Release], list[str]]:

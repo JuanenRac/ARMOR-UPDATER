@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -291,7 +292,11 @@ def cmd_notify(args: argparse.Namespace) -> int:
     print(title)
     print(body)
     if args.ntfy_url:
-        status = send(args.ntfy_url, title, body)
+        try:
+            status = send(args.ntfy_url, title, body)
+        except (OSError, http.client.HTTPException) as error:   # no network, a refused or cut connection
+            print(f"The notification could not be sent: {error}", file=sys.stderr)
+            return 2
         if not 200 <= status < 300:
             print(f"The notification was refused: HTTP {status}", file=sys.stderr)
             return 2
@@ -523,7 +528,16 @@ def build_parser() -> argparse.ArgumentParser:
 COMMAND_WORDS = {"status", "install", "update", "rollback", "backups", "tools", "notify", "android"}
 
 
+def _print_whatever_the_console_holds() -> None:
+    """A file or project name the code page of the console cannot hold is shown with a replacement mark; it must not end the command with an error."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="replace")
+
+
 def main() -> int:
+    _print_whatever_the_console_holds()
     arguments = [a for a in sys.argv[1:] if a != "--cli"]
     if "--cli" not in sys.argv and not (arguments and arguments[0] in COMMAND_WORDS):
         try:

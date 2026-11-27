@@ -10,6 +10,7 @@ Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import re
 import shutil
@@ -90,6 +91,8 @@ def release_assets(project: str = DEFAULT_PROJECT, owner: str = OWNER, opener: C
     """(tag, {asset name: download address}) of the newest release of the project."""
     fetch = opener or _fetch
     data = json.loads(fetch(f"https://api.github.com/repos/{owner}/{project}/releases/latest").decode("utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("the answer about the newest release is not the expected object")
     return str(data.get("tag_name", "")), {str(item["name"]): str(item["browser_download_url"]) for item in data.get("assets", []) if "name" in item and "browser_download_url" in item}
 
 
@@ -97,8 +100,15 @@ def _fetch(address: str) -> bytes:
     if not address.startswith("https://"):
         raise ValueError("only https addresses are fetched")
     request = urllib.request.Request(address, headers={"User-Agent": "armor-updater"})
-    with urllib.request.urlopen(request, timeout=30) as answer:   # noqa: S310 - https only, checked above
-        data = answer.read(MAX_APK_BYTES + 1)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as answer:   # noqa: S310 - https only, checked above
+            data = answer.read(MAX_APK_BYTES + 1)
+            declared = str(getattr(answer, "headers", None) and answer.headers.get("Content-Length") or "")
+    except http.client.HTTPException as error:
+        raise ValueError(f"the download was cut or the answer was not HTTP ({type(error).__name__})") from error
+    # read(n) of a connection that closes early returns what came without raising: the announced length tells
+    if declared.isdigit() and len(data) < min(int(declared), MAX_APK_BYTES + 1):
+        raise ValueError(f"the download was cut: {len(data)} of {declared} bytes arrived")
     if len(data) > MAX_APK_BYTES:
         raise ValueError("the download is larger than an APK of this app can be")
     return data
@@ -196,6 +206,6 @@ def install_apk(
 
 def _run(command: list[str]) -> "subprocess.CompletedProcess[str]":
     try:
-        return subprocess.run(command, capture_output=True, text=True, timeout=300, check=False, creationflags=NO_WINDOW)
+        return subprocess.run(command, capture_output=True, encoding="utf-8", errors="replace", timeout=300, check=False, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as error:
         return subprocess.CompletedProcess(command, 127, "", str(error))

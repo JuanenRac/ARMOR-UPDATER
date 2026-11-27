@@ -29,13 +29,14 @@ def installed_state(project_path: Path) -> dict[str, str | None]:
     version = commit = None
     manifest = project_path / _PROFILE.manifest_file
     try:
-        version = json.loads(manifest.read_text(encoding="utf-8")).get("version")
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        version = data.get("version") if isinstance(data, dict) else None
     except (OSError, ValueError):
         pass
     try:
         completed = subprocess.run(
             ["git", "-C", str(project_path), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=15, check=False, creationflags=NO_WINDOW,
+            capture_output=True, encoding="utf-8", errors="replace", timeout=15, check=False, creationflags=NO_WINDOW,
         )
         if completed.returncode == 0:
             commit = completed.stdout.strip() or None
@@ -72,8 +73,14 @@ def record_attempt(
         directory = workspace_root / EVIDENCE_DIRECTORY
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / EVIDENCE_FILE
+        # a line cut by a power loss has no end: the new one must not be glued to it
+        cut = False
+        if path.is_file() and path.stat().st_size:
+            with path.open("rb") as existing:
+                existing.seek(-1, 2)
+                cut = existing.read(1) != b"\n"
         with path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(line, sort_keys=True) + "\n")
+            stream.write(("\n" if cut else "") + json.dumps(line, sort_keys=True) + "\n")
         return path
     except OSError as error:
         # The attempt is still reported to the person; only the evidence file could not be written, and that is said instead of passing unnoticed.
@@ -82,8 +89,18 @@ def record_attempt(
 
 
 def read_attempts(workspace_root: Path) -> list[dict[str, Any]]:
+    """Every readable line of the evidence file. A damaged or cut line is left out and does not hide the others."""
     path = workspace_root / EVIDENCE_DIRECTORY / EVIDENCE_FILE
     try:
-        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    except (OSError, ValueError):
+        lines = path.read_bytes().split(b"\n")
+    except OSError:
         return []
+    attempts: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            data = json.loads(line.decode("utf-8"))
+        except ValueError:   # blank, cut, not JSON or not UTF-8
+            continue
+        if isinstance(data, dict):
+            attempts.append(data)
+    return attempts

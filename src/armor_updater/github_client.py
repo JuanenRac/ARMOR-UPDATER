@@ -36,6 +36,7 @@
 # =============================================================================
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import socket
@@ -198,7 +199,8 @@ def _urlopen_with_retries(
             if retry_after is None or attempt >= max_attempts:
                 raise
             sleep(retry_after)
-        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError):
+        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError, http.client.HTTPException):
+            # HTTPException: the answer was cut in the middle (IncompleteRead) or was not an HTTP answer
             if attempt >= max_attempts:
                 raise
             sleep(backoff_base_s * (2 ** (attempt - 1)))
@@ -227,7 +229,7 @@ def _remote_tip(owner: str, name: str, branch: str) -> str | None:
     try:
         completed = subprocess.run(
             ["git", "ls-remote", f"{GITHUB_GIT_BASE}/{owner}/{name}", f"refs/heads/{branch}"],
-            capture_output=True, text=True, timeout=LS_REMOTE_TIMEOUT_S, check=False, env=environment, stdin=subprocess.DEVNULL, creationflags=NO_WINDOW,
+            capture_output=True, encoding="utf-8", errors="replace", timeout=LS_REMOTE_TIMEOUT_S, check=False, env=environment, stdin=subprocess.DEVNULL, creationflags=NO_WINDOW,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -270,7 +272,7 @@ def _read_manifest(owner: str, name: str, branch: str, token: str = "") -> tuple
             if exc.code == 404 and final_404:
                 raise
             last_error = exc
-        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
+        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError, http.client.HTTPException) as exc:
             last_error = exc
     assert last_error is not None
     raise last_error
@@ -333,7 +335,7 @@ def _fetch_discovered_manifest(owner: str, name: str, branch: str, token: str = 
         if exc.code == 404:
             return None
         raise RuntimeError(f"{name}: manifest {describe_http_error(exc)}") from exc
-    except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
+    except (urllib.error.URLError, TimeoutError, socket.timeout, OSError, http.client.HTTPException) as exc:
         raise RuntimeError(f"{name}: manifest lookup failed: {exc}") from exc
 
     try:
@@ -405,7 +407,7 @@ def discover_remote_projects(
             # resets, or that GITHUB_TOKEN raises the limit - all of
             # which describe_http_error() already knows how to say.
             raise RuntimeError(f"unable to list GitHub repositories for {owner}: {describe_http_error(exc)}") from exc
-        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError, json.JSONDecodeError) as exc:
+        except (urllib.error.URLError, TimeoutError, socket.timeout, OSError, http.client.HTTPException, json.JSONDecodeError) as exc:
             raise RuntimeError(f"unable to list GitHub repositories for {owner}: {exc}") from exc
         if not isinstance(payload, list):
             raise RuntimeError(f"unexpected GitHub repository-list response for {owner}")
@@ -496,7 +498,7 @@ def _fetch_one(
             url=url,
         )
 
-    except OSError as exc:
+    except (OSError, http.client.HTTPException) as exc:
         return RemoteStatus(
             entry=entry,
             version=None,
