@@ -97,8 +97,8 @@ def load_profiles(workspace_root: Path | None = None) -> ProfileSet:
     if workspace_root is not None:
         candidate = workspace_root.joinpath(*DOCS_PROFILES)
         try:
-            return parse_profiles(candidate.read_text(encoding="utf-8"))
-        except (OSError, ProfilesError):
+            return parse_profiles(candidate.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):   # ValueError: ProfilesError, or a file in another encoding
             pass
     return parse_profiles(BUNDLED_PROFILES.read_text(encoding="utf-8"))
 

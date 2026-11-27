@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A download cut in the middle is asked again or reported instead of ending in an error:** the lists and manifests read from GitHub are retried and then explained, so the window is not left busy; an APK that arrives short is reported as cut, and a notice that cannot be sent (no network, a cut connection) ends the `notify` command with a message and exit code 2.
+- **Damaged files, or files saved in another encoding, no longer stop the updater:** a settings file in another encoding is left as it is and keeps the protections on, a byte-order mark is accepted, one unreadable manifest or profiles file is reported or replaced by the shipped one, and one cut line of the evidence log hides neither the others nor the next one.
+- **Output outside the code page of the console is not an error:** what git, `adb` and the build tools write is read without failing on a character that cannot be decoded, and a name the console cannot show is printed with a replacement mark.
 - **Local files with names outside ASCII are no longer left behind by an update on Windows:** the names git reports were read with the code page of the console, so a file such as `configuración.json` or one with a Japanese name was not found and the updated installation was missing it, and a changed file of that kind was named wrongly. What git writes is now read as UTF-8, which also lets a manifest or a commit message with such characters through.
 - **The shared project tool is the current one:** the copy follows the shared repository, which now knows the new solar panel node.
 

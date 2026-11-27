@@ -97,12 +97,12 @@ def wants_releases(project: str, workspace_root: Path | None = None) -> bool:
 def backup_history(workspace_root: Path, project: str, path: Path) -> Path | None:
     """Writes a git bundle with the whole history of the checkout at `path` before it is moved into the releases layout. Returns the file, or None when it could not be made (the
     migration is then not attempted)."""
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=60).stdout.strip() or "unknown"
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW, timeout=60).stdout.strip() or "unknown"
     directory = state_directory(workspace_root) / BACKUPS_OF_LAYOUT / project
     target = directory / f"{commit[:12]}.bundle"
     try:
         directory.mkdir(parents=True, exist_ok=True)
-        done = subprocess.run(["git", "bundle", "create", str(target), "--all"], cwd=path, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=600)
+        done = subprocess.run(["git", "bundle", "create", str(target), "--all"], cwd=path, capture_output=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW, timeout=600)
     except (OSError, subprocess.SubprocessError):
         return None
     return target if done.returncode == 0 and target.is_file() else None
@@ -133,7 +133,7 @@ def link_target(path: Path) -> Path | None:
 def make_link(link: Path, target: Path) -> None:
     """Creates `link` pointing at the folder `target`: a junction on Windows (no administrator rights needed), a symbolic link elsewhere."""
     if os.name == "nt":
-        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], capture_output=True, text=True, creationflags=NO_WINDOW)
+        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], capture_output=True, text=True, errors="replace", creationflags=NO_WINDOW)
         if result.returncode != 0:
             raise OSError((result.stdout + result.stderr).strip() or "mklink /J failed")
     else:
@@ -271,7 +271,7 @@ def verify_in_service(workspace_root: Path, project: str, release: Path, expecte
     if not isinstance(document, dict) or not isinstance(document.get("version"), str):
         return "the manifest of the new release has no version"
     try:
-        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=link, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=30).stdout.strip()
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=link, capture_output=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW, timeout=30).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return "the commit of the new release cannot be read"
     if expected_commit and not head.startswith(expected_commit[:12]):
