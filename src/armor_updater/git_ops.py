@@ -22,7 +22,9 @@ def _run(
 ) -> subprocess.CompletedProcess[str]:
     kwargs: dict[str, Any] = {"cwd": str(cwd), "check": False}
     if capture_output:
-        kwargs.update({"capture_output": True, "text": True})
+        kwargs.update({"capture_output": True, "text": True, "errors": "replace"})   # a character the console cannot hold must not turn a finished step into an error
+        if cmd[0] == "git":
+            kwargs["encoding"] = "utf-8"   # git writes UTF-8 whatever the code page of the console is
     # The GUI is started with pythonw on Windows. Do not let git or a child build script create a surprise console while its output is captured for the in-window checkpoint log.
     if os.name == "nt" and (capture_output or headless()):
         kwargs["creationflags"] = NO_WINDOW
@@ -45,7 +47,7 @@ def _command_output(result: subprocess.CompletedProcess[str]) -> str:
 
 
 def _rev_parse(path: Path, revision: str) -> str:
-    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW).stdout.strip()
+    return subprocess.run(["git", "rev-parse", revision], cwd=str(path), check=False, capture_output=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW).stdout.strip()
 
 
 def _validated_manifest_text(text: str, entry: ProjectEntry) -> ProjectManifest:
@@ -60,7 +62,8 @@ def _manifest_from_revision(path: Path, revision: str, entry: ProjectEntry) -> P
         cwd=str(path),
         check=False,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="replace",
         creationflags=NO_WINDOW,
     )
     if result.returncode != 0:

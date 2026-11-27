@@ -207,7 +207,7 @@ def signers_file_for_tags(policy: SignaturePolicy) -> tuple[str | None, str | No
 
 def _git_text(repo: Path, *args: str) -> tuple[int, str]:
     try:
-        done = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
+        done = subprocess.run(["git", *args], cwd=repo, capture_output=True, encoding="utf-8", errors="replace", timeout=60, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)
     return done.returncode, (done.stdout if done.returncode == 0 else (done.stderr or done.stdout)).strip()
@@ -328,7 +328,7 @@ def verify_range(repo: Path, base: str, tip: str, policy: SignaturePolicy, *, li
     if not policy.required:
         return None
     try:
-        listing = subprocess.run(["git", "rev-list", f"{base}..{tip}"], cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
+        listing = subprocess.run(["git", "rev-list", f"{base}..{tip}"], cwd=repo, capture_output=True, encoding="utf-8", errors="replace", timeout=60, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"could not list the new commits: {exc}"
     if listing.returncode != 0:
@@ -362,7 +362,7 @@ def unsigned_reason(repo: Path, revision: str, policy: SignaturePolicy) -> str |
             return "candidate commit has no SSH signature" + (f" (it carries a {kind.upper()} signature, which the setting signature_formats = ssh does not accept)" if kind != "none" else "")
     cmd += ["verify-commit", revision]
     try:
-        result = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW)
+        result = subprocess.run(cmd, cwd=repo, capture_output=True, encoding="utf-8", errors="replace", timeout=60, creationflags=NO_WINDOW)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"could not run git verify-commit: {exc}"
     if result.returncode != 0:
