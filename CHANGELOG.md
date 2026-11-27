@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared tools read the output of processes as UTF-8:** `tools/status_lights.py`, `tools/sync_manifests.py` and `tools/universal_readme_check.py` are the current copies; on Windows a character outside the code page no longer breaks a check.
+
 ## [0.2.5] - Cut downloads, damaged files and local names outside ASCII handled, machine roles confirmed
 
 - **A download cut in the middle is asked again or reported instead of ending in an error:** the lists and manifests read from GitHub are retried and then explained, so the window is not left busy; an APK that arrives short is reported as cut, and a notice that cannot be sent (no network, a cut connection) ends the `notify` command with a message and exit code 2.
