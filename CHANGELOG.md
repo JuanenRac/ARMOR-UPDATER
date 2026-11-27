@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Local files with names outside ASCII are no longer left behind by an update on Windows:** the names git reports were read with the code page of the console, so a file such as `configuración.json` or one with a Japanese name was not found and the updated installation was missing it, and a changed file of that kind was named wrongly. What git writes is now read as UTF-8, which also lets a manifest or a commit message with such characters through.
 - **The shared project tool is the current one:** the copy follows the shared repository, which now knows the new solar panel node.
 
 - **The machine roles are confirmed:** the profiles shipped with the updater (CM5, operator PC, development PC) no longer say that their composition is a proposal, so the window stops showing that note. The components are the same; a profiles file with `"proposal": true` still shows it.

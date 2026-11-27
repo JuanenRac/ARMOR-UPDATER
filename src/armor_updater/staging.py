@@ -12,13 +12,17 @@ import sys
 import time
 from pathlib import Path
 from shutil import copy2, copytree, rmtree
-from typing import Callable
+from typing import Any, Callable
 from .console_flags import NO_WINDOW
 
 
 # The GUI consumes these events to show the same real work that the CLI does. A callback is deliberately optional: command-line users retain normal child process output, while the
 # GUI captures it so Windows never needs a second terminal window merely to show a project's build output.
 ProgressCallback = Callable[[str, str], None]
+
+
+#: git writes UTF-8 whatever the code page of the console is. For lists of file names a byte that is not UTF-8 has to come back as it was, so the file is still found.
+_GIT_PATHS: dict[str, Any] = {"encoding": "utf-8", "errors": "surrogateescape"}
 
 
 def _checkpoint(progress: ProgressCallback | None, phase: str, message: str) -> None:
@@ -105,7 +109,7 @@ def _real_untracked_paths(path: Path) -> list[str]:
     A modified TRACKED file is never included - that already blocks the update separately."""
     result = subprocess.run(
         ["git", "status", "--porcelain", "--ignored", "-uall", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW,
+        cwd=str(path), check=False, capture_output=True, creationflags=NO_WINDOW, **_GIT_PATHS,
     )
     if result.returncode != 0 or not result.stdout:
         return []
@@ -128,7 +132,7 @@ def _tracked_dirty_paths(path: Path) -> list[str]:
     would be invisible to it, the build would pass, and the promotion would move the edit away to a backup while reporting success."""
     result = subprocess.run(
         ["git", "status", "--porcelain", "-z"],
-        cwd=str(path), check=False, capture_output=True, text=True, creationflags=NO_WINDOW,
+        cwd=str(path), check=False, capture_output=True, creationflags=NO_WINDOW, **_GIT_PATHS,
     )
     if result.returncode != 0:
         raise DirtyCheckError(
