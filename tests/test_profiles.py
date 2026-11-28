@@ -37,10 +37,10 @@ def test_the_bundled_profiles_are_valid_confirmed_and_in_eight_languages():
     assert cm5 and cm5.components == ("ARMOR-SERVER", "ARMOR-STUDIO", "ARMOR-NETWORK", "ARMOR-SERVER-AI", "ARMOR-VOICE-AI", "ARMOR-VISION", "ARMOR-DEVOPS")
     minimal, standard, complete = loaded.get("cm5-minimal"), loaded.get("cm5-standard"), loaded.get("cm5-complete")
     assert minimal and standard and complete
-    # the three tiers the owner confirmed: Minimal = server + contracts + Studio; Standard adds the nodes, the two apps and the vision service; Complete adds voice, AI, simulator, hardware, network and DevOps
+    # the three tiers the owner confirmed: Minimal = server + contracts + Studio; Standard adds the nodes, the two apps and the vision service; Complete adds voice, AI, simulator, hardware, the solar touch screen, network and DevOps
     assert minimal.components == ("ARMOR-SERVER", "ARMOR-COMMON", "ARMOR-STUDIO")
     assert set(standard.components) == set(minimal.components) | {"ARMOR-NODE-RADAR", "ARMOR-NODE-ALARM", "ARMOR-NODE-ELECTRICAL", "ARMOR-NODE-SOLAR", "ARMOR-NODE-HMI", "ARMOR-ANDROID-CONTROL", "ARMOR-IOS-CONTROL", "ARMOR-VISION"}
-    assert set(complete.components) == set(standard.components) | {"ARMOR-VOICE-AI", "ARMOR-SERVER-AI", "ARMOR-SIMULATOR", "ARMOR-HARDWARE", "ARMOR-NETWORK", "ARMOR-DEVOPS"}
+    assert set(complete.components) == set(standard.components) | {"ARMOR-VOICE-AI", "ARMOR-SERVER-AI", "ARMOR-SIMULATOR", "ARMOR-HARDWARE", "ARMOR-NODE-SOLAR-HMI", "ARMOR-NETWORK", "ARMOR-DEVOPS"}
     assert set(minimal.components) < set(standard.components) < set(complete.components), "each tier contains the one before"
     assert len(set(complete.components)) == len(complete.components), "no component twice"
     assert [item.title["en"] for item in (minimal, standard, complete)] == ["Minimal", "Standard", "Complete"]

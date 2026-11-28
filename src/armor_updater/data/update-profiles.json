@@ -111,14 +111,14 @@
         "pt": "Completo"
       },
       "description": {
-        "en": "The standard profile plus the voice and AI services, the simulator, the hardware models, the network watcher and the DevOps tools.",
-        "es": "El perfil estándar más los servicios de voz e IA, el simulador, los modelos de hardware, el vigilante de red y las herramientas DevOps.",
-        "de": "Das Standardprofil plus die Sprach- und KI-Dienste, der Simulator, die Hardware-Modelle, der Netzwerkwächter und die DevOps-Werkzeuge.",
-        "fr": "Le profil standard plus les services de voix et d'IA, le simulateur, les modèles matériels, le surveillant de réseau et les outils DevOps.",
-        "it": "Il profilo standard più i servizi di voce e IA, il simulatore, i modelli hardware, il sorvegliante di rete e gli strumenti DevOps.",
-        "ja": "標準プロファイルに、音声・AI サービス、シミュレーター、ハードウェアモデル、ネットワーク監視、DevOps ツールを加えたもの。",
-        "zh": "标准配置加上语音和 AI 服务、模拟器、硬件模型、网络监视器和 DevOps 工具。",
-        "pt": "O perfil padrão mais os serviços de voz e IA, o simulador, os modelos de hardware, o vigilante de rede e as ferramentas DevOps."
+        "en": "The standard profile plus the voice and AI services, the simulator, the hardware models, the solar touch screen, the network watcher and the DevOps tools.",
+        "es": "El perfil estándar más los servicios de voz e IA, el simulador, los modelos de hardware, la pantalla táctil solar, el vigilante de red y las herramientas DevOps.",
+        "de": "Das Standardprofil plus die Sprach- und KI-Dienste, der Simulator, die Hardware-Modelle, der Solar-Touchscreen, der Netzwerkwächter und die DevOps-Werkzeuge.",
+        "fr": "Le profil standard plus les services de voix et d'IA, le simulateur, les modèles matériels, l'écran tactile solaire, le surveillant de réseau et les outils DevOps.",
+        "it": "Il profilo standard più i servizi di voce e IA, il simulatore, i modelli hardware, lo schermo touch solare, il sorvegliante di rete e gli strumenti DevOps.",
+        "ja": "標準プロファイルに、音声・AI サービス、シミュレーター、ハードウェアモデル、太陽光タッチ画面、ネットワーク監視、DevOps ツールを加えたもの。",
+        "zh": "标准配置加上语音和 AI 服务、模拟器、硬件模型、太阳能触摸屏、网络监视器和 DevOps 工具。",
+        "pt": "O perfil padrão mais os serviços de voz e IA, o simulador, os modelos de hardware, o ecrã tátil solar, o vigilante de rede e as ferramentas DevOps."
       },
       "components": [
         "ARMOR-SERVER",
@@ -136,6 +136,7 @@
         "ARMOR-SERVER-AI",
         "ARMOR-SIMULATOR",
         "ARMOR-HARDWARE",
+        "ARMOR-NODE-SOLAR-HMI",
         "ARMOR-NETWORK",
         "ARMOR-DEVOPS"
       ]

@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The solar touch screen is part of the Complete role:** the shipped profiles list ARMOR-NODE-SOLAR-HMI in that profile only; the other profiles are unchanged.
 - **The shared tools read the output of processes as UTF-8:** `tools/status_lights.py`, `tools/sync_manifests.py` and `tools/universal_readme_check.py` are the current copies; on Windows a character outside the code page no longer breaks a check.
 
 ## [0.2.5] - Cut downloads, damaged files and local names outside ASCII handled, machine roles confirmed
